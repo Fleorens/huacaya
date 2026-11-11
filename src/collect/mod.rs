@@ -19,6 +19,8 @@ pub(crate) fn read_parsed<T: std::str::FromStr>(sysroot: &Path, relative: &str) 
 
 pub mod disk;
 pub mod gpu;
+pub mod llama;
+pub mod llama_poll;
 pub mod net;
 pub mod process;
 pub mod sensors;

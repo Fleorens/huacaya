@@ -142,8 +142,8 @@ bodies from `tests/fixtures/llama/`. `TIEL` = `peculiar-ragdoll/Cyber-Tiel-Coder
 
 ## Acceptance criteria
 
-- [ ] Exact public API above; `impl Fetch for http::Client` exists.
-- [ ] The 13 tests exist under these names and pass.
-- [ ] No request with `model=` is ever sent for a model that is not `Loaded` (tests 2, 3, 4).
-- [ ] No fixture modified; `src/http.rs` and `src/collect/llama.rs` unchanged.
-- [ ] `bash .devbox/check` is green.
+- [x] Exact public API above; `impl Fetch for http::Client` exists.
+- [x] The 13 tests exist under these names and pass.
+- [x] No request with `model=` is ever sent for a model that is not `Loaded` (tests 2, 3, 4).
+- [x] No fixture modified; `src/http.rs` and `src/collect/llama.rs` unchanged.
+- [x] `bash .devbox/check` is green.
