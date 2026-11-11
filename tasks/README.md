@@ -55,7 +55,7 @@ each against the code its dependencies actually delivered.
 | [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), gauge, braille graph, badge, panel frame | — | prête |
 | [T11](T11-demo.md) | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | prête |
 | [T12](T12-panels-model.md) | Text helpers, header + tabs, Model and Last request panels | T10, T11 | prête |
-| T13 | GPU, CPU, Memory and Log panels | T12 | outlined |
+| [T13](T13-panels-machine.md) | GPU, CPU, Memory and Log panels | T12 | prête |
 | T14 | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | outlined |
 | T15 | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | outlined |
 | T16 | Models screen (table + details) | T14 | outlined |
