@@ -123,7 +123,7 @@ pub fn read_server_procs(sysroot: &Path) -> Vec<ProcSample>;
 
 ## Acceptance criteria
 
-- [ ] Exact public API above; exactly one `unsafe` block in the crate, with its `// SAFETY:` comment.
-- [ ] The 8 tests exist under these names and pass.
-- [ ] No fixture modified.
-- [ ] `bash .devbox/check` is green.
+- [x] Exact public API above; exactly one `unsafe` block in the crate, with its `// SAFETY:` comment.
+- [x] The 8 tests exist under these names and pass.
+- [x] No fixture modified.
+- [x] `bash .devbox/check` is green.
