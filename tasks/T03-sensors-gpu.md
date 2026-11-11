@@ -19,6 +19,7 @@ hwmon/hwmon0/  name=acpitz    temp1_input                      (no label file)
 hwmon/hwmon1/  name=nvme      temp1_input temp1_label=Composite
 hwmon/hwmon2/  name=coretemp  temp1..3_input, labels "Package id 0", "Core 0", "Core 1"
 hwmon/hwmon3   -> symlink to ../drm/card1/device/hwmon/hwmon3   (name=amdgpu)
+hwmon/hwmon4/  name=gigabyte_wmi  temp1_input=27000  temp2_input=-55000 (unconnected probe)
 drm/card0/device/vendor = 0x8086          Intel iGPU: not ours
 drm/card1/device/vendor = 0x1002          the Radeon
 drm/card1-DP-1/  drm/card1-HDMI-A-1/      connectors: not cards
@@ -29,7 +30,7 @@ Files of `drm/card1/device/`: `device` (`0x747e`), `gpu_busy_percent` (`97`), `m
 `mem_info_vram_used`, `mem_info_gtt_used` (bytes), `current_link_speed` (`16.0 GT/s PCIe`),
 `current_link_width` (`16`). Files of its `hwmon/hwmon3/`: `temp<N>_input` (millidegrees) with
 `temp<N>_label` ∈ `edge`, `junction`, `mem`; `power1_average` and `power1_cap` (microwatts); `fan1_input`
-(rpm); `pwm1` and `pwm1_max`; `freq1_input` (Hz, label `sclk`); `in0_input` (millivolts, label `vddgfx`).
+(rpm); `pwm1` and `pwm1_max`; `freq<N>_input` (Hz; the one labelled `sclk` — the real card also has `mclk`); `in0_input` (millivolts, label `vddgfx`).
 
 ## Contract
 
@@ -48,7 +49,8 @@ pub struct TempReading {
 }
 
 /// Every `temp<N>_input` of every `sys/class/hwmon/hwmon<M>`, ordered by M then N (numeric order).
-/// A chip without a `name` file is skipped. Unreadable or unparsable inputs are skipped.
+/// A chip without a `name` file is skipped. Unreadable or unparsable inputs are skipped, and so is a
+/// reading below −40 °C (an unconnected probe: the real board reports −55 °C on two of them).
 pub fn read_temps(sysroot: &Path) -> Vec<TempReading>;
 
 /// CPU package temperature: chip `coretemp` label `Package id 0`; else chip `k10temp` label `Tctl`;
@@ -105,8 +107,9 @@ pub fn read_gpus(sysroot: &Path) -> Vec<GpuSample>;
 
 Same `sysroot()` helper as `tests/system.rs`. Float tolerance 0.01.
 
-- `temps_are_listed_in_order`: 8 readings; chips in order: `acpitz`, `nvme`, `coretemp` ×3, `amdgpu` ×3.
-  First: label `temp1`, 27.8. Second: label `Composite`, 41.85. Last: label `mem`, 66.0.
+- `temps_are_listed_in_order`: 9 readings; chips in order: `acpitz`, `nvme`, `coretemp` ×3, `amdgpu` ×3,
+  `gigabyte_wmi`. First: label `temp1`, 27.8. Second: label `Composite`, 41.85. Eighth: label `mem`, 66.0.
+  Last: chip `gigabyte_wmi`, label `temp1`, 27.0 (its `temp2` at −55 °C is skipped).
 - `cpu_and_nvme_temps`: `cpu_temp` = 52.0, `nvme_temp` = 41.85.
 - `cpu_temp_falls_back_to_hottest_core`: hand-built slice with `coretemp` readings `Core 0` 50 and
   `Core 1` 57 only → 57.0; empty slice → `None`.

@@ -16,12 +16,24 @@ tests run: with `cat` on a fixture.
 
 ## Fixture (do not edit) — `tests/fixtures/journal/llama-server.txt`
 
-18 lines. ⚠ The llama.cpp messages in it are **plausible, not captured**: the real format will be checked on
-the aibox before batch 2. So the parser must be **tolerant**: a line it does not understand is still shown,
-as `Info`, with no event. Never drop a line, never fail on one.
+35 lines. Lines 1–30 are **real**, captured on the aibox on 2026-11-11 (build b12151, router mode). Lines
+31–35 are hand-written in the same shape, for the cases the capture did not contain (warning, error, another
+unit, a `request:` line, a line with no prefix). The parser must be **tolerant**: a line it does not
+understand is still shown, as `Info`, with no event. Never drop a line, never fail on one.
 
-Shape of a journal line: `<ISO timestamp> <host> <unit>[<pid>]: <message>`, for example
-`2026-11-11T10:21:03.900500+01:00 aibox-flo llama-server[1201]: prompt eval time =     169.37 ms /   109 tokens (    1.55 ms per token,   643.56 tokens per second)`.
+Shape of a line:
+
+```
+<ISO timestamp> <host> <unit>[<pid>]: [<port>] <elapsed> <L> <message>
+2026-11-11T10:28:42.776572+01:00 aibox-flo llama-server[1194]: [35335] 60.30.873.549 I slot print_timing: id  0 | task 9137 | n_gen =    161, tg =  52.96 t/s, tg_3s =  53.29 t/s
+2026-11-11T10:28:39.046742+01:00 aibox-flo llama-server[1194]: 90.25.429.894 I srv  proxy_reques: proxying request to model <id> on port 35335
+```
+
+- `[<port>]` is present on lines relayed from a model instance, absent on the router's own lines;
+- `<elapsed>` is digits and dots only; `<L>` is one letter: `I`, `W`, `E` or `D`;
+- all three are optional (other builds and other units do not print them).
+
+Look at the fixture with `cut -c1-200 tests/fixtures/journal/llama-server.txt | sed -n '1,35p'`.
 
 ## Contract — `src/collect/logs.rs`
 
@@ -31,11 +43,21 @@ Data types derive `Debug, Clone, PartialEq, serde::Serialize`.
 pub enum Level { Info, Warn, Error }
 
 pub enum LogEvent {
-    /// From a `prompt eval time = … / N tokens ( … , X tokens per second)` line.
+    /// `prompt eval time = … / N tokens ( … , X tokens per second)`
     PromptTiming { tokens: u64, tps: f64 },
-    /// From an `eval time = …` line that is not a `prompt eval time` line.
+    /// `eval time = … / N tokens ( … , X tokens per second)` on a line that is not a prompt line
     GenTiming { tokens: u64, tps: f64 },
-    /// From `request: <METHOD> <path> <client address> <status>`.
+    /// `n_gen = N, tg = X t/s, tg_3s = Y t/s` — printed every ~3 s while generating
+    GenProgress { n_gen: u64, tps: f64, tps_3s: f64 },
+    /// `prompt processing, n_tokens = N, progress = P, t = … s / X tokens per second`
+    PromptProgress { n_tokens: u64, progress: f32, tps: f64 },
+    /// `draft acceptance = R ( A accepted / G generated), …`
+    DraftAcceptance { accepted: u64, generated: u64 },
+    /// `stop processing: n_tokens = N, …` — the context size at the end of the request
+    Released { n_tokens: u64 },
+    /// `proxying request to model <id> on port <port>`
+    Proxy { model: String, port: u16 },
+    /// `request: <METHOD> <path> <client address> <status>`
     Request { method: String, path: String, status: u16 },
 }
 
@@ -44,8 +66,13 @@ pub struct LogLine {
     pub time: Option<String>,
     /// The unit name without `[pid]` (`llama-server`, `systemd`); `None` without prefix.
     pub source: Option<String>,
+    /// The `[<port>]` of the model instance that printed the line.
+    pub instance: Option<u16>,
+    /// The number after `| task ` (may be −1).
+    pub task: Option<i64>,
     pub level: Level,
-    /// The message, without the journal prefix, leading whitespace removed. Without prefix: the whole line.
+    /// The message: without journal prefix, `[port]`, elapsed time and level letter; leading whitespace
+    /// removed. Without journal prefix: the whole line.
     pub text: String,
     pub event: Option<LogEvent>,
 }
@@ -75,25 +102,43 @@ impl Drop for Follower { /* calls stop */ }
 
 ### `parse_line` rules
 
-**Prefix.** The line has a journal prefix when its first whitespace-separated token is at least 19 bytes
+**1. Journal prefix.** The line has one when its first whitespace-separated token is at least 19 bytes
 long, has `T` at byte 10 and `:` at bytes 13 and 16, and the third token ends with `:`. Then: `time` =
 bytes 11..19 of the first token; `source` = third token without the trailing `:` and without a trailing
-`[digits]`; `text` = everything after the third token, with leading whitespace removed. Otherwise there is
-no prefix.
+`[digits]`; the **rest** is what follows the third token. Otherwise there is no prefix: `text` is the whole
+line and step 2 is skipped.
 
-**Event** (first match wins, on `text`):
-1. contains `prompt eval time =` → `PromptTiming`;
-2. contains `eval time =` → `GenTiming`;
-   for both: `tokens` = the integer just before the first ` tokens`; `tps` = the number just before
-   ` tokens per second`. If either number cannot be read: no event;
-3. contains `request: ` followed by at least 4 whitespace-separated items → `Request` with method = 1st,
-   path = 2nd, status = 4th parsed as `u16`. If the status does not parse: no event.
+**2. llama.cpp prefix**, on the rest, each part optional, in this order:
+- a token `[digits]` → `instance`;
+- a token made of ASCII digits and dots only, with at least one dot → dropped (elapsed time);
+- a token that is exactly `I`, `W`, `E` or `D` → the **level letter**.
+`text` = what remains, leading whitespace removed.
 
-**Level** (first match wins):
+**3. Task.** `task` = the integer after the first `| task ` in `text`, if any.
+
+**4. Event** (first match wins, on `text`). Two private helpers make this short: `number_after(text, key)`
+= the first whitespace-separated token after `key`, trailing `,` removed, parsed; `number_before(text, key)`
+= the last whitespace-separated token before `key`, leading `(` removed, parsed. A number that cannot be
+read means **no event**.
+
+| `text` contains | Event | Fields |
+|---|---|---|
+| `prompt processing, n_tokens =` | `PromptProgress` | `number_after("n_tokens =")`, `number_after("progress =")`, `number_before(" tokens per second")` |
+| `prompt eval time =` | `PromptTiming` | tokens = `number_before(" tokens (")`, tps = `number_before(" tokens per second")` |
+| `eval time =` | `GenTiming` | same two |
+| `n_gen =` | `GenProgress` | `number_after("n_gen =")`, `number_after("tg =")`, `number_after("tg_3s =")` |
+| `draft acceptance =` | `DraftAcceptance` | `number_before(" accepted")`, `number_before(" generated")` |
+| `stop processing: n_tokens =` | `Released` | `number_after("n_tokens =")` |
+| `proxying request to model ` | `Proxy` | model = the token after `model `, port = `number_after(" on port ")` |
+| `request: ` + at least 4 items | `Request` | method = 1st item, path = 2nd, status = 4th |
+
+**5. Level** (first match wins):
 1. `Request` event: status ≥ 500 → `Error`; 400–499 → `Warn`; else `Info`;
-2. `text` starts with `E ` or, lower-cased, contains `error`, `failed`, `failure` or `out of memory` → `Error`;
-3. `text` starts with `W ` or, lower-cased, contains `warn` → `Warn`;
-4. else `Info`.
+2. a level letter was found: `E` → `Error`, `W` → `Warn`, `I` and `D` → `Info` — and the keywords below are
+   **not** looked at;
+3. `text`, lower-cased, contains `error`, `failed`, `failure` or `out of memory` → `Error`;
+4. `text`, lower-cased, contains `warn` → `Warn`;
+5. else `Info`.
 
 ## Pitfalls
 
@@ -105,33 +150,43 @@ no prefix.
   `Child` where `stop` can reach it (take `child.stdout` out for the thread first), `kill()` it, `wait()`
   for it, then join the thread. Killing the child ends the pipe, which unblocks the reader.
 - Never let the child outlive llamatop: `Drop` must stop it.
-- `"       eval time = …"` (the generation line) contains `eval time =` but not `prompt eval time =`; the
-  prompt line contains both. Order of the rules matters.
+- The generation line contains `eval time =` but not `prompt eval time =`; the prompt line contains both;
+  the `prompt processing` line also ends with `tokens per second`. The order of the table matters.
+- Search for the keys with their ` =` (`tg =`, `tg_3s =`, `n_tokens =`): `tg` alone would also match `tg_3s`.
+- The model id of a `Proxy` line contains `/` and `:`; it never contains a space.
 
 ## Tests — `tests/logs.rs`
 
-`parse_line` on the fixture lines (1-based numbers; read the file and index its lines):
+`parse_line` on the fixture lines (1-based numbers; read the file and index its lines). Float tolerance 0.01.
 
-- `journal_prefix_is_split`: line 1 → time `10:20:58`, source `llama-server`, text starts with
-  `srv  log_server_r: request: GET /health`, event `Request { GET, /health, 200 }`, level `Info`.
-- `prompt_timing`: line 7 → `PromptTiming { tokens: 109, tps: 643.56 }`, level `Info`.
-- `gen_timing`: line 8 → `GenTiming { tokens: 200, tps: 62.48 }`; `text` starts with `eval time =`.
-- `total_time_has_no_event`: line 9 → event `None`.
-- `warning_line`: line 13 → `Warn`.
-- `unauthorized_request_is_a_warning`: line 14 → `Request` with status 401, level `Warn`.
-- `error_line`: line 15 → `Error`.
-- `other_unit`: line 17 → source `systemd`, level `Error`.
-- `line_without_prefix`: line 18 → time `None`, source `None`, text = the whole line, `Info`, no event.
+- `router_line`: line 1 → time `10:28:39`, source `llama-server`, instance `None`, task `None`, level `Info`,
+  text starts with `srv  proxy_reques: proxying request`, event
+  `Proxy { model: "peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M", port: 35335 }`.
+- `instance_line`: line 3 → instance `Some(35335)`, task `Some(9137)`, text starts with `slot launch_slot_:`,
+  event `None`. Line 2 → task `Some(-1)`.
+- `gen_progress`: line 4 → `GenProgress { n_gen: 161, tps: 52.96, tps_3s: 53.29 }`.
+- `prompt_timing`: line 8 → `PromptTiming { tokens: 48, tps: 85.26 }`; line 24 → tokens 10229, tps 891.00.
+- `gen_timing`: line 9 → `GenTiming { tokens: 627, tps: 46.63 }`.
+- `lines_without_event`: lines 10, 11 and 12 → event `None`, level `Info`.
+- `draft_acceptance`: line 13 → `DraftAcceptance { accepted: 369, generated: 771 }`.
+- `released`: line 14 → `Released { n_tokens: 57724 }`.
+- `prompt_progress`: line 18 → `PromptProgress { n_tokens: 4096, progress: 0.40, tps: 1004.65 }`.
+- `warning_letter`: line 31 → `Warn`, text starts with `srv    load_model:`.
+- `error_letter`: line 32 → `Error`.
+- `other_unit_uses_keywords`: line 33 → source `systemd`, instance `None`, level `Error`.
+- `request_line`: line 34 → `Request { method: "POST", path: "/v1/chat/completions", status: 401 }`, `Warn`.
+- `line_without_prefix`: line 35 → time `None`, source `None`, text = the whole line, `Info`, no event.
+- `letter_wins_over_keywords`: `"2026-11-11T10:00:00.000000+01:00 h llama-server[1]: [1] 1.2 I srv x: no error here"`
+  → `Info`.
 - `weird_input_never_panics`: `""`, `"   "`, `"é"`, `"éééééééééééééééééééééé x y: z"`, a 100 000-byte line,
-  `"request: GET"`, `"eval time = x tokens per second"` → each returns a `LogLine` (event `None` for the
-  last two).
-- `server_error_request`: `"srv  log_server_r: request: POST /v1/chat/completions 10.0.0.1 500"` → `Error`.
+  `"request: GET"`, `"eval time = x tokens per second"`, `"n_gen = a, tg = b"`, `"[99999999] I"` → each returns
+  a `LogLine` with event `None`.
 
 `follow` (collect lines into an `Arc<Mutex<Vec<LogLine>>>`; wait by polling up to 3 s, never a fixed sleep
 longer than 50 ms):
 
-- `follows_a_command_to_its_end`: `cat <absolute fixture path>` → 19 lines; the last one is the `Warn`
-  `log source ended: cat`; the first has time `10:20:58`.
+- `follows_a_command_to_its_end`: `cat <absolute fixture path>` → 36 lines; the last one is the `Warn`
+  `log source ended: cat`; the first has time `10:28:39`.
 - `stop_kills_a_silent_command`: `sleep 30` → `stop()` returns within 2 s (measure with `Instant`).
 - `drop_stops_the_command`: `sleep 30`, drop the `Follower` → returns within 2 s.
 - `missing_program_is_an_error`: `llamatop-no-such-program --x` → `Err`; empty command `"  "` → `Err`.
@@ -140,7 +195,7 @@ longer than 50 ms):
 ## Acceptance criteria
 
 - [ ] Exact public API above.
-- [ ] The 16 tests exist under these names and pass.
+- [ ] The 21 tests exist under these names and pass.
 - [ ] After `cargo test`, no `sleep 30` process is left running (`pgrep -x sleep` shows none of ours).
 - [ ] No fixture modified.
 - [ ] `bash .devbox/check` is green.

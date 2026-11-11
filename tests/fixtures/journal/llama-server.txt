@@ -1,18 +1,35 @@
-2026-11-11T10:20:58.101234+01:00 aibox-flo llama-server[1201]: srv  log_server_r: request: GET /health 127.0.0.1 200
-2026-11-11T10:21:00.412345+01:00 aibox-flo llama-server[1201]: srv  params_from_: Chat format: peg-native
-2026-11-11T10:21:00.413001+01:00 aibox-flo llama-server[1201]: slot launch_slot_: id  0 | task 8021 | processing task
-2026-11-11T10:21:00.413220+01:00 aibox-flo llama-server[1201]: slot update_slots: id  0 | task 8021 | new prompt, n_ctx_slot = 196608, n_keep = 0, task.n_tokens = 49353
-2026-11-11T10:21:00.602118+01:00 aibox-flo llama-server[1201]: slot update_slots: id  0 | task 8021 | prompt processing progress, n_tokens = 49353, batch.n_tokens = 109, progress = 1.000000
-2026-11-11T10:21:03.900412+01:00 aibox-flo llama-server[1201]: slot print_timing: id  0 | task 8021 |
-2026-11-11T10:21:03.900500+01:00 aibox-flo llama-server[1201]: prompt eval time =     169.37 ms /   109 tokens (    1.55 ms per token,   643.56 tokens per second)
-2026-11-11T10:21:03.900580+01:00 aibox-flo llama-server[1201]:        eval time =    3201.15 ms /   200 tokens (   16.01 ms per token,    62.48 tokens per second)
-2026-11-11T10:21:03.900650+01:00 aibox-flo llama-server[1201]:       total time =    3370.52 ms /   309 tokens
-2026-11-11T10:21:03.900811+01:00 aibox-flo llama-server[1201]: slot      release: id  0 | task 8021 | stop processing: n_tokens = 49553, truncated = 0
-2026-11-11T10:21:03.901020+01:00 aibox-flo llama-server[1201]: srv  update_slots: all slots are idle
-2026-11-11T10:21:03.901500+01:00 aibox-flo llama-server[1201]: srv  log_server_r: request: POST /v1/chat/completions 192.168.1.237 200
-2026-11-11T10:24:10.000100+01:00 aibox-flo llama-server[1201]: W srv    load_model: the slot context (196608) exceeds the training context of the model
-2026-11-11T10:25:41.330000+01:00 aibox-flo llama-server[1201]: srv  log_server_r: request: POST /v1/chat/completions 192.168.1.42 401
-2026-11-11T10:26:02.770000+01:00 aibox-flo llama-server[1201]: E load_tensors: failed to allocate 2048.00 MiB on device 0: out of memory
-2026-11-11T10:26:02.770900+01:00 aibox-flo llama-server[1201]: srv  operator(): instance exited with status 1
-2026-11-11T10:26:03.000000+01:00 aibox-flo systemd[1]: llama-server.service: Main process exited, code=exited, status=1/FAILURE
+2026-11-11T10:28:39.046742+01:00 aibox-flo llama-server[1194]: 90.25.429.894 I srv  proxy_reques: proxying request to model peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M on port 35335
+2026-11-11T10:28:39.192196+01:00 aibox-flo llama-server[1194]: [35335] 60.27.289.043 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.999 (> 0.100 thold), f_keep = 1.000
+2026-11-11T10:28:39.192424+01:00 aibox-flo llama-server[1194]: [35335] 60.27.289.353 I slot launch_slot_: id  0 | task 9137 | processing task, is_child = 0
+2026-11-11T10:28:42.776572+01:00 aibox-flo llama-server[1194]: [35335] 60.30.873.549 I slot print_timing: id  0 | task 9137 | n_gen =    161, tg =  52.96 t/s, tg_3s =  53.29 t/s
+2026-11-11T10:28:45.787199+01:00 aibox-flo llama-server[1194]: [35335] 60.33.884.178 I slot print_timing: id  0 | task 9137 | n_gen =    308, tg =  50.90 t/s, tg_3s =  48.83 t/s
+2026-11-11T10:28:48.809704+01:00 aibox-flo llama-server[1194]: [35335] 60.36.906.683 I slot print_timing: id  0 | task 9137 | n_gen =    450, tg =  49.59 t/s, tg_3s =  46.98 t/s
+2026-11-11T10:28:51.844654+01:00 aibox-flo llama-server[1194]: [35335] 60.39.941.622 I slot print_timing: id  0 | task 9137 | n_gen =    576, tg =  47.56 t/s, tg_3s =  41.52 t/s
+2026-11-11T10:28:53.180123+01:00 aibox-flo llama-server[1194]: [35335] 60.41.277.108 I slot print_timing: id  0 | task 9137 | prompt eval time =     562.96 ms /    48 tokens (   11.73 ms per token,    85.26 tokens per second)
+2026-11-11T10:28:53.180123+01:00 aibox-flo llama-server[1194]: [35335] 60.41.277.111 I slot print_timing: id  0 | task 9137 |        eval time =   13424.49 ms /   627 tokens (   21.44 ms per token,    46.63 tokens per second)
+2026-11-11T10:28:53.180123+01:00 aibox-flo llama-server[1194]: [35335] 60.41.277.112 I slot print_timing: id  0 | task 9137 |       total time =   13987.46 ms /   675 tokens
+2026-11-11T10:28:53.180123+01:00 aibox-flo llama-server[1194]: [35335] 60.41.277.112 I slot print_timing: id  0 | task 9137 |    graphs reused =       8758
+2026-11-11T10:28:53.180123+01:00 aibox-flo llama-server[1194]: [35335] 60.41.277.113 I slot print_timing: id  0 | task 9137 |   graph reallocs =        319    /     0        (same size) / (changed size)
+2026-11-11T10:28:53.180123+01:00 aibox-flo llama-server[1194]: [35335] 60.41.277.116 I slot print_timing: id  0 | task 9137 | draft acceptance = 0.47860 (  369 accepted /   771 generated), mean len =  2.44
+2026-11-11T10:28:53.187486+01:00 aibox-flo llama-server[1194]: [35335] 60.41.278.282 I slot      release: id  0 | task 9137 | stop processing: n_tokens = 57724, truncated = 0
+2026-11-11T10:38:08.607280+01:00 aibox-flo llama-server[1194]: 99.54.990.272 I srv  proxy_reques: proxying request to model peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M on port 35335
+2026-11-11T10:38:08.628820+01:00 aibox-flo llama-server[1194]: [35335] 69.56.725.656 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.107 (> 0.100 thold), f_keep = 0.019
+2026-11-11T10:38:08.828371+01:00 aibox-flo llama-server[1194]: [35335] 69.56.925.192 I slot launch_slot_: id  0 | task 9397 | processing task, is_child = 0
+2026-11-11T10:38:13.098757+01:00 aibox-flo llama-server[1194]: [35335] 70.01.195.613 I slot print_timing: id  0 | task 9397 | prompt processing, n_tokens =   4096, progress = 0.40, t =   4.08 s / 1004.65 tokens per second
+2026-11-11T10:38:15.219556+01:00 aibox-flo llama-server[1194]: [35335] 70.03.316.407 I slot print_timing: id  0 | task 9397 | prompt processing, n_tokens =   6144, progress = 0.60, t =   6.19 s / 992.77 tokens per second
+2026-11-11T10:38:17.415714+01:00 aibox-flo llama-server[1194]: [35335] 70.05.512.575 I slot print_timing: id  0 | task 9397 | prompt processing, n_tokens =   8192, progress = 0.80, t =   8.38 s / 977.99 tokens per second
+2026-11-11T10:38:18.525996+01:00 aibox-flo llama-server[1194]: [35335] 70.06.622.848 I slot print_timing: id  0 | task 9397 | prompt processing, n_tokens =   9201, progress = 0.90, t =   9.50 s / 968.37 tokens per second
+2026-11-11T10:38:19.566317+01:00 aibox-flo llama-server[1194]: [35335] 70.07.663.156 I slot print_timing: id  0 | task 9397 | prompt processing, n_tokens =   9997, progress = 0.98, t =  10.57 s / 945.72 tokens per second
+2026-11-11T10:38:20.251207+01:00 aibox-flo llama-server[1194]: [35335] 70.08.348.064 I slot print_timing: id  0 | task 9397 | prompt processing, n_tokens =  10225, progress = 1.00, t =  11.35 s / 900.65 tokens per second
+2026-11-11T10:38:21.429833+01:00 aibox-flo llama-server[1194]: [35335] 70.09.526.812 I slot print_timing: id  0 | task 9397 | prompt eval time =   11480.35 ms / 10229 tokens (    1.12 ms per token,   891.00 tokens per second)
+2026-11-11T10:38:21.429833+01:00 aibox-flo llama-server[1194]: [35335] 70.09.526.815 I slot print_timing: id  0 | task 9397 |        eval time =    1120.94 ms /    86 tokens (   13.19 ms per token,    75.83 tokens per second)
+2026-11-11T10:38:21.429833+01:00 aibox-flo llama-server[1194]: [35335] 70.09.526.815 I slot print_timing: id  0 | task 9397 |       total time =   12601.29 ms / 10315 tokens
+2026-11-11T10:38:21.429833+01:00 aibox-flo llama-server[1194]: [35335] 70.09.526.815 I slot print_timing: id  0 | task 9397 |    graphs reused =       8780
+2026-11-11T10:38:21.429833+01:00 aibox-flo llama-server[1194]: [35335] 70.09.526.816 I slot print_timing: id  0 | task 9397 |   graph reallocs =        329    /     0        (same size) / (changed size)
+2026-11-11T10:38:21.429833+01:00 aibox-flo llama-server[1194]: [35335] 70.09.526.818 I slot print_timing: id  0 | task 9397 | draft acceptance = 0.84722 (   61 accepted /    72 generated), mean len =  3.54
+2026-11-11T10:38:21.430156+01:00 aibox-flo llama-server[1194]: [35335] 70.09.527.079 I slot      release: id  0 | task 9397 | stop processing: n_tokens = 10314, truncated = 0
+2026-11-11T10:40:02.100000+01:00 aibox-flo llama-server[1194]: [35335] 71.50.197.001 W srv    load_model: the slot context (196608) exceeds the training context of the model
+2026-11-11T10:40:05.770000+01:00 aibox-flo llama-server[1194]: [35335] 71.53.867.120 E load_tensors: failed to allocate 2048.00 MiB on device 0: out of memory
+2026-11-11T10:40:06.000000+01:00 aibox-flo systemd[1]: llama-server.service: Main process exited, code=exited, status=1/FAILURE
+2026-11-11T10:40:07.000000+01:00 aibox-flo llama-server[1194]: srv  log_server_r: request: POST /v1/chat/completions 192.168.1.42 401
 this line has no journald prefix at all

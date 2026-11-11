@@ -97,7 +97,7 @@ Steps of `run`:
 
 - `snapshot_of_the_fixture_machine`: `Sampler::new(sysroot(), vec!["/".into()])`, `sample(t0)` → hostname
   `aibox-flo`, uptime 356400, `cpu.usage_pct` `None` (first sample), mem total 33554432000, 1 GPU with busy
-  97.0, cpu_temp 52.0, nvme_temp 41.85, 8 temps, 1 disk, 1 net (`wlp9s0`, rates `None`), 2 procs.
+  97.0, cpu_temp 52.0, nvme_temp 41.85, 9 temps, 1 disk, 1 net (`wlp9s0`, rates `None`), 2 procs.
 - `second_sample_keeps_references`: a second `sample(t0 + 1 s)` on the same `Sampler` → `nets[0].rx_bps` is
   `Some(0.0)` (the counters did not move), `cpu.per_core_pct` has 16 entries, all 0.0, and `cpu.usage_pct` is
   `None` (the fixture `proc/stat` did not change, so the total did not grow).
@@ -108,7 +108,7 @@ Steps of `run`:
   "--sysroot", <fixture sysroot>, "--mount", "/", "--log-cmd", "cat <absolute journal fixture>"])` →
   `run` is `Ok`; parse the text as `serde_json::Value`: the top-level keys are exactly `system`, `llama`,
   `log_tail`, `log_error`; `system.hostname` = `aibox-flo`; `system.gpus[0].busy_pct` = 97.0;
-  `llama.health.Down` is a string; `llama.models` is empty; `log_tail` has 19 items; `log_error` is null.
+  `llama.health.Down` is a string; `llama.models` is empty; `log_tail` has 20 items, the last one has the text `log source ended: cat`; `log_error` is null.
   The call takes less than 5 s.
 - `dump_with_missing_log_program`: same with `--log-cmd "llamatop-no-such-program"` → `log_tail` empty,
   `log_error` is a non-empty string.

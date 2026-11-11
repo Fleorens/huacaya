@@ -10,7 +10,11 @@ Run a sheet: `dev add llamatop @tasks/T01-util.md`. Order: the table's, top to b
 
 - Skeleton written and green by the orchestrator: `Cargo.toml` (all dependencies), `src/config.rs` (CLI),
   `src/http.rs` (HTTP client), `.devbox/check`, fixtures (`tests/fixtures/`: real API answers captured on the
-  aibox, a synthetic `/proc` + `/sys` tree, a synthetic journal).
+  aibox, a synthetic `/proc` + `/sys` tree, a journal excerpt).
+- 2026-11-11, capture of the real machine (`scripts/capture-fixtures.sh`) compared with the fixtures: the
+  `/proc` and `/sys` layout matches (amdgpu on `card1`, sensors under `device/hwmon/hwmon5`); the journal
+  format did not, so the journal fixture is now 30 real lines and T07 was rewritten against them. Added from
+  the capture: unconnected probes at −55 °C are skipped (T03).
 - Batch 1: **ready** (T01 → T08).
 - Batch 2: **outlined** below, sheets to be written after the review of batch 1 and after `--dump` has been
   compared with the real machine.
@@ -32,8 +36,7 @@ Statuses: `prête` → `livrée` (set by the model at the end of its session) �
 orchestrator after review).
 
 **Gate between the batches** — on the aibox:
-1. `bash scripts/capture-fixtures.sh` → `llamatop-capture.tar.gz`: the real `/proc`, `/sys` and journal, to
-   compare with the synthetic fixtures (the journal format above all);
+1. ~~`bash scripts/capture-fixtures.sh`~~ done on 2026-11-11, see above;
 2. `llamatop --dump --api-key-file <file>`: every value checked against `amdgpu_top` / `sensors` / `free`.
 
 ## Batch 2 — the dashboard (outline, from `docs/02-ui.md`)
