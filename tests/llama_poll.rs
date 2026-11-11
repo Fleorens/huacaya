@@ -37,11 +37,6 @@ impl FakeFetch {
         self.answers.lock().unwrap().insert(path.to_string(), Ok(body.into()));
     }
 
-    /// Overwrite an answer between rounds (used by the live-speed tests).
-    fn set(&self, path: &str, body: impl Into<String>) {
-        self.answers.lock().unwrap().insert(path.to_string(), Ok(body.into()));
-    }
-
     /// An error answer for `path` (the message is surfaced verbatim).
     fn give_error(&self, path: &str, msg: impl Into<String>) {
         self.answers.lock().unwrap().insert(path.to_string(), Err(msg.into()));
@@ -125,7 +120,7 @@ fn nothing_loaded_means_no_model_query() {
     router_setup(&fetch);
     let mut models = llama("models.json");
     models = models.replace("\"value\":\"loaded\"", "\"value\":\"unloaded\"");
-    fetch.set("/v1/models", models);
+    fetch.give("/v1/models", models);
 
     let mut poller = Poller::new(fetch);
     let snap = poller.poll(Instant::now());
@@ -142,7 +137,7 @@ fn loading_model_is_not_queried() {
     router_setup(&fetch);
     let mut models = llama("models.json");
     models = models.replace("\"value\":\"loaded\"", "\"value\":\"loading\"");
-    fetch.set("/v1/models", models);
+    fetch.give("/v1/models", models);
 
     let mut poller = Poller::new(fetch);
     let snap = poller.poll(Instant::now());
@@ -258,7 +253,7 @@ fn live_speed() {
     // Next sample: n_decoded grew to 552, 2 s later.
     let mut slots = llama("slots-busy.json");
     slots = slots.replace("\"n_decoded\":427", "\"n_decoded\":552");
-    fetch.set("/slots", slots);
+    fetch.give("/slots", slots);
 
     let t1 = t0 + Duration::from_secs(2);
     let snap2 = poller.poll(t1);
@@ -284,11 +279,35 @@ fn live_speed_resets_on_new_task() {
     slots = slots
         .replace("\"id_task\":8040", "\"id_task\":8041")
         .replace("\"n_decoded\":427", "\"n_decoded\":552");
-    fetch.set("/slots", slots);
+    fetch.give("/slots", slots);
 
     let t1 = t0 + Duration::from_secs(2);
     let snap2 = poller.poll(t1);
     assert_eq!(snap2.active[0].live_gen_tps, None);
+}
+
+#[test]
+fn live_speed_reference_dropped_when_idle() {
+    let (fetch, _calls) = FakeFetch::new();
+    fetch.give("/health", r#"{"status":"ok"}"#);
+    fetch.give("/props", llama("props-router.json"));
+    fetch.give("/v1/models", llama("models.json"));
+    fetch.give("/metrics", llama("metrics.prom"));
+    fetch.give("/slots", llama("slots-busy.json"));
+
+    let mut poller = Poller::new(fetch.clone());
+    let t0 = Instant::now();
+    let _ = poller.poll(t0);
+
+    // No processing slot: `None`, and the reference must be forgotten.
+    fetch.give("/slots", llama("slots-idle.json"));
+    let snap2 = poller.poll(t0 + Duration::from_secs(1));
+    assert_eq!(snap2.active[0].live_gen_tps, None);
+
+    // Same task again with growth: no stale reference, so still `None`.
+    fetch.give("/slots", llama("slots-busy.json").replace("\"n_decoded\":427", "\"n_decoded\":552"));
+    let snap3 = poller.poll(t0 + Duration::from_secs(2));
+    assert_eq!(snap3.active[0].live_gen_tps, None);
 }
 
 #[test]
@@ -308,7 +327,9 @@ fn spawn_stops_on_flag() {
 
     std::thread::sleep(Duration::from_millis(300));
     stop.store(true, Ordering::Relaxed);
+    let asked = Instant::now();
     handle.join().expect("the thread joins");
+    assert!(asked.elapsed() < Duration::from_secs(1));
 
     assert!(*count.lock().unwrap() >= 2);
 }
@@ -320,7 +341,9 @@ fn spawn_stops_when_sink_refuses() {
 
     let poller = Poller::new(fetch);
     let stop = Arc::new(AtomicBool::new(false));
+    let started = Instant::now();
     let handle = spawn(poller, Duration::from_millis(50), stop, |_snap| false);
 
     handle.join().expect("the thread joins as soon as the sink refuses");
+    assert!(started.elapsed() < Duration::from_secs(1));
 }

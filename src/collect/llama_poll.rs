@@ -84,7 +84,8 @@ impl<F: Fetch> Poller<F> {
     pub fn poll(&mut self, now: Instant) -> LlamaSnapshot {
         // 1. `/health`. Any failure stops the round, keeping last-known props in the snapshot.
         if let Err(e) = self.fetch.get("/health", &[]) {
-            let msg = e.to_string();
+            // `{:#}` keeps the cause chain (connection refused, timeout), not just the outer context.
+            let msg = format!("{e:#}");
             let snapshot = LlamaSnapshot {
                 health: Health::Down(msg),
                 router: self.router,
@@ -109,9 +110,9 @@ impl<F: Fetch> Poller<F> {
                         self.build_info = props.build_info;
                         self.props_cached = true;
                     }
-                    Err(e) => self.fail_props(e),
+                    Err(_) => self.fail_props(),
                 },
-                Err(e) => self.fail_props(e),
+                Err(_) => self.fail_props(),
             }
         }
 
@@ -119,10 +120,10 @@ impl<F: Fetch> Poller<F> {
         let models = match self.fetch.get("/v1/models", &[]) {
             Ok(body) => match crate::collect::llama::parse_models(&body) {
                 Ok(models) => models,
-                Err(e) => return self.empty_snapshot(Health::Down(e.to_string())),
+                Err(e) => return self.empty_snapshot(Health::Down(format!("{e:#}"))),
             },
             Err(e) => {
-                let msg = e.to_string();
+                let msg = format!("{e:#}");
                 if msg.contains("HTTP 401") {
                     return self.empty_snapshot(Health::Unauthorized);
                 }
@@ -149,7 +150,7 @@ impl<F: Fetch> Poller<F> {
                 .and_then(|body| crate::collect::llama::parse_slots(&body).ok())
                 .unwrap_or_default();
 
-            let live = live_gen_tps(self, model.id.as_str(), &slots, now);
+            let live = self.live_gen_tps(model.id.as_str(), &slots, now);
             active.push(ActiveModel { id: model.id.clone(), metrics, slots, live_gen_tps: live });
         }
 
@@ -163,7 +164,7 @@ impl<F: Fetch> Poller<F> {
     }
 
     /// `/props` failed: keep `router = false`, `build_info = None`, nothing cached (retried next round).
-    fn fail_props(&mut self, _e: anyhow::Error) {
+    fn fail_props(&mut self) {
         self.router = false;
         self.build_info = None;
         self.props_cached = false;
@@ -179,28 +180,32 @@ impl<F: Fetch> Poller<F> {
             active: Vec::new(),
         }
     }
-}
 
-/// `live_gen_tps` for one model: the growth of `n_decoded` of its first processing slot since the
-/// previous round, or `None`. No processing slot drops the stored reference.
-fn live_gen_tps<F: Fetch>(poller: &mut Poller<F>, id: &str, slots: &[SlotInfo], now: Instant) -> Option<f64> {
-    let slot = slots.iter().find(|s| s.is_processing)?;
-    let prev = poller.live.get(id).map(|r| (r.id_task, r.n_decoded, r.instant));
-    let tps = match prev {
-        Some((task, decoded, instant))
-            if task == slot.id_task
-                && slot.n_decoded > decoded
-                && now.duration_since(instant) >= Duration::from_millis(1) =>
-        {
-            let secs = now.duration_since(instant).as_secs_f64();
-            Some((slot.n_decoded as f64 - decoded as f64) / secs)
-        }
-        _ => None,
-    };
-    poller
-        .live
-        .insert(id.to_string(), LiveRef { id_task: slot.id_task, n_decoded: slot.n_decoded, instant: now });
-    tps
+    /// `live_gen_tps` for one model: the growth of `n_decoded` of its first processing slot since the
+    /// previous round, or `None`. No processing slot drops the stored reference.
+    fn live_gen_tps(&mut self, id: &str, slots: &[SlotInfo], now: Instant) -> Option<f64> {
+        let Some(slot) = slots.iter().find(|s| s.is_processing) else {
+            self.live.remove(id);
+            return None;
+        };
+        let prev = self.live.get(id).map(|r| (r.id_task, r.n_decoded, r.instant));
+        let tps = match prev {
+            Some((task, decoded, instant))
+                if task == slot.id_task
+                    && slot.n_decoded > decoded
+                    && now.duration_since(instant) >= Duration::from_millis(1) =>
+            {
+                let secs = now.duration_since(instant).as_secs_f64();
+                Some((slot.n_decoded as f64 - decoded as f64) / secs)
+            }
+            _ => None,
+        };
+        self.live.insert(
+            id.to_string(),
+            LiveRef { id_task: slot.id_task, n_decoded: slot.n_decoded, instant: now },
+        );
+        tps
+    }
 }
 
 /// Runs `poller.poll` every `interval` on a new thread and hands each snapshot to `sink`.

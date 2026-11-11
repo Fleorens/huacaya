@@ -27,7 +27,7 @@ Run a sheet: `dev add llamatop @tasks/T01-util.md`. Order: the table's, top to b
 | [T02](T02-system.md) | CPU, memory, load, uptime | T01 | livrée |
 | [T03](T03-sensors-gpu.md) | Temperatures, AMD GPU | T02 | livrée |
 | [T04](T04-disk-net-process.md) | Disks, network, llama-server processes | T02 | livrée |
-| [T05](T05-llama-parsing.md) | Parsing the server answers | T02 | livrée |
+| [T05](T05-llama-parsing.md) | Parsing the server answers | T02 | prête |
 | [T06](T06-llama-poller.md) | Polling the server, the safety rule | T05 | livrée |
 | [T07](T07-logs.md) | Following and classifying the log | T02 | prête |
 | [T08](T08-sampler-dump.md) | System sampler, `--dump` | T03, T04, T06, T07 | prête |
