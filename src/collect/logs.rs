@@ -77,12 +77,12 @@ pub fn parse_line(raw: &str) -> LogLine {
         (start, i)
     };
 
-    let (_s1, e1) = token(bytes);
-    let (_s2, _e2) = token(bytes);
-    let (_s3, e3) = token(bytes);
-    let has_third = e3 > _s3;
-    let first = &raw[_s1..e1];
-    let third = &raw[_s3..e3];
+    let (s1, e1) = token(bytes);
+    let _ = token(bytes);
+    let (s3, e3) = token(bytes);
+    let has_third = e3 > s3;
+    let first = &raw[s1..e1];
+    let third = &raw[s3..e3];
 
     // 1. Journal prefix: a long ISO token, shaped like a time, followed by a unit token ending in `:`.
     let has_prefix = has_third
@@ -92,24 +92,16 @@ pub fn parse_line(raw: &str) -> LogLine {
         && first.as_bytes().get(16) == Some(&b':')
         && third.ends_with(':');
 
-    if !has_prefix {
-        return LogLine {
-            time: None,
-            source: None,
-            instance: None,
-            task: None,
-            level: Level::Info,
-            text: raw.to_string(),
-            event: None,
-        };
-    }
-
-    let time = raw.get(_s1 + 11.._s1 + 19).map(str::to_string);
-    let source = strip_pid(third.strip_suffix(':').unwrap_or(third)).to_string();
-    let rest = &raw[e3..];
-
-    // 2. llama.cpp prefix: optional `[port]`, elapsed time and level letter, in that order.
-    let (instance, level_letter, text) = parse_llama_prefix(rest);
+    // 2. llama.cpp prefix: optional `[port]`, elapsed time and level letter, in that order. Skipped
+    // without a journal prefix, where `text` is the whole line.
+    let (time, source, instance, level_letter, text) = if has_prefix {
+        let time = raw.get(s1 + 11..s1 + 19).map(str::to_string);
+        let source = strip_pid(third.strip_suffix(':').unwrap_or(third)).to_string();
+        let (instance, level_letter, text) = parse_llama_prefix(&raw[e3..]);
+        (time, Some(source), instance, level_letter, text)
+    } else {
+        (None, None, None, None, raw.to_string())
+    };
 
     // 3. Task.
     let task = token_after(&text, "| task ")
@@ -122,7 +114,7 @@ pub fn parse_line(raw: &str) -> LogLine {
     // 5. Level.
     let level = level_for(&text, event.as_ref(), level_letter);
 
-    LogLine { time, source: Some(source), instance, task, level, text, event }
+    LogLine { time, source, instance, task, level, text, event }
 }
 
 /// Removes a trailing `[pid]` (`llama-server[1194]` → `llama-server`); leaves other names untouched.
@@ -143,45 +135,45 @@ fn strip_pid(name: &str) -> &str {
 /// Consumes the optional `[port]`, elapsed time and level letter at the start of `rest`, returning the
 /// port, the level letter (if any) and the remaining message with leading whitespace removed.
 fn parse_llama_prefix(rest: &str) -> (Option<u16>, Option<char>, String) {
-    let bytes = rest.as_bytes();
-    let n = bytes.len();
-    let mut i = 0usize;
+    let mut rest = rest.trim_start();
+
+    // Each step consumes at most one token, and only in the sheet's order.
     let mut instance = None;
-    let mut level = None;
-    let mut text_start = i;
-
-    loop {
-        while i < n && bytes[i].is_ascii_whitespace() {
-            i += 1;
-        }
-        if i >= n {
-            break;
-        }
-        text_start = i;
-        while i < n && !bytes[i].is_ascii_whitespace() {
-            i += 1;
-        }
-        let token = &rest[text_start..i];
-
-        if let Some(inner) = token.strip_prefix('[').and_then(|s| s.strip_suffix(']'))
-            && !inner.is_empty()
-            && inner.bytes().all(|b| b.is_ascii_digit())
-        {
-            instance = inner.parse::<u16>().ok();
-            continue;
-        }
-        if token.bytes().any(|b| b == b'.') && token.bytes().all(|b| b.is_ascii_digit() || b == b'.') {
-            continue;
-        }
-        if token.len() == 1 && matches!(token.as_bytes()[0], b'I' | b'W' | b'E' | b'D') {
-            level = Some(token.as_bytes()[0] as char);
-            continue;
-        }
-        break;
+    if let Some(inner) = next_token(rest).and_then(|t| t.strip_prefix('[')?.strip_suffix(']'))
+        && !inner.is_empty()
+        && inner.bytes().all(|b| b.is_ascii_digit())
+    {
+        instance = inner.parse::<u16>().ok();
+        rest = after_token(rest);
     }
 
-    let text = rest[text_start..].trim_start().to_string();
-    (instance, level, text)
+    if next_token(rest)
+        .is_some_and(|t| t.bytes().any(|b| b == b'.') && t.bytes().all(|b| b.is_ascii_digit() || b == b'.'))
+    {
+        rest = after_token(rest);
+    }
+
+    let mut level = None;
+    if let Some(t) = next_token(rest)
+        && t.len() == 1
+        && matches!(t.as_bytes()[0], b'I' | b'W' | b'E' | b'D')
+    {
+        level = Some(t.as_bytes()[0] as char);
+        rest = after_token(rest);
+    }
+
+    (instance, level, rest.to_string())
+}
+
+/// The first whitespace-separated token of `s`, which starts without whitespace.
+fn next_token(s: &str) -> Option<&str> {
+    s.split_ascii_whitespace().next()
+}
+
+/// What follows the first token of `s`, leading whitespace removed.
+fn after_token(s: &str) -> &str {
+    let end = s.find(|c: char| c.is_ascii_whitespace()).unwrap_or(s.len());
+    s[end..].trim_start()
 }
 
 /// First whitespace-separated token after `key`, or `None`.
@@ -321,7 +313,11 @@ pub fn follow(command: &str, mut sink: impl FnMut(LogLine) -> bool + Send + 'sta
         .spawn()?;
 
     // Take the stdout out for the thread so `stop` can still reach the child and unblock it by killing.
-    let stdout = child.stdout.take().expect("stdout was piped");
+    let Some(stdout) = child.stdout.take() else {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(io::Error::other("log command has no stdout"));
+    };
     let thread = thread::spawn(move || {
         let mut reader = io::BufReader::new(stdout);
         let mut buf: Vec<u8> = Vec::new();

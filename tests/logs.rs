@@ -274,8 +274,8 @@ fn sink_can_refuse() {
     let lines = Arc::new(Mutex::new(Vec::new()));
     {
         let sink_lines = lines.clone();
-        let mut follower = follow(&format!("cat {}", fixture_path()), move |_line| {
-            sink_lines.lock().unwrap().push(_line);
+        let mut follower = follow(&format!("cat {}", fixture_path()), move |line| {
+            sink_lines.lock().unwrap().push(line);
             false
         })
         .expect("cat runs");
