@@ -58,7 +58,7 @@ each against the code its dependencies actually delivered.
 | [T13](T13-panels-machine.md) | GPU, CPU, Memory and Log panels | T12 | prête |
 | [T14](T14-layout-overview.md) | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | prête |
 | [T15](T15-run-loop.md) | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | prête |
-| T16 | Models screen (table + details) | T14 | outlined |
-| T17 | Logs screen: follow, scroll, filter, level filter | T14 | outlined |
-| T18 | System screen (per-core bars, sensors, disks, network, processes) and help overlay | T14 | outlined |
+| [T16](T16-models-screen.md) | Models screen (table + details) | T14 | prête |
+| T17 | Logs screen (status bar, filter typing) and help overlay | T16 | outlined |
+| T18 | System screen (per-core bars, sensors, disks, network, processes) | T17 | outlined |
 | T19 | Release build, install script for the aibox, README | T15–T18 | outlined |
