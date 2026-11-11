@@ -23,7 +23,7 @@ Run a sheet: `dev add llamatop @tasks/T01-util.md`. Order: the table's, top to b
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T01](T01-util.md) | History ring, rates, formatting | — | prête |
+| [T01](T01-util.md) | History ring, rates, formatting | — | livrée |
 | [T02](T02-system.md) | CPU, memory, load, uptime | T01 | prête |
 | [T03](T03-sensors-gpu.md) | Temperatures, AMD GPU | T02 | prête |
 | [T04](T04-disk-net-process.md) | Disks, network, llama-server processes | T02 | prête |

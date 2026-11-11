@@ -109,6 +109,6 @@ Unit tests in each file (`#[cfg(test)] mod tests`), with exactly these names and
 
 ## Acceptance criteria
 
-- [ ] The four files exist with the exact public API above; `src/lib.rs` declares `pub mod util;`.
-- [ ] The 12 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The four files exist with the exact public API above; `src/lib.rs` declares `pub mod util;`.
+- [x] The 12 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
