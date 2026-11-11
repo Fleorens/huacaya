@@ -1,0 +1,11 @@
+# Artefacts de build et dépendances
+target/
+node_modules/
+.svelte-kit/
+dist/
+build/
+# Secrets et fichiers locaux
+.env
+.env.*
+!.env.example
+*.log
