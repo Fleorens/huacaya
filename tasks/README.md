@@ -15,7 +15,9 @@ Run a sheet: `dev add llamatop @tasks/T01-util.md`. Order: the table's, top to b
   `/proc` and `/sys` layout matches (amdgpu on `card1`, sensors under `device/hwmon/hwmon5`); the journal
   format did not, so the journal fixture is now 30 real lines and T07 was rewritten against them. Added from
   the capture: unconnected probes at −55 °C are skipped (T03).
-- Batch 1: **ready** (T01 → T08).
+- Batch 1: **validée** (T01 → T08), reviewed by the orchestrator on 2026-11-11. Fixed in the review:
+  `--dump` hung forever on a live but silent log stream (the 700 ms deadline was checked only when a line
+  arrived); the GPU temperature lookup also matched `freq<N>_label` files.
 - Batch 2: **outlined** below, sheets to be written after the review of batch 1 and after `--dump` has been
   compared with the real machine.
 
@@ -23,14 +25,14 @@ Run a sheet: `dev add llamatop @tasks/T01-util.md`. Order: the table's, top to b
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T01](T01-util.md) | History ring, rates, formatting | — | livrée |
-| [T02](T02-system.md) | CPU, memory, load, uptime | T01 | livrée |
-| [T03](T03-sensors-gpu.md) | Temperatures, AMD GPU | T02 | livrée |
-| [T04](T04-disk-net-process.md) | Disks, network, llama-server processes | T02 | livrée |
-| [T05](T05-llama-parsing.md) | Parsing the server answers | T02 | livrée |
-| [T06](T06-llama-poller.md) | Polling the server, the safety rule | T05 | livrée |
-| [T07](T07-logs.md) | Following and classifying the log | T02 | livrée |
-| [T08](T08-sampler-dump.md) | System sampler, `--dump` | T03, T04, T06, T07 | livrée |
+| [T01](T01-util.md) | History ring, rates, formatting | — | validée |
+| [T02](T02-system.md) | CPU, memory, load, uptime | T01 | validée |
+| [T03](T03-sensors-gpu.md) | Temperatures, AMD GPU | T02 | validée |
+| [T04](T04-disk-net-process.md) | Disks, network, llama-server processes | T02 | validée |
+| [T05](T05-llama-parsing.md) | Parsing the server answers | T02 | validée |
+| [T06](T06-llama-poller.md) | Polling the server, the safety rule | T05 | validée |
+| [T07](T07-logs.md) | Following and classifying the log | T02 | validée |
+| [T08](T08-sampler-dump.md) | System sampler, `--dump` | T03, T04, T06, T07 | validée |
 
 Statuses: `prête` → `livrée` (set by the model at the end of its session) → `validée` (set by the
 orchestrator after review).
