@@ -6,9 +6,9 @@
 # The remote path defaults to ~/.local/bin/llamatop (relative paths are relative to the remote home).
 # Extra ssh options go through SSH_OPTS, e.g. SSH_OPTS="-F $HOME/work/.aibox-access/ssh_config".
 # The binary is copied next to its destination then renamed, so a running llamatop is not disturbed.
-set -euo pipefail
 # The remote commands are built here on purpose: $dest is expanded client side.
 # shellcheck disable=SC2029
+set -euo pipefail
 target="${1:?usage: $0 <ssh-target> [remote path]}"
 dest="${2:-.local/bin/llamatop}"
 read -r -a ssh_opts <<< "${SSH_OPTS:-}"
