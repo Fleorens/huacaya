@@ -19,7 +19,7 @@ Run a sheet: `dev add llamatop @tasks/T01-util.md`. Order: the table's, top to b
   `--dump` hung forever on a live but silent log stream (the 700 ms deadline was checked only when a line
   arrived); the GPU temperature lookup also matched `freq<N>_label` files.
 - Batch 2: **outlined** below, sheets to be written after `--dump` has been compared with the real machine.
-  Exception: T10 (theme and widgets) uses nothing from batch 1, so it is written ahead and ready.
+  Exception: T10 (theme and widgets) uses nothing from batch 1, so it was written ahead.
 
 ## Batch 1 — data layer (no screen)
 
@@ -39,17 +39,26 @@ orchestrator after review).
 
 **Gate between the batches** — on the aibox:
 1. ~~`bash scripts/capture-fixtures.sh`~~ done on 2026-11-11, see above;
-2. `llamatop --dump --api-key-file <file>`: every value checked against `amdgpu_top` / `sensors` / `free`.
+2. ~~`llamatop --dump --api-key-file <file>`~~ done on 2026-11-12 on the aibox: every value matches `free`,
+   `sensors`, `df`, `ps` and `/proc/loadavg` (GPU power is `power1_average`, the same file `sensors` reads as
+   PPT). Finding: each polling round makes the router print two `proxying request` lines, so the log view
+   hides `Proxy` lines by default (T09).
 
-## Batch 2 — the dashboard (outline, from `docs/02-ui.md`)
+## Batch 2 — the dashboard (from `docs/02-ui.md`)
 
-| Sheet | Subject |
-|---|---|
-| T09 | App state, event loop (data tick + animation tick), terminal setup / restore / panic hook, `--demo` data generator |
-| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), widgets: gradient gauge, braille graph, badge, panel frame — **livrée** |
-| T11 | Responsive layout engine + Overview screen, `--snapshot WxH`, golden files at 4 sizes |
-| T12 | Models screen (table + details) |
-| T13 | Logs screen: follow, scroll, text filter, level filter; "Last request" from the timing lines |
-| T14 | System screen: per-core bars, all sensors, disks, network, processes |
-| T15 | Help overlay, pause, refresh speed, compact mode, "terminal too small" |
-| T16 | Release build, install script for the aibox, README with screenshots |
+Re-split on 2026-11-12 into smaller sheets, one per session. Sheets are written one or two ahead of the queue,
+each against the code its dependencies actually delivered.
+
+| Sheet | Subject | Depends on | Status |
+|---|---|---|---|
+| [T09](T09-app-state.md) | App state, events, keys (pure, no terminal) | T08 | prête |
+| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), gauge, braille graph, badge, panel frame | — | livrée |
+| [T11](T11-demo.md) | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | prête |
+| [T12](T12-panels-model.md) | Text helpers, header + tabs, Model and Last request panels | T10, T11 | prête |
+| [T13](T13-panels-machine.md) | GPU, CPU, Memory and Log panels | T12 | prête |
+| [T14](T14-layout-overview.md) | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | prête |
+| [T15](T15-run-loop.md) | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | prête |
+| [T16](T16-models-screen.md) | Models screen (table + details) | T14 | prête |
+| [T17](T17-logs-help.md) | Logs screen (status bar, filter typing) and help overlay | T16 | prête |
+| [T18](T18-system-screen.md) | System screen (per-core bars, sensors, disks, network, processes) | T17 | prête |
+| T19 | Release build, install script for the aibox, README | T15–T18 | outlined |
