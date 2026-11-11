@@ -1,0 +1,79 @@
+//! Command line and environment.
+
+use std::path::PathBuf;
+
+use clap::Parser;
+
+/// Terminal dashboard for a llama.cpp server and the machine that runs it.
+#[derive(Debug, Clone, Parser)]
+#[command(version, about)]
+pub struct Cli {
+    /// Base URL of the llama.cpp server (router or single model).
+    #[arg(long, env = "LLAMATOP_URL", default_value = "http://127.0.0.1:8080")]
+    pub url: String,
+
+    /// File holding the API key (first line). `LLAMA_API_KEY` wins when both are set.
+    #[arg(long, env = "LLAMATOP_API_KEY_FILE")]
+    pub api_key_file: Option<PathBuf>,
+
+    /// Root under which `proc/` and `sys/` are read. Tests point it at `tests/fixtures/sysroot`.
+    #[arg(long, default_value = "/")]
+    pub sysroot: PathBuf,
+
+    /// Mount points whose usage is shown. A path that does not exist is skipped.
+    #[arg(long = "mount", default_values = ["/", "/srv/models", "/srv/data"])]
+    pub mounts: Vec<PathBuf>,
+
+    /// Command whose standard output is followed as the server log, split on spaces.
+    #[arg(
+        long,
+        env = "LLAMATOP_LOG_CMD",
+        default_value = "journalctl -u llama-server -f -n 200 --no-pager -q -o short-iso-precise"
+    )]
+    pub log_cmd: String,
+
+    /// Refresh period of the system and server panels, in milliseconds.
+    #[arg(long, default_value_t = 1000, value_parser = clap::value_parser!(u64).range(200..=10_000))]
+    pub interval_ms: u64,
+
+    /// Print one JSON snapshot of every data source on standard output, then exit.
+    #[arg(long)]
+    pub dump: bool,
+}
+
+impl Cli {
+    /// The API key: `LLAMA_API_KEY`, else the first line of `--api-key-file`, else none.
+    /// The key is never printed, logged, or put in an error message.
+    pub fn api_key(&self) -> Option<String> {
+        if let Ok(key) = std::env::var("LLAMA_API_KEY") {
+            let key = key.trim().to_string();
+            if !key.is_empty() {
+                return Some(key);
+            }
+        }
+        let path = self.api_key_file.as_ref()?;
+        let text = std::fs::read_to_string(path).ok()?;
+        let key = text.lines().next()?.trim().to_string();
+        if key.is_empty() { None } else { Some(key) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn defaults() {
+        let cli = Cli::parse_from(["llamatop"]);
+        assert_eq!(cli.url, "http://127.0.0.1:8080");
+        assert_eq!(cli.sysroot, PathBuf::from("/"));
+        assert_eq!(cli.mounts.len(), 3);
+        assert_eq!(cli.interval_ms, 1000);
+        assert!(!cli.dump);
+    }
+
+    #[test]
+    fn interval_is_bounded() {
+        assert!(Cli::try_parse_from(["llamatop", "--interval-ms", "50"]).is_err());
+    }
+}

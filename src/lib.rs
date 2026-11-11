@@ -1,0 +1,6 @@
+//! llamatop — terminal dashboard for a llama.cpp server and the machine that runs it.
+//!
+//! Architecture: `docs/01-architecture.md`. One module per data source; nothing here draws.
+
+pub mod config;
+pub mod http;

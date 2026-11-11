@@ -1,0 +1,18 @@
+2026-11-11T10:20:58.101234+01:00 aibox-flo llama-server[1201]: srv  log_server_r: request: GET /health 127.0.0.1 200
+2026-11-11T10:21:00.412345+01:00 aibox-flo llama-server[1201]: srv  params_from_: Chat format: peg-native
+2026-11-11T10:21:00.413001+01:00 aibox-flo llama-server[1201]: slot launch_slot_: id  0 | task 8021 | processing task
+2026-11-11T10:21:00.413220+01:00 aibox-flo llama-server[1201]: slot update_slots: id  0 | task 8021 | new prompt, n_ctx_slot = 196608, n_keep = 0, task.n_tokens = 49353
+2026-11-11T10:21:00.602118+01:00 aibox-flo llama-server[1201]: slot update_slots: id  0 | task 8021 | prompt processing progress, n_tokens = 49353, batch.n_tokens = 109, progress = 1.000000
+2026-11-11T10:21:03.900412+01:00 aibox-flo llama-server[1201]: slot print_timing: id  0 | task 8021 |
+2026-11-11T10:21:03.900500+01:00 aibox-flo llama-server[1201]: prompt eval time =     169.37 ms /   109 tokens (    1.55 ms per token,   643.56 tokens per second)
+2026-11-11T10:21:03.900580+01:00 aibox-flo llama-server[1201]:        eval time =    3201.15 ms /   200 tokens (   16.01 ms per token,    62.48 tokens per second)
+2026-11-11T10:21:03.900650+01:00 aibox-flo llama-server[1201]:       total time =    3370.52 ms /   309 tokens
+2026-11-11T10:21:03.900811+01:00 aibox-flo llama-server[1201]: slot      release: id  0 | task 8021 | stop processing: n_tokens = 49553, truncated = 0
+2026-11-11T10:21:03.901020+01:00 aibox-flo llama-server[1201]: srv  update_slots: all slots are idle
+2026-11-11T10:21:03.901500+01:00 aibox-flo llama-server[1201]: srv  log_server_r: request: POST /v1/chat/completions 192.168.1.237 200
+2026-11-11T10:24:10.000100+01:00 aibox-flo llama-server[1201]: W srv    load_model: the slot context (196608) exceeds the training context of the model
+2026-11-11T10:25:41.330000+01:00 aibox-flo llama-server[1201]: srv  log_server_r: request: POST /v1/chat/completions 192.168.1.42 401
+2026-11-11T10:26:02.770000+01:00 aibox-flo llama-server[1201]: E load_tensors: failed to allocate 2048.00 MiB on device 0: out of memory
+2026-11-11T10:26:02.770900+01:00 aibox-flo llama-server[1201]: srv  operator(): instance exited with status 1
+2026-11-11T10:26:03.000000+01:00 aibox-flo systemd[1]: llama-server.service: Main process exited, code=exited, status=1/FAILURE
+this line has no journald prefix at all

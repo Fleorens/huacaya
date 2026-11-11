@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Automatic checks for llamatop. Exit code 0 = everything passes.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+cargo fmt --all -- --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked --quiet
+# No source file above 400 lines (see AGENTS.md).
+long="$(find src tests -name '*.rs' -exec awk 'END { if (NR > 400) print FILENAME ": " NR " lines" }' {} \;)"
+if [[ -n "$long" ]]; then
+  echo "Files above 400 lines:" >&2
+  echo "$long" >&2
+  exit 1
+fi
