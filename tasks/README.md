@@ -57,7 +57,7 @@ each against the code its dependencies actually delivered.
 | [T12](T12-panels-model.md) | Text helpers, header + tabs, Model and Last request panels | T10, T11 | prête |
 | [T13](T13-panels-machine.md) | GPU, CPU, Memory and Log panels | T12 | prête |
 | [T14](T14-layout-overview.md) | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | prête |
-| T15 | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | outlined |
+| [T15](T15-run-loop.md) | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | prête |
 | T16 | Models screen (table + details) | T14 | outlined |
 | T17 | Logs screen: follow, scroll, filter, level filter | T14 | outlined |
 | T18 | System screen (per-core bars, sensors, disks, network, processes) and help overlay | T14 | outlined |
