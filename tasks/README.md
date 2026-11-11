@@ -46,7 +46,7 @@ orchestrator after review).
 | Sheet | Subject |
 |---|---|
 | T09 | App state, event loop (data tick + animation tick), terminal setup / restore / panic hook, `--demo` data generator |
-| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), widgets: gradient gauge, braille graph, badge, panel frame — **prête** |
+| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), widgets: gradient gauge, braille graph, badge, panel frame — **livrée** |
 | T11 | Responsive layout engine + Overview screen, `--snapshot WxH`, golden files at 4 sizes |
 | T12 | Models screen (table + details) |
 | T13 | Logs screen: follow, scroll, text filter, level filter; "Last request" from the timing lines |
