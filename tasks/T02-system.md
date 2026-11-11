@@ -128,7 +128,7 @@ Compare floats with a tolerance of 0.01.
 
 ## Acceptance criteria
 
-- [ ] Exact public API above; all structs serialize with serde.
-- [ ] The 10 tests exist under these names and pass, with the values above.
-- [ ] No fixture modified (`git status --short tests/fixtures` is empty).
-- [ ] `bash .devbox/check` is green.
+- [x] Exact public API above; all structs serialize with serde.
+- [x] The 10 tests exist under these names and pass, with the values above.
+- [x] No fixture modified (`git status --short tests/fixtures` is empty).
+- [x] `bash .devbox/check` is green.
