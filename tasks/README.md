@@ -53,7 +53,7 @@ each against the code its dependencies actually delivered.
 |---|---|---|---|
 | [T09](T09-app-state.md) | App state, events, keys (pure, no terminal) | T08 | prête |
 | [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), gauge, braille graph, badge, panel frame | — | prête |
-| T11 | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | outlined |
+| [T11](T11-demo.md) | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | prête |
 | T12 | Overview panels: header + tabs, Model, GPU, CPU, Memory, Log, Last request | T10, T11 | outlined |
 | T13 | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T12 | outlined |
 | T14 | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T13 | outlined |
