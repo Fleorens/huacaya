@@ -131,7 +131,7 @@ at the top. Each row: `<time> ` in `Dim` (nothing for a line without time), then
 - `cpu_generating`: `demo::app(Generating)`, 40 × 6 → `50 %`, `temp  60 °C   3.5 GHz avg`,
   `load  8.33 7.14 5.56`; with `graphs: false` no braille character anywhere.
 - `memory_generating`: `demo::app(Generating)`, 40 × 5 → `RAM   `, `21.6/31.1 G`, `swap  `, `0.0/8.0 G`,
-  `model 19.2 G`; `demo::app(Down)` → `server 286.8 M` (the router only).
+  `model 19.2 G`; `demo::app(Down)` → `server 287 M` (the router only: 286.8 MiB, and `util::bytes` drops the decimal from 100 up).
 - `log_follow`: `demo::app(Generating)`, 70 × 6 → top row contains `follow ●`; the last inner row contains
   `10:00:32` and `all slots are idle`; no row contains `proxying request`.
 - `log_scroll_and_filter`: same app with `log_view.follow = false`, `log_view.scroll = 3` → top row contains
