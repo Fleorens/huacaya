@@ -4,5 +4,6 @@
 
 pub mod collect;
 pub mod config;
+pub mod dump;
 pub mod http;
 pub mod util;

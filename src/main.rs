@@ -5,7 +5,8 @@ use llamatop::config::Cli;
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     if cli.dump {
-        anyhow::bail!("--dump is not implemented yet (task T08)");
+        println!("{}", llamatop::dump::run(&cli)?);
+        return Ok(());
     }
     anyhow::bail!("the dashboard is not implemented yet (batch 2)")
 }
