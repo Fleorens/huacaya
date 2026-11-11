@@ -18,8 +18,8 @@ Run a sheet: `dev add llamatop @tasks/T01-util.md`. Order: the table's, top to b
 - Batch 1: **validée** (T01 → T08), reviewed by the orchestrator on 2026-11-11. Fixed in the review:
   `--dump` hung forever on a live but silent log stream (the 700 ms deadline was checked only when a line
   arrived); the GPU temperature lookup also matched `freq<N>_label` files.
-- Batch 2: **outlined** below, sheets to be written after the review of batch 1 and after `--dump` has been
-  compared with the real machine.
+- Batch 2: **outlined** below, sheets to be written after `--dump` has been compared with the real machine.
+  Exception: T10 (theme and widgets) uses nothing from batch 1, so it is written ahead and ready.
 
 ## Batch 1 — data layer (no screen)
 
@@ -46,7 +46,7 @@ orchestrator after review).
 | Sheet | Subject |
 |---|---|
 | T09 | App state, event loop (data tick + animation tick), terminal setup / restore / panic hook, `--demo` data generator |
-| T10 | Theme (true colour / 16 colours / `NO_COLOR`), widgets: gradient gauge, braille graph, badge, panel frame |
+| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), widgets: gradient gauge, braille graph, badge, panel frame — **prête** |
 | T11 | Responsive layout engine + Overview screen, `--snapshot WxH`, golden files at 4 sizes |
 | T12 | Models screen (table + details) |
 | T13 | Logs screen: follow, scroll, text filter, level filter; "Last request" from the timing lines |
