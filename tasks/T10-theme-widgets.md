@@ -231,8 +231,8 @@ Frame
 
 ## Acceptance criteria
 
-- [ ] The five `src/ui/` files exist with the exact public API above; `src/lib.rs` declares `pub mod ui;`.
-- [ ] Nothing outside `src/ui/`, `src/lib.rs` and `tests/ui_widgets.rs` changed (except `tasks/`).
-- [ ] The 17 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The five `src/ui/` files exist with the exact public API above; `src/lib.rs` declares `pub mod ui;`.
+- [x] Nothing outside `src/ui/`, `src/lib.rs` and `tests/ui_widgets.rs` changed (except `tasks/`).
+- [x] The 17 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) the gauge gradient and the braille graph look right in a real terminal.
