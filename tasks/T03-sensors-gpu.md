@@ -124,7 +124,7 @@ Same `sysroot()` helper as `tests/system.rs`. Float tolerance 0.01.
 
 ## Acceptance criteria
 
-- [ ] Exact public API above.
-- [ ] The 7 tests exist under these names and pass.
-- [ ] No fixture modified.
-- [ ] `bash .devbox/check` is green.
+- [x] Exact public API above.
+- [x] The 7 tests exist under these names and pass.
+- [x] No fixture modified.
+- [x] `bash .devbox/check` is green.
