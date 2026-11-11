@@ -56,7 +56,7 @@ each against the code its dependencies actually delivered.
 | [T11](T11-demo.md) | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | prête |
 | [T12](T12-panels-model.md) | Text helpers, header + tabs, Model and Last request panels | T10, T11 | prête |
 | [T13](T13-panels-machine.md) | GPU, CPU, Memory and Log panels | T12 | prête |
-| T14 | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | outlined |
+| [T14](T14-layout-overview.md) | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | prête |
 | T15 | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | outlined |
 | T16 | Models screen (table + details) | T14 | outlined |
 | T17 | Logs screen: follow, scroll, filter, level filter | T14 | outlined |
