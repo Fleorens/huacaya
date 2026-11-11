@@ -165,7 +165,7 @@ Float tolerance 0.01.
 
 ## Acceptance criteria
 
-- [ ] Exact public API above.
-- [ ] The 15 tests exist under these names and pass.
-- [ ] No fixture modified.
-- [ ] `bash .devbox/check` is green.
+- [x] Exact public API above.
+- [x] The 15 tests exist under these names and pass.
+- [x] No fixture modified.
+- [x] `bash .devbox/check` is green.
