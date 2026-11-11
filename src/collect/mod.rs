@@ -17,4 +17,6 @@ pub(crate) fn read_parsed<T: std::str::FromStr>(sysroot: &Path, relative: &str) 
     text.parse().ok()
 }
 
+pub mod gpu;
+pub mod sensors;
 pub mod system;
