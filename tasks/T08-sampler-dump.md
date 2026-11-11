@@ -117,8 +117,8 @@ Steps of `run`:
 
 ## Acceptance criteria
 
-- [ ] Exact public API above; `cargo run -- --dump --sysroot tests/fixtures/sysroot --url http://127.0.0.1:9
+- [x] Exact public API above; `cargo run -- --dump --sysroot tests/fixtures/sysroot --url http://127.0.0.1:9
       --log-cmd "cat tests/fixtures/journal/llama-server.txt"` prints the JSON report and exits 0.
-- [ ] The 7 tests exist under these names and pass.
-- [ ] No fixture modified; no collector module of T02–T07 changed (if one of them has a bug, STOP and report).
-- [ ] `bash .devbox/check` is green.
+- [x] The 7 tests exist under these names and pass.
+- [x] No fixture modified; no collector module of T02–T07 changed (if one of them has a bug, STOP and report).
+- [x] `bash .devbox/check` is green.
