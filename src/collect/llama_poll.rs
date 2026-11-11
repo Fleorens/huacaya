@@ -101,18 +101,15 @@ impl<F: Fetch> Poller<F> {
             return snapshot;
         }
 
-        // 2. `/props` only when not yet cached.
+        // 2. `/props` only when not yet cached. On failure nothing changes: while uncached, `router` is
+        // already `false` and `build_info` `None`, and the fetch is retried next round.
         if !self.props_cached {
-            match self.fetch.get("/props", &[]) {
-                Ok(body) => match crate::collect::llama::parse_props(&body) {
-                    Ok(props) => {
-                        self.router = props.router;
-                        self.build_info = props.build_info;
-                        self.props_cached = true;
-                    }
-                    Err(_) => self.fail_props(),
-                },
-                Err(_) => self.fail_props(),
+            let props =
+                self.fetch.get("/props", &[]).ok().and_then(|b| crate::collect::llama::parse_props(&b).ok());
+            if let Some(props) = props {
+                self.router = props.router;
+                self.build_info = props.build_info;
+                self.props_cached = true;
             }
         }
 
@@ -153,6 +150,8 @@ impl<F: Fetch> Poller<F> {
             let live = self.live_gen_tps(model.id.as_str(), &slots, now);
             active.push(ActiveModel { id: model.id.clone(), metrics, slots, live_gen_tps: live });
         }
+        // A model that left `Loaded` must not keep a stale reference for when it comes back.
+        self.live.retain(|id, _| active.iter().any(|a| &a.id == id));
 
         LlamaSnapshot {
             health: Health::Ok,
@@ -161,13 +160,6 @@ impl<F: Fetch> Poller<F> {
             models,
             active,
         }
-    }
-
-    /// `/props` failed: keep `router = false`, `build_info = None`, nothing cached (retried next round).
-    fn fail_props(&mut self) {
-        self.router = false;
-        self.build_info = None;
-        self.props_cached = false;
     }
 
     /// A snapshot with empty lists and the last-known props, for the health/models error paths.
