@@ -92,7 +92,7 @@ fn hwmon_temp_by_label(sysroot: &Path, hwmon: &str, label: &str) -> Option<f32> 
     let entries = std::fs::read_dir(&dir).ok()?;
     for entry in entries.flatten() {
         let name: String = entry.file_name().to_string_lossy().into_owned();
-        let Some(n) = freq_index(&name, "_label").or_else(|| temp_index(&name, "_label")) else {
+        let Some(n) = temp_index(&name, "_label") else {
             continue;
         };
         if read_trimmed(sysroot, &format!("{hwmon}/{name}"))

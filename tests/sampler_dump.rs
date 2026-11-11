@@ -149,6 +149,19 @@ fn dump_with_server_down() {
 }
 
 #[test]
+fn dump_with_silent_live_log() {
+    // A live stream that prints nothing (`journalctl -f` on an idle server) must not block the dump.
+    let cli = dump_cli("sleep 30");
+    let start = Instant::now();
+    let text = dump::run(&cli).expect("run is Ok");
+    assert!(start.elapsed() < Duration::from_secs(5), "dump took {:?}", start.elapsed());
+
+    let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
+    assert!(value["log_tail"].as_array().unwrap().is_empty());
+    assert_eq!(value["log_error"], serde_json::Value::Null);
+}
+
+#[test]
 fn dump_with_missing_log_program() {
     let cli = dump_cli("llamatop-no-such-program");
     let text = dump::run(&cli).expect("run is Ok");

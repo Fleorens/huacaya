@@ -36,21 +36,25 @@ pub fn run(cli: &Cli) -> Result<String> {
     let client = Client::new(&cli.url, cli.api_key(), Duration::from_secs(3));
     let llama = Poller::new(client).poll(Instant::now());
 
-    // 3. Follow the log for 700 ms (or until it ends), keeping the last 20 lines. Do not stop the
-    // command before the thread has ended: SIGKILL would skip the program's flush and drop buffered
-    // lines. `rx.iter()` returns once the thread drops `tx`, i.e. after the "ended" line or 700 ms.
+    // 3. Follow the log for 700 ms (or until it ends), keeping the last 20 lines. The deadline is
+    // enforced here, not in the sink: a live but silent stream (`journalctl -f` on an idle server)
+    // never calls the sink again, so a sink-side check would block forever. A command that ends in
+    // time has been read to EOF before the "ended" line, so killing it afterwards loses nothing.
     let (tx, rx) = mpsc::channel::<LogLine>();
-    let start = Instant::now();
+    let deadline = Instant::now() + Duration::from_millis(700);
     let mut log_tail = Vec::new();
-    let log_error = match logs::follow(&cli.log_cmd, move |line: LogLine| {
-        let source_ended = line.text.starts_with("log source ended:");
-        let too_late = start.elapsed() >= Duration::from_millis(700);
-        let _ = tx.send(line); // keep every line, including the "ended" one
-        !source_ended && !too_late
-    }) {
+    let log_error = match logs::follow(&cli.log_cmd, move |line: LogLine| tx.send(line).is_ok()) {
         Ok(mut follower) => {
-            let mut all: Vec<LogLine> = rx.iter().collect();
-            follower.stop(); // no-op if the thread already ended; kills a still-running live stream
+            let mut all: Vec<LogLine> = Vec::new();
+            while let Some(left) = deadline.checked_duration_since(Instant::now()) {
+                let Ok(line) = rx.recv_timeout(left) else { break };
+                let ended = line.text.starts_with("log source ended:");
+                all.push(line);
+                if ended {
+                    break;
+                }
+            }
+            follower.stop(); // kills a still-running stream, which unblocks and ends the thread
             log_tail = all.split_off(all.len().saturating_sub(20));
             None
         }
