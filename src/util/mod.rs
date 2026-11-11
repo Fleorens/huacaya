@@ -2,9 +2,9 @@
 //!
 //! See `docs/01-architecture.md` § 3 "Derived values". No I/O, no display strings in the data model.
 
-mod format;
-mod history;
-mod rate;
+pub mod format;
+pub mod history;
+pub mod rate;
 
 pub use format::{bytes, count, duration, short_model_name};
 pub use history::History;

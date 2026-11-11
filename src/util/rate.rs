@@ -8,6 +8,7 @@ pub struct Rate {
 }
 
 impl Rate {
+    /// A rate with no reference reading yet.
     pub fn new() -> Self {
         Rate { prev: None }
     }
@@ -24,14 +25,14 @@ impl Rate {
 
         let elapsed = now.duration_since(prev_time).as_secs_f64();
 
-        // Too close to measure: keep the old reference so the next reading has a baseline.
-        if elapsed < 1e-3 {
-            return None;
-        }
-
         // Counter went down (restart / reload): drop it, start fresh from this reading.
         if value < prev_value {
             self.prev = Some((value, now));
+            return None;
+        }
+
+        // Too close to measure: keep the old reference so the next reading has a baseline.
+        if elapsed < 1e-3 {
             return None;
         }
 

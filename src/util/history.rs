@@ -1,7 +1,9 @@
+use std::collections::VecDeque;
+
 /// Fixed-capacity series of samples; pushing on a full history drops the oldest sample.
 #[derive(Debug, Clone)]
 pub struct History {
-    buf: Vec<f32>,
+    buf: VecDeque<f32>,
     capacity: usize,
 }
 
@@ -9,31 +11,35 @@ impl History {
     /// `capacity` 0 is treated as 1.
     pub fn new(capacity: usize) -> Self {
         let capacity = capacity.max(1);
-        History { buf: Vec::with_capacity(capacity), capacity }
+        History { buf: VecDeque::with_capacity(capacity), capacity }
     }
 
+    /// Appends a sample, dropping the oldest one when full.
     pub fn push(&mut self, value: f32) {
         if self.buf.len() == self.capacity {
-            self.buf.remove(0);
+            self.buf.pop_front();
         }
-        self.buf.push(value);
+        self.buf.push_back(value);
     }
 
+    /// Number of stored samples.
     pub fn len(&self) -> usize {
         self.buf.len()
     }
 
+    /// True when no sample is stored.
     pub fn is_empty(&self) -> bool {
         self.buf.is_empty()
     }
 
+    /// Maximum number of samples kept.
     pub fn capacity(&self) -> usize {
         self.capacity
     }
 
     /// Most recent sample.
     pub fn last(&self) -> Option<f32> {
-        self.buf.last().copied()
+        self.buf.back().copied()
     }
 
     /// Largest sample, `None` when empty. NaN samples are ignored.
@@ -49,7 +55,7 @@ impl History {
     /// The `n` most recent samples, oldest first. Shorter than `n` when fewer are stored.
     pub fn tail(&self, n: usize) -> Vec<f32> {
         let start = self.buf.len().saturating_sub(n);
-        self.buf[start..].to_vec()
+        self.buf.range(start..).copied().collect()
     }
 }
 

@@ -1,15 +1,16 @@
 /// Binary units, one letter: `512 B`, `1.5 K`, `150 M`, `14.8 G`, `1.2 T`.
 /// One decimal when the scaled value is below 100, none from 100 up. Always one space before the unit.
 pub fn bytes(n: u64) -> String {
-    if n == 0 {
-        return "0 B".to_string();
-    }
     const UNITS: [&str; 5] = ["B", "K", "M", "G", "T"];
     let mut value = n as f64;
     let mut i = 0;
     while value >= 1024.0 && i < UNITS.len() - 1 {
         value /= 1024.0;
         i += 1;
+    }
+    // Whole bytes never carry a decimal: `5 B`, not `5.0 B`.
+    if i == 0 {
+        return format!("{} B", n);
     }
     let scaled = if value < 100.0 { format!("{:.1}", value) } else { format!("{:.0}", value) };
     format!("{} {}", scaled, UNITS[i])
@@ -75,6 +76,7 @@ mod tests {
         assert_eq!(bytes(15_894_315_008), "14.8 G");
         assert_eq!(bytes(17_163_091_968), "16.0 G");
         assert_eq!(bytes(0), "0 B");
+        assert_eq!(bytes(5), "5 B");
     }
 
     #[test]
