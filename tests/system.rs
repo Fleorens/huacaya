@@ -141,3 +141,33 @@ fn structs_serialize_with_serde() {
     })
     .expect("MemSample serializes");
 }
+
+#[test]
+fn idle_going_backwards_does_not_panic() {
+    let mut reader = CpuReader::new();
+    // iowait (column 5) drops between readings while total grows.
+    let t0 = "cpu  100 0 100 500 300 0 0 0\ncpu0 100 0 100 500 300 0 0 0\n";
+    let t1 = "cpu  400 0 200 500 100 0 0 0\ncpu0 400 0 200 500 100 0 0 0\n";
+    reader.usage_from(t0);
+    let (usage, per_core) = reader.usage_from(t1);
+    let usage = usage.expect("total grew");
+    assert!((0.0..=100.0).contains(&usage));
+    assert_eq!(per_core.len(), 1);
+    assert!((0.0..=100.0).contains(&per_core[0]));
+}
+
+#[test]
+fn cpu_freq_skips_core_without_cpufreq() {
+    let root = std::env::temp_dir().join(format!("llamatop-freq-{}", std::process::id()));
+    let cpu = root.join("sys/devices/system/cpu");
+    std::fs::create_dir_all(cpu.join("cpu0/cpufreq")).expect("create cpu0");
+    std::fs::create_dir_all(cpu.join("cpu1")).expect("create cpu1"); // offline: no cpufreq/
+    std::fs::write(cpu.join("cpu0/cpufreq/scaling_cur_freq"), "3600000\n").expect("write freq");
+
+    let freq = read_cpu_freq(&root);
+    std::fs::remove_dir_all(&root).ok();
+
+    let freq = freq.expect("one readable core is enough");
+    assert!(approx(freq.avg_mhz, 3600.0));
+    assert!(approx(freq.max_mhz, 3600.0));
+}

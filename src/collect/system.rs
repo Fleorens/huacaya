@@ -7,7 +7,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::collect::read_trimmed;
+use crate::collect::{read_parsed, read_trimmed};
 
 /// Jiffies of one `cpu` line. `idle` = idle + iowait (columns 4 and 5).
 /// `total` = the sum of the first 8 columns (user … steal); guest columns are already in user.
@@ -31,9 +31,15 @@ pub fn parse_proc_stat(text: &str) -> Option<CpuStat> {
     let mut cores: Vec<CpuTimes> = Vec::new();
 
     for line in text.lines() {
-        let tokens: Vec<&str> = line.split_whitespace().collect();
-        let label = *tokens.first()?;
-        let nums: Vec<u64> = tokens[1..].iter().filter_map(|s| s.parse().ok()).collect();
+        let mut tokens = line.split_whitespace();
+        let Some(label) = tokens.next() else { continue };
+        if label != "cpu" && !is_cpu_label(label) {
+            continue; // skips `intr`, `ctxt`, … without parsing their numbers.
+        }
+        // A malformed token would shift the columns: skip the whole line instead.
+        let Ok(nums) = tokens.map(str::parse::<u64>).collect::<Result<Vec<u64>, _>>() else {
+            continue;
+        };
         // Need at least idle + iowait (columns 3 and 4) to be useful.
         if nums.len() < 5 {
             continue;
@@ -44,7 +50,7 @@ pub fn parse_proc_stat(text: &str) -> Option<CpuStat> {
         };
         if label == "cpu" {
             all = Some(times);
-        } else if is_cpu_label(label) {
+        } else {
             cores.push(times);
         }
     }
@@ -54,12 +60,7 @@ pub fn parse_proc_stat(text: &str) -> Option<CpuStat> {
 
 /// A directory name like `cpu0`…`cpu15`: `cpu` followed by digits only.
 fn is_cpu_label(label: &str) -> bool {
-    let mut chars = label.chars();
-    if chars.next() != Some('c') || chars.next() != Some('p') || chars.next() != Some('u') {
-        return false;
-    }
-    let rest: String = chars.collect();
-    !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit())
+    label.strip_prefix("cpu").is_some_and(|rest| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// Busy share between two readings, 0–100. `None` when `total` did not grow.
@@ -76,9 +77,10 @@ fn core_usage_pct(prev: CpuTimes, cur: CpuTimes) -> f32 {
         return 0.0;
     }
     let delta_total = cur.total - prev.total;
-    let delta_idle = cur.idle - prev.idle;
+    // iowait can go backwards on Linux: saturate rather than underflow, then clamp.
+    let delta_idle = cur.idle.saturating_sub(prev.idle);
     // Compute in f64 so large counters keep precision, return the data-model unit (f32).
-    (100.0 * (1.0 - delta_idle as f64 / delta_total as f64)) as f32
+    (100.0 * (1.0 - delta_idle as f64 / delta_total as f64)).clamp(0.0, 100.0) as f32
 }
 
 /// All fields in bytes. `used` = total − available.
@@ -171,8 +173,9 @@ pub fn read_cpu_freq(sysroot: &Path) -> Option<CpuFreq> {
         if !entry.file_type().ok().map(|ft| ft.is_dir()).unwrap_or(false) {
             continue;
         }
-        let path = cpu_dir.join(&*name).join("cpufreq/scaling_cur_freq");
-        let khz: u64 = std::fs::read_to_string(path).ok()?.trim().parse().ok()?;
+        // A core without a readable cpufreq (offline, no driver) is skipped, not fatal.
+        let relative = format!("sys/devices/system/cpu/{name}/cpufreq/scaling_cur_freq");
+        let Some(khz) = read_parsed::<u64>(sysroot, &relative) else { continue };
         freqs_khz.push(khz);
     }
 
@@ -194,7 +197,7 @@ pub fn read_uptime(sysroot: &Path) -> Option<u64> {
 
 /// Trimmed content of `proc/sys/kernel/hostname`; `None` when missing or empty.
 pub fn read_hostname(sysroot: &Path) -> Option<String> {
-    read_trimmed(sysroot, "proc/sys/kernel/hostname")
+    read_trimmed(sysroot, "proc/sys/kernel/hostname").filter(|h| !h.is_empty())
 }
 
 /// Reads and parses `proc/meminfo`.
@@ -234,16 +237,9 @@ impl CpuReader {
 
     /// Reads `proc/stat`, `proc/loadavg` and cpufreq under `sysroot`.
     pub fn sample(&mut self, sysroot: &Path) -> CpuSample {
-        let Some(stat_text) = read_trimmed(sysroot, "proc/stat") else {
-            return CpuSample {
-                usage_pct: None,
-                per_core_pct: Vec::new(),
-                freq: read_cpu_freq(sysroot),
-                load: read_load(sysroot),
-            };
-        };
-
-        let (usage_pct, per_core_pct) = self.usage_from(&stat_text);
+        let (usage_pct, per_core_pct) = read_trimmed(sysroot, "proc/stat")
+            .map(|text| self.usage_from(&text))
+            .unwrap_or((None, Vec::new()));
         CpuSample { usage_pct, per_core_pct, freq: read_cpu_freq(sysroot), load: read_load(sysroot) }
     }
 
