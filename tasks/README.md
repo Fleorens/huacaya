@@ -54,10 +54,11 @@ each against the code its dependencies actually delivered.
 | [T09](T09-app-state.md) | App state, events, keys (pure, no terminal) | T08 | prête |
 | [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), gauge, braille graph, badge, panel frame | — | prête |
 | [T11](T11-demo.md) | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | prête |
-| T12 | Overview panels: header + tabs, Model, GPU, CPU, Memory, Log, Last request | T10, T11 | outlined |
-| T13 | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T12 | outlined |
-| T14 | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T13 | outlined |
-| T15 | Models screen (table + details) | T13 | outlined |
-| T16 | Logs screen: follow, scroll, filter, level filter | T13 | outlined |
-| T17 | System screen (per-core bars, sensors, disks, network, processes) and help overlay | T13 | outlined |
-| T18 | Release build, install script for the aibox, README | T14–T17 | outlined |
+| [T12](T12-panels-model.md) | Text helpers, header + tabs, Model and Last request panels | T10, T11 | prête |
+| T13 | GPU, CPU, Memory and Log panels | T12 | outlined |
+| T14 | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | outlined |
+| T15 | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | outlined |
+| T16 | Models screen (table + details) | T14 | outlined |
+| T17 | Logs screen: follow, scroll, filter, level filter | T14 | outlined |
+| T18 | System screen (per-core bars, sensors, disks, network, processes) and help overlay | T14 | outlined |
+| T19 | Release build, install script for the aibox, README | T15–T18 | outlined |
