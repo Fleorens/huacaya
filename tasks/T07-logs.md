@@ -194,8 +194,8 @@ longer than 50 ms):
 
 ## Acceptance criteria
 
-- [ ] Exact public API above.
-- [ ] The 21 tests exist under these names and pass.
-- [ ] After `cargo test`, no `sleep 30` process is left running (`pgrep -x sleep` shows none of ours).
-- [ ] No fixture modified.
-- [ ] `bash .devbox/check` is green.
+- [x] Exact public API above.
+- [x] The 21 tests exist under these names and pass.
+- [x] After `cargo test`, no `sleep 30` process is left running (`pgrep -x sleep` shows none of ours).
+- [x] No fixture modified.
+- [x] `bash .devbox/check` is green.
