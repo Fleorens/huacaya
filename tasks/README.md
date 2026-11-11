@@ -39,17 +39,25 @@ orchestrator after review).
 
 **Gate between the batches** — on the aibox:
 1. ~~`bash scripts/capture-fixtures.sh`~~ done on 2026-11-11, see above;
-2. `llamatop --dump --api-key-file <file>`: every value checked against `amdgpu_top` / `sensors` / `free`.
+2. ~~`llamatop --dump --api-key-file <file>`~~ done on 2026-11-12 on the aibox: every value matches `free`,
+   `sensors`, `df`, `ps` and `/proc/loadavg` (GPU power is `power1_average`, the same file `sensors` reads as
+   PPT). Finding: each polling round makes the router print two `proxying request` lines, so the log view
+   hides `Proxy` lines by default (T09).
 
-## Batch 2 — the dashboard (outline, from `docs/02-ui.md`)
+## Batch 2 — the dashboard (from `docs/02-ui.md`)
 
-| Sheet | Subject |
-|---|---|
-| T09 | App state, event loop (data tick + animation tick), terminal setup / restore / panic hook, `--demo` data generator |
-| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), widgets: gradient gauge, braille graph, badge, panel frame — **prête** |
-| T11 | Responsive layout engine + Overview screen, `--snapshot WxH`, golden files at 4 sizes |
-| T12 | Models screen (table + details) |
-| T13 | Logs screen: follow, scroll, text filter, level filter; "Last request" from the timing lines |
-| T14 | System screen: per-core bars, all sensors, disks, network, processes |
-| T15 | Help overlay, pause, refresh speed, compact mode, "terminal too small" |
-| T16 | Release build, install script for the aibox, README with screenshots |
+Re-split on 2026-11-12 into smaller sheets, one per session. Sheets are written one or two ahead of the queue,
+each against the code its dependencies actually delivered.
+
+| Sheet | Subject | Depends on | Status |
+|---|---|---|---|
+| [T09](T09-app-state.md) | App state, events, keys (pure, no terminal) | T08 | prête |
+| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), gauge, braille graph, badge, panel frame | — | prête |
+| T11 | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | outlined |
+| T12 | Overview panels: header + tabs, Model, GPU, CPU, Memory, Log, Last request | T10, T11 | outlined |
+| T13 | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T12 | outlined |
+| T14 | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T13 | outlined |
+| T15 | Models screen (table + details) | T13 | outlined |
+| T16 | Logs screen: follow, scroll, filter, level filter | T13 | outlined |
+| T17 | System screen (per-core bars, sensors, disks, network, processes) and help overlay | T13 | outlined |
+| T18 | Release build, install script for the aibox, README | T14–T17 | outlined |
