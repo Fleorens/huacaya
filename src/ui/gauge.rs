@@ -6,10 +6,12 @@ use ratatui::widgets::Widget;
 
 use crate::ui::theme::{Role, Theme, gauge_color};
 
+// Partial cells, one to seven eighths.
+const PARTIALS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
+
 /// The bar's characters: `width` cells. With `e = (ratio * width * 8).round()` eighths (`ratio`
 /// clamped to 0..=1, NaN counts as 0): `e / 8` cells `█`, then, when `e % 8 > 0`, one cell from
 /// `▏▎▍▌▋▊▉` (index `e % 8`, 1-based), then `░` up to `width`. Always exactly `width` characters.
-const PARTIALS: [char; 7] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉'];
 pub fn bar_cells(ratio: f64, width: u16) -> String {
     let ratio = ratio.clamp(0.0, 1.0);
     let e = (ratio * width as f64 * 8.0).round() as u32;

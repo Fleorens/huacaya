@@ -22,7 +22,7 @@ pub fn braille_rows(values: &[f32], max: f32, width: u16, height: u16) -> Vec<St
     if width == 0 || height == 0 {
         return Vec::new();
     }
-    let max_ok = max.is_finite() && max > 0.0;
+    let max_ok = !max.is_nan() && max > 0.0;
 
     // The graph shows the last `2 * width` values, newest at the right; pad the left with blanks.
     let n = (width as usize) * 2;
@@ -80,14 +80,8 @@ impl Widget for BrailleGraph<'_> {
         let color = self.theme.color(self.accent);
         for (y, line) in rows.iter().enumerate() {
             let ry = area.y + y as u16;
-            if ry >= area.y + area.height {
-                break;
-            }
             for (x, ch) in line.chars().enumerate() {
                 let rx = area.x + x as u16;
-                if rx >= area.x + area.width {
-                    break;
-                }
                 if ch == ' ' {
                     continue;
                 }

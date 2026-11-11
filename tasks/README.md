@@ -52,7 +52,7 @@ each against the code its dependencies actually delivered.
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
 | [T09](T09-app-state.md) | App state, events, keys (pure, no terminal) | T08 | prête |
-| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), gauge, braille graph, badge, panel frame | — | livrée |
+| [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), gauge, braille graph, badge, panel frame | — | validée |
 | [T11](T11-demo.md) | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | prête |
 | [T12](T12-panels-model.md) | Text helpers, header + tabs, Model and Last request panels | T10, T11 | prête |
 | [T13](T13-panels-machine.md) | GPU, CPU, Memory and Log panels | T12 | prête |

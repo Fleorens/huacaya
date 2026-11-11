@@ -74,6 +74,7 @@ pub struct Theme {
 }
 
 impl Theme {
+    /// The palette for `mode`.
     pub fn new(mode: ColorMode) -> Self {
         Theme { mode }
     }
@@ -136,9 +137,11 @@ pub fn hot_mark(severity: Severity) -> &'static str {
     }
 }
 
-/// Thresholds of `docs/02-ui.md` § 4, `(warning, critical)`.
+/// Thresholds of `docs/02-ui.md` § 4, `(warning, critical)`: percentages.
 pub const PCT_THRESHOLDS: (f32, f32) = (75.0, 90.0);
+/// GPU junction temperature, °C.
 pub const GPU_JUNCTION_THRESHOLDS: (f32, f32) = (85.0, 95.0);
+/// CPU package temperature, °C.
 pub const CPU_TEMP_THRESHOLDS: (f32, f32) = (80.0, 95.0);
 
 /// Per channel `from + (to - from) * t` in `f32`, `t` clamped to 0..=1, then `.round()` to `u8`.
