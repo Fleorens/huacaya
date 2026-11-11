@@ -59,6 +59,6 @@ each against the code its dependencies actually delivered.
 | [T14](T14-layout-overview.md) | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | prête |
 | [T15](T15-run-loop.md) | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | prête |
 | [T16](T16-models-screen.md) | Models screen (table + details) | T14 | prête |
-| T17 | Logs screen (status bar, filter typing) and help overlay | T16 | outlined |
+| [T17](T17-logs-help.md) | Logs screen (status bar, filter typing) and help overlay | T16 | prête |
 | T18 | System screen (per-core bars, sensors, disks, network, processes) | T17 | outlined |
 | T19 | Release build, install script for the aibox, README | T15–T18 | outlined |
