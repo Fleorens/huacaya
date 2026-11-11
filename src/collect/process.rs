@@ -1,6 +1,6 @@
 //! The `llama-server` processes, read from `proc/<pid>/` under the sysroot.
 //!
-//! Parsing (`parse_proc_sample`) is pure and unit-tested; `read_server_procs` only does I/O.
+//! Parsing (`parse_proc_sample`) is pure; `read_server_procs` only does I/O.
 
 use std::path::Path;
 
@@ -39,15 +39,24 @@ pub fn read_server_procs(sysroot: &Path) -> Vec<ProcSample> {
     let mut procs = Vec::new();
     for entry in entries.flatten() {
         // Only numeric directory names are processes (`proc/net`, `proc/sys` are skipped).
-        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.is_empty() || !name.bytes().all(|b| b.is_ascii_digit()) {
+            continue;
+        }
+        let Ok(pid) = name.parse::<u32>() else {
             continue;
         };
         let comm = read_trimmed(sysroot, &format!("proc/{}/comm", pid)).unwrap_or_default();
         if comm != "llama-server" {
             continue;
         }
-        let status = read_trimmed(sysroot, &format!("proc/{}/status", pid)).unwrap_or_default();
-        let cmdline = read_cmdline(sysroot, pid);
+        // A process can exit between `read_dir` and these reads: skip it rather than publish zeros.
+        let Some(status) = read_trimmed(sysroot, &format!("proc/{}/status", pid)) else {
+            continue;
+        };
+        let Some(cmdline) = read_cmdline(sysroot, pid) else {
+            continue;
+        };
         procs.push(parse_proc_sample(pid, &status, &cmdline));
     }
 
@@ -56,9 +65,15 @@ pub fn read_server_procs(sysroot: &Path) -> Vec<ProcSample> {
 }
 
 /// `llama-server` arguments, split from the NUL-separated `cmdline` (which often has a trailing NUL).
-fn read_cmdline(sysroot: &Path, pid: u32) -> Vec<String> {
-    let bytes = std::fs::read(sysroot.join(format!("proc/{}/cmdline", pid))).unwrap_or_default();
-    String::from_utf8_lossy(&bytes).split('\0').filter(|s| !s.is_empty()).map(|s| s.to_string()).collect()
+fn read_cmdline(sysroot: &Path, pid: u32) -> Option<Vec<String>> {
+    let bytes = std::fs::read(sysroot.join(format!("proc/{}/cmdline", pid))).ok()?;
+    Some(
+        String::from_utf8_lossy(&bytes)
+            .split('\0')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect(),
+    )
 }
 
 /// Builds a sample from a process's `status` and parsed `cmdline`.
@@ -85,7 +100,7 @@ fn parse_rss(status: &str) -> u64 {
         .find(|l| l.starts_with("VmRSS:"))
         .and_then(|l| l.split_whitespace().nth(1))
         .and_then(|v| v.parse::<u64>().ok())
-        .map(|kb| kb * 1024)
+        .map(|kb| kb.saturating_mul(1024))
         .unwrap_or(0)
 }
 

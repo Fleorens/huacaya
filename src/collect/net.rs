@@ -1,6 +1,7 @@
 //! Network traffic, read from `proc/net/dev` under the sysroot.
 //!
-//! Parsing (`parse_net_dev`, `NetReader::rates`) is pure and unit-tested; `sample` only does I/O.
+//! Parsing (`parse_net_dev`) is pure; `NetReader::rates` computes rates from stored baselines and
+//! `sample` only does I/O.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -65,7 +66,7 @@ impl NetReader {
             return Vec::new();
         };
         let counters: Vec<NetCounters> =
-            parse_net_dev(&text).into_iter().filter(|c| c.rx_bytes + c.tx_bytes > 0).collect();
+            parse_net_dev(&text).into_iter().filter(|c| c.rx_bytes != 0 || c.tx_bytes != 0).collect();
         self.rates(counters, now)
     }
 

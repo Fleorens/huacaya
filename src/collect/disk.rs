@@ -25,26 +25,25 @@ pub fn disk_usage(path: &Path) -> Option<DiskSample> {
     let c_path = CString::new(path.as_os_str().as_bytes()).ok()?;
     let mut stat: MaybeUninit<libc::statvfs> = MaybeUninit::uninit();
 
-    unsafe {
-        // SAFETY: `c_path` is a null-terminated string valid for the whole call, and `stat` is a
-        // correctly aligned buffer of `libc::statvfs`; libc writes it only on success and returns
-        // non-zero (leaving the buffer untouched) on failure.
+    // SAFETY: `c_path` is a NUL-terminated string valid for the whole call, and `stat` is a
+    // correctly aligned `libc::statvfs` buffer; libc fills every field when it returns 0, so
+    // `assume_init` only runs on success.
+    let stat = unsafe {
         if libc::statvfs(c_path.as_ptr(), stat.as_mut_ptr()) != 0 {
             return None;
         }
-        // libc populated every field before returning 0.
-        let stat = stat.assume_init();
-        if stat.f_blocks == 0 {
-            return None;
-        }
-
-        let frsize = stat.f_frsize;
-        let total = stat.f_blocks * frsize;
-        let used = (stat.f_blocks - stat.f_bfree) * frsize;
-        let available = stat.f_bavail * frsize;
-
-        Some(DiskSample { mount: path.display().to_string(), total, used, available })
+        stat.assume_init()
+    };
+    if stat.f_blocks == 0 {
+        return None;
     }
+
+    let frsize = stat.f_frsize;
+    let total = stat.f_blocks.saturating_mul(frsize);
+    let used = stat.f_blocks.saturating_sub(stat.f_bfree).saturating_mul(frsize);
+    let available = stat.f_bavail.saturating_mul(frsize);
+
+    Some(DiskSample { mount: path.display().to_string(), total, used, available })
 }
 
 /// `disk_usage` of each path, skipping the `None`s, keeping the order.
