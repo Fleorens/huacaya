@@ -128,22 +128,22 @@ fn layout_invariants() {
             assert!(l.model.is_some(), "model dropped at {w}x{h}");
             assert!(l.gpu.is_some(), "gpu dropped at {w}x{h}");
             if let Some(r) = l.model {
-                assert!(r.height >= 8);
+                assert!(r.height >= llamatop::ui::panels::model::MIN_HEIGHT);
             }
             if let Some(r) = l.gpu {
-                assert!(r.height >= 6);
+                assert!(r.height >= llamatop::ui::panels::gpu::MIN_HEIGHT);
             }
             if let Some(r) = l.request {
-                assert!(r.height >= 5);
+                assert!(r.height >= llamatop::ui::panels::request::MIN_HEIGHT);
             }
             if let Some(r) = l.cpu {
-                assert!(r.height >= 5);
+                assert!(r.height >= llamatop::ui::panels::cpu::MIN_HEIGHT);
             }
             if let Some(r) = l.memory {
-                assert!(r.height >= 5);
+                assert!(r.height >= llamatop::ui::panels::memory::MIN_HEIGHT);
             }
             if let Some(r) = l.log {
-                assert!(r.height >= 3);
+                assert!(r.height >= llamatop::ui::panels::log::MIN_HEIGHT);
             }
         }
     }
@@ -219,6 +219,26 @@ fn ansi_snapshot() {
     assert!(ansi.contains("\x1b[0m"));
     let plain = snapshot(&app, &theme, 100, 30, false);
     assert!(!plain.contains("\x1b"));
+}
+
+#[test]
+fn ansi_snapshot_ansi16() {
+    let app = demo_app(DemoState::Generating);
+    let theme = Theme::new(ColorMode::Ansi16);
+    let ansi = snapshot(&app, &theme, 100, 30, true);
+    // Server = Yellow (33), Border = DarkGray (90): named colours map to 30–37 / 90–97.
+    assert!(ansi.contains("\x1b[0m\x1b[33m"));
+    assert!(ansi.contains("\x1b[0m\x1b[90m"));
+}
+
+#[test]
+fn ansi_sgr_params_are_separated() {
+    let app = demo_app(DemoState::Generating);
+    let theme = Theme::new(ColorMode::TrueColor);
+    let ansi = snapshot(&app, &theme, 100, 30, true);
+    // Bold + reversed must never be glued into the invalid `17`.
+    assert!(!ansi.contains("\x1b[17"));
+    assert!(ansi.contains("\x1b[0m\x1b[1;"));
 }
 
 // --------------------------------------------------------------------------- Golden files

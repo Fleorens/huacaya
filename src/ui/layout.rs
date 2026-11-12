@@ -87,10 +87,10 @@ fn wide(area: Rect, header: Rect, body: Rect) -> OverviewLayout {
 
     OverviewLayout {
         header,
-        model: Some(model),
-        request: keep_request.then_some(request),
+        model: Some(model.intersection(body)),
+        request: keep_request.then_some(request.intersection(body)),
         log,
-        gpu: Some(gpu),
+        gpu: Some(gpu.intersection(body)),
         cpu: Some(cpu),
         memory: Some(memory),
         graphs: true,
@@ -116,10 +116,10 @@ fn medium(header: Rect, body: Rect) -> OverviewLayout {
 
     OverviewLayout {
         header,
-        model: Some(model),
+        model: Some(model.intersection(body)),
         request: None,
         log,
-        gpu: Some(gpu),
+        gpu: Some(gpu.intersection(body)),
         cpu: if cpu_memory { Some(cpu) } else { None },
         memory: if cpu_memory { Some(memory) } else { None },
         graphs: true,
@@ -145,10 +145,10 @@ fn narrow(header: Rect, body: Rect) -> OverviewLayout {
 
     OverviewLayout {
         header,
-        model: Some(model),
+        model: Some(model.intersection(body)),
         request: None,
         log,
-        gpu: Some(gpu),
+        gpu: Some(gpu.intersection(body)),
         cpu: if cpu_memory { Some(cpu) } else { None },
         memory: if cpu_memory { Some(memory) } else { None },
         graphs: false,

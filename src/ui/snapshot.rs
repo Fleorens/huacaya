@@ -72,38 +72,47 @@ fn ansi_rows(buffer: &ratatui::buffer::Buffer, width: u16, height: u16) -> Strin
     out
 }
 
-/// The SGR sequence for `style`: `\x1b[0m`, then `1` for bold, `7` for reversed, then the foreground
-/// colour code (`38;2;r;g;b` for `Rgb`, `3x`/`9x` for the 16 named colours).
+/// The SGR sequence for `style`: always `\x1b[0m` (so no attribute leaks from the previous cell), then
+/// `\x1b[p1;p2;…m` with `1` for bold, `7` for reversed and the foreground colour code, if any.
 fn sgr(style: &Style) -> String {
-    let mut params = String::new();
+    let mut params: Vec<String> = Vec::new();
     if style.add_modifier.contains(Modifier::BOLD) {
-        params.push('1');
+        params.push("1".to_string());
     }
     if style.add_modifier.contains(Modifier::REVERSED) {
-        params.push('7');
+        params.push("7".to_string());
     }
-    if let Some(fg) = style.fg
-        && let Some(code) = color_code(fg)
-    {
-        if !params.is_empty() {
-            params.push(';');
-        }
-        params.push_str(&code);
+    if let Some(code) = style.fg.and_then(color_code) {
+        params.push(code);
     }
-    if params.is_empty() { "\x1b[0m".to_string() } else { format!("\x1b[{}m", params) }
+    if params.is_empty() { "\x1b[0m".to_string() } else { format!("\x1b[0m\x1b[{}m", params.join(";")) }
 }
 
 /// The SGR foreground colour code for the 16 named colours and true colour; `None` for anything else.
 fn color_code(c: Color) -> Option<String> {
-    match c {
-        Color::Rgb(r, g, b) => Some(format!("38;2;{r};{g};{b}")),
-        Color::Indexed(i) => match i {
-            0..=7 => Some(format!("3{i}")),
-            8..=15 => Some(format!("9{}", i - 8)),
-            _ => None,
-        },
-        _ => None,
-    }
+    let code = match c {
+        Color::Rgb(r, g, b) => return Some(format!("38;2;{r};{g};{b}")),
+        Color::Indexed(i @ 0..=7) => 30 + i,
+        Color::Indexed(i @ 8..=15) => 90 + i - 8,
+        Color::Black => 30,
+        Color::Red => 31,
+        Color::Green => 32,
+        Color::Yellow => 33,
+        Color::Blue => 34,
+        Color::Magenta => 35,
+        Color::Cyan => 36,
+        Color::Gray => 37,
+        Color::DarkGray => 90,
+        Color::LightRed => 91,
+        Color::LightGreen => 92,
+        Color::LightYellow => 93,
+        Color::LightBlue => 94,
+        Color::LightMagenta => 95,
+        Color::LightCyan => 96,
+        Color::White => 97,
+        _ => return None,
+    };
+    Some(code.to_string())
 }
 
 /// Parses `WxH` (`140x40`; `X` accepted too). Both between 1 and 1000, else `None`.
