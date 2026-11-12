@@ -190,7 +190,7 @@ equal `c` the lines keep the order listed. Each raw line is
 
 ## Acceptance criteria
 
-- [ ] `src/app/demo.rs` exists with the exact public API above; `src/app/mod.rs` declares `pub mod demo;`.
-- [ ] Nothing outside the deliverable changed (except `tasks/`).
-- [ ] The 9 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] `src/app/demo.rs` exists with the exact public API above; `src/app/mod.rs` declares `pub mod demo;`.
+- [x] Nothing outside the deliverable changed (except `tasks/`).
+- [x] The 9 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
