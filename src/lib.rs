@@ -8,5 +8,6 @@ pub mod config;
 pub mod dump;
 pub mod http;
 pub mod settings;
+pub mod setup;
 pub mod ui;
 pub mod util;

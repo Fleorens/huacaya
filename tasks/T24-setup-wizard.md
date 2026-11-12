@@ -125,9 +125,9 @@ answers `HTTP 401` for the key `wrong`, else two models, one loaded
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; `llamatop setup` runs the dialogue; the dashboard runs it when there is no
+- [x] The public API above exists; `llamatop setup` runs the dialogue; the dashboard runs it when there is no
       configuration, under the conditions above.
-- [ ] The 9 tests above exist under these names and pass.
-- [ ] README: the first run and `llamatop setup` are described.
-- [ ] `bash .devbox/check` is green.
+- [x] The 9 tests above exist under these names and pass.
+- [x] README: the first run and `llamatop setup` are described.
+- [x] `bash .devbox/check` is green.
 - [ ] (On a terminal, not by the model) `llamatop setup` hides the key while typing.
