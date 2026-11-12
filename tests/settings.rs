@@ -38,6 +38,7 @@ fn paths() {
         Some(PathBuf::from("/h/.config/llamatop/config.toml"))
     );
     assert_eq!(settings::path_from(None, None), None);
+    assert_eq!(settings::path_from(None, Some("")), None, "an empty HOME gives no default");
 }
 
 #[test]

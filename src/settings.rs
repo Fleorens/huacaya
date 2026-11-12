@@ -50,7 +50,8 @@ pub fn path_from(xdg_config_home: Option<&str>, home: Option<&str>) -> Option<Pa
     let base = match xdg_config_home {
         Some(dir) if !dir.is_empty() => PathBuf::from(dir),
         _ => {
-            let dir = home?;
+            // An empty HOME would give a path relative to the current directory: no default then.
+            let dir = home.filter(|dir| !dir.is_empty())?;
             Path::new(dir).join(".config")
         }
     };
