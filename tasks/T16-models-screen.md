@@ -115,8 +115,8 @@ then `screens::models::render` on the body (everything under the header). Nothin
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; `draw.rs` routes the Models screen.
-- [ ] Nothing outside the deliverable changed (except `tasks/`).
-- [ ] The 8 tests above exist under these names and pass; the Overview golden files are unchanged.
-- [ ] `bash .devbox/check` is green.
+- [x] The files exist with the exact public API above; `draw.rs` routes the Models screen.
+- [x] Nothing outside the deliverable changed (except `tasks/`).
+- [x] The 8 tests above exist under these names and pass; the Overview golden files are unchanged.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) `--demo`, key `2`, then `↑` / `↓` move the selection.

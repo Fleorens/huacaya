@@ -1,0 +1,30 @@
+╭ llamatop ─ aibox-flo ─ up 4d 3h ───────────────────────────────────────────────────── ● server ok  b12151 ─ 10:21:03 ╮
+│ 1 Overview   2 Models   3 Logs   4 System                                                                  ? help  q │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭ Models ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│   state       model                                                        quant    ctx      moe   spec          img │
+│   ○ unloaded  Ornith-1.5-35B-A3B                                           Q4_K_M   163.8K   16    -             img │
+│   ○ unloaded  gsq-qwen3.8-27b                                                       65.5K    -     draft-mtp         │
+│   ○ unloaded  muse-glimmer-30b                                                      131.1K   -     draft-dflash      │
+│▶  ● loaded    Cyber-Tiel-Coder-35B-A3B                                     Q4_K_M   196.6K   21    draft-mtp         │
+│   ○ unloaded  Qwen3-8B                                                     Q4_K_M   32.8K    -     -                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭ Details ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│id          peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M                                                     │
+│state       ● loaded                                                                                                  │
+│path        /srv/models/direct/Cyber-Tiel-Coder-35B-A3B-MTP-UD-Q4_K_M.gguf                                            │
+│context     196.6K of 262.1K trained                                                                                  │
+│offload     ngl 99   n-cpu-moe 21   threads 8                                                                         │
+│speculative draft-mtp                                                                                                 │
+│size        21.0 G   35.5B params   Q4_K - Medium                                                                     │
+│                                                                                                                      │
+│speed       gen 56.7 t/s   prompt 591 t/s                                                                             │
+│cache       98 % reused   draft 64 % accepted                                                                         │
+│requests    1 processing   0 deferred                                                                                 │
+│slot        63.8K / 196.6K tokens                                                                                     │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
