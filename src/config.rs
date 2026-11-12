@@ -93,7 +93,8 @@ impl Cli {
         {
             return Some(key.trim().to_string());
         }
-        self.api_key_inline.clone()
+        // Same hygiene as the other sources: `api_key = " sk-x "` or `""` must not reach the header as is.
+        self.api_key_inline.as_deref().map(str::trim).filter(|key| !key.is_empty()).map(str::to_string)
     }
 
     /// Fills, from `settings`, every value the user did not give by flag or environment variable: `url` and

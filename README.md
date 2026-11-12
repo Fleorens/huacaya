@@ -26,7 +26,15 @@ server down. It is **read-only**: it never loads, unloads or configures a model.
 
 ## Install
 
-On the build machine (Rust 2024, no system library needed):
+As a Debian package (Debian, Ubuntu…), built on the devbox:
+
+```sh
+scripts/build-deb.sh                           # prints the path of llamatop_<version>_amd64.deb
+sudo apt install ./llamatop_0.2.0_amd64.deb    # /usr/bin/llamatop
+llamatop                                       # the first run asks for the server and its key
+```
+
+From source (Rust 2024, no system library needed):
 
 ```sh
 cargo build --release          # the binary is target/release/llamatop

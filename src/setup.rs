@@ -226,7 +226,9 @@ pub fn read_secret(prompt: &str) -> Result<String> {
                 KeyCode::Backspace => {
                     result.pop();
                 }
-                KeyCode::Char(c) => {
+                // Ctrl-U, Alt-x… are shortcuts, not characters of the key: an invisible stray letter would
+                // make the key wrong with no way to see why.
+                KeyCode::Char(c) if !key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => {
                     result.push(c);
                 }
                 _ => {}
