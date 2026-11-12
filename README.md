@@ -64,7 +64,8 @@ answers to `~/.config/llamatop/config.toml` (mode 600) and starts. `llamatop set
 | `4` System | per-core usage, every temperature sensor, disks, network, `llama-server` processes |
 
 The machine panels describe the machine llamatop runs on. To see the server's machine from elsewhere, run the
-[agent](#agent) on the server. GPU support: AMD (amdgpu sysfs); NVIDIA is coming.
+[agent](#agent) on the server. GPU support: AMD (amdgpu sysfs) and NVIDIA (`nvidia-smi`, shipped with the
+driver).
 
 The log comes from any command whose output is the server's log: by default
 `journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise`, which suits llama.cpp run as a
