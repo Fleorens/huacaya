@@ -33,9 +33,7 @@ fn system_is_plausible() {
             let gpu = &s.gpus[0];
             let busy = gpu.busy_pct.unwrap();
             assert!((0.0..=100.0).contains(&busy), "busy {busy} in 0..=100 in {state:?}");
-            if let (Some(vram_used), Some(vram_total)) = (gpu.vram_used, gpu.vram_total) {
-                assert!(vram_used <= vram_total, "vram in {state:?}");
-            }
+            assert!(gpu.vram_used.unwrap() <= gpu.vram_total.unwrap(), "vram in {state:?}");
 
             let mem = s.mem.unwrap();
             assert!(mem.used <= mem.total, "mem in {state:?}");
@@ -167,6 +165,7 @@ fn log_split_invariant() {
     for l in &second {
         assert!(l.task.is_none() || l.task == Some(9001), "cycle 1 carries task 9001, got {:?}", l.task);
     }
+    assert!(second.iter().any(|l| l.task == Some(9001)), "cycle 1 has a task 9001 line");
 
     assert!(log_lines(5.0, 5.0).is_empty());
 }
@@ -176,6 +175,7 @@ fn demo_app() {
     let gen_snap = app(DemoState::Generating);
     assert_eq!(gen_snap.gen_tps.len(), 120);
     assert_eq!(gen_snap.cpu_usage.len(), 120);
+    assert_eq!(gen_snap.logs.len(), log_lines(0.0, CYCLE_S).len(), "one log cycle replayed once");
 
     let req = gen_snap.last_request.as_ref().unwrap();
     assert_eq!(req.prompt_tokens, Some(8192));

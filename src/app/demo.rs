@@ -18,7 +18,7 @@ use crate::collect::sensors::TempReading;
 use crate::collect::system::{CpuFreq, CpuSample, LoadAvg, MemSample};
 
 /// The model id of the loaded one (model 4 below).
-pub const LOADED_ID: &str = "peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M";
+pub(crate) const LOADED_ID: &str = "peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M";
 
 /// The states the demo can show. `clap::ValueEnum` so that T13 can take it as `--demo-state <state>`
 /// (values `idle`, `prompt`, `generating`, `loading`, `down`).
@@ -331,14 +331,13 @@ fn active_model(state: DemoState, t: f64) -> ActiveModel {
 /// equal results.
 pub fn app(state: DemoState) -> App {
     let mut app = App::new(1000);
-    let lines = log_lines(0.0, CYCLE_S);
     for s in 0..120 {
         let s = s as f64;
         app.apply(Event::System(system(s, state)));
         app.apply(Event::Llama(llama(s, state)));
-        for line in &lines {
-            app.apply(Event::Log(line.clone()));
-        }
+    }
+    for line in log_lines(0.0, CYCLE_S) {
+        app.apply(Event::Log(line));
     }
     app
 }
