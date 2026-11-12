@@ -1,6 +1,7 @@
 use std::io::IsTerminal;
+use std::time::Duration;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use clap::{CommandFactory, FromArgMatches, parser::ValueSource};
 
 use llamatop::app::run::run;
@@ -31,6 +32,32 @@ fn main() -> Result<()> {
     if let Some(Command::Setup) = cli.command {
         let path = path.as_deref().ok_or_else(|| anyhow!("no configuration file path"))?;
         setup::run_with_key(path, &current.unwrap_or_default(), cli.api_key())?;
+        return Ok(());
+    }
+
+    // `llamatop agent`: publish this machine's panels over HTTP.
+    if let Some(Command::Agent { listen, token_file, no_auth }) = cli.command {
+        let token = match token_file {
+            Some(path) => {
+                let text = std::fs::read_to_string(&path)
+                    .with_context(|| format!("reading token file {}", path.display()))?;
+                match text.lines().next().map(str::trim).filter(|line| !line.is_empty()) {
+                    Some(token) => Some(token.to_string()),
+                    None => return Err(anyhow!("token file {} is empty", path.display())),
+                }
+            }
+            None => None,
+        };
+        llamatop::agent::server::check_token_policy(&listen, token.as_deref(), no_auth)?;
+        let config = llamatop::agent::server::AgentConfig {
+            listen,
+            token,
+            sysroot: cli.sysroot.clone(),
+            mounts: cli.mounts.clone(),
+            log_cmd: cli.log_cmd.clone(),
+            interval: Duration::from_millis(cli.interval_ms),
+        };
+        llamatop::agent::server::run(config)?;
         return Ok(());
     }
 

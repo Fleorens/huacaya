@@ -116,6 +116,28 @@ and `--demo` is off. It asks for the server URL (and checks `<url>/health`), the
 current one; the key is never shown on screen), and the log command — a local `journalctl` for a server on
 the machine, otherwise an `ssh` to its host. The answers are written to the configuration file (mode 600).
 
+## Agent
+
+`llamatop agent`, run on the server's machine (by hand or a systemd unit), samples that machine and follows
+its log exactly as the dashboard does locally, and publishes three endpoints for remote llamatop dashboards:
+
+| Endpoint | Answer |
+|---|---|
+| `/v1/health` | `{"version":"…"}`, no token needed |
+| `/v1/system` | the machine snapshot as JSON (`503` until the first sample) |
+| `/v1/log?since=N` | log lines after sequence `N` (missing → `0`), as a page with a `next` to ask for |
+
+```sh
+llamatop agent --token-file /etc/llamatop/agent-token        # on the server
+llamatop --interval-ms 500 agent --listen 0.0.0.0:9099       # global flags come first
+```
+
+The agent reads the machine through the same global flags as the dashboard (`--sysroot`, `--mount`,
+`--log-cmd`, `--interval-ms`). It listens on `--listen` (default `0.0.0.0:9099`); the token is the first line
+of `--token-file` (`LLAMATOP_AGENT_TOKEN_FILE`). A token is required as soon as the agent listens beyond
+loopback, unless `--no-auth` is given (trusted network only) or a token is set. A client sends it as
+`Authorization: Bearer <token>`; `/v1/system` and `/v1/log` answer `401` without it, `/v1/health` does not.
+
 ## The safety rule
 
 On a llama.cpp router with autoload, a request naming a model that is not loaded **loads it** (tens of GB,
