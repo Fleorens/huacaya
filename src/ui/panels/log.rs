@@ -1,0 +1,112 @@
+//! The Log panel: the end of `app.visible_logs()`, coloured by level, with the filter and follow/scroll
+//! indicators on the top border. See `docs/02-ui.md` § 2.2.
+
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::text::{Line, Span};
+use ratatui::widgets::Widget;
+
+use crate::app::App;
+use crate::collect::logs::{Level, LogLine};
+use crate::ui::frame::panel;
+use crate::ui::panels::Ctx;
+use crate::ui::text::fit;
+use crate::ui::theme::{Role, Theme};
+
+/// Height needed, borders included (1 row inside).
+pub const MIN_HEIGHT: u16 = 3;
+
+/// The log panel: `frame::panel("Log", Role::Server, false, theme)` with the filter and follow/scroll
+/// indicators right-aligned on the top border, then the last `h` visible lines (oldest at the top),
+/// each `<time> ` in `Role::Dim` then the text coloured by level and cut to the panel width. No line:
+/// one `Dim` row `no log line yet`.
+pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
+    if area.width < 3 || area.height < 3 {
+        return;
+    }
+    let theme = ctx.theme;
+    let block = panel("Log", Role::Server, false, theme);
+    let inner = block.inner(area);
+    block.render(area, buf);
+
+    // The filter and follow/scroll indicators, right-aligned on the top border.
+    render_indicators(app, area, theme, buf);
+
+    let v = app.visible_logs();
+    if v.is_empty() {
+        buf.set_line(
+            inner.x,
+            inner.y,
+            &Line::from(Span::styled("no log line yet", theme.fg(Role::Dim))),
+            inner.width,
+        );
+        return;
+    }
+
+    // Show `v[end - h .. end]`, oldest at the top; `h` is the number of rows available.
+    let h = inner.height as usize;
+    let scroll = app.log_view.scroll;
+    let end = v.len().saturating_sub(scroll.min(v.len()));
+    let start = end.saturating_sub(h);
+
+    for (i, line) in v[start..end].iter().enumerate() {
+        let y = inner.y + i as u16;
+        if y >= inner.bottom() {
+            break;
+        }
+        render_line(line, theme, inner.x, y, inner.width, buf);
+    }
+}
+
+/// The top-border indicators: ` /<filter> ` (Warning) when the filter is not empty, then ` follow ● `
+/// (Good) when following, else ` scroll −<scroll> ` (Warning).
+fn render_indicators(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer) {
+    let mut parts: Vec<(String, Role)> = Vec::new();
+    if !app.log_view.filter.is_empty() {
+        parts.push((format!(" /{}", app.log_view.filter), Role::Warning));
+    }
+    if app.log_view.follow {
+        parts.push((" follow ● ".to_string(), Role::Good));
+    } else {
+        parts.push((format!(" scroll −{}", app.log_view.scroll), Role::Warning));
+    }
+
+    // Place the parts right-aligned on the top border, the last one at the right edge.
+    let y = area.y;
+    let right = area.x + area.width;
+    let mut x = right;
+    for (text, role) in parts.into_iter().rev() {
+        let w = text.chars().count() as u16;
+        x = x.saturating_sub(w);
+        let color = theme.color(role);
+        for (i, ch) in text.chars().enumerate() {
+            let cx = x + i as u16;
+            if cx >= right {
+                continue;
+            }
+            let Some(cell) = buf.cell_mut((cx, y)) else { continue };
+            cell.set_char(ch);
+            if let Some(color) = color {
+                cell.fg = color;
+            }
+        }
+    }
+}
+
+/// One log row: `<time> ` in `Role::Dim` (nothing without a time), then the text coloured by level and
+/// cut to `width` columns.
+fn render_line(line: &LogLine, theme: &Theme, x: u16, y: u16, width: u16, buf: &mut Buffer) {
+    let role = match line.level {
+        Level::Info => Role::Text,
+        Level::Warn => Role::Warning,
+        Level::Error => Role::Critical,
+    };
+    let time_w = line.time.as_ref().map(|t| t.chars().count() + 1).unwrap_or(0) as u16;
+    let text_w = width.saturating_sub(time_w);
+    let mut spans = Vec::new();
+    if let Some(t) = &line.time {
+        spans.push(Span::styled(format!("{t} "), theme.fg(Role::Dim)));
+    }
+    spans.push(Span::styled(fit(&line.text, text_w as usize), theme.fg(role)));
+    buf.set_line(x, y, &Line::from(spans), width);
+}
