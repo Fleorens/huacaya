@@ -64,6 +64,17 @@ pub struct Cli {
     /// The key from the configuration file.
     #[arg(skip)]
     pub api_key_inline: Option<String>,
+
+    /// Subcommand: the first-run setup dialogue.
+    #[command(subcommand)]
+    pub command: Option<Command>,
+}
+
+/// A subcommand of `llamatop`.
+#[derive(Debug, Clone, Copy, clap::Subcommand)]
+pub enum Command {
+    /// Ask for the server address and key, check them, save the configuration file.
+    Setup,
 }
 
 impl Cli {

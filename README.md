@@ -96,6 +96,18 @@ log_cmd = "journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-prec
 Every field is optional. Each value is taken from the flag, then the environment variable, then the file, then
 the built-in default — the first that is set wins (`flag > environment > file > default`).
 
+## Setup
+
+Installed as a package, `llamatop` works the first time it is typed: when there is no configuration yet, it
+asks where the llama.cpp server is and its API key, checks them against the server, saves the file, and
+starts. It is a plain question-and-answer dialogue on the terminal, before the dashboard: no TUI. The same
+dialogue runs anytime with `llamatop setup`.
+
+On the first run it starts automatically, on a terminal, when the file does not exist, no `--url` was given
+and `--demo` is off. It asks for the server URL (and checks `<url>/health`), the API key (empty keeps the
+current one; the key is never shown on screen), and the log command — a local `journalctl` for a server on
+the machine, otherwise an `ssh` to its host. The answers are written to the configuration file (mode 600).
+
 ## The safety rule
 
 On a llama.cpp router with autoload, a request naming a model that is not loaded **loads it** (tens of GB,
