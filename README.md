@@ -127,6 +127,19 @@ its log exactly as the dashboard does locally, and publishes three endpoints for
 | `/v1/system` | the machine snapshot as JSON (`503` until the first sample) |
 | `/v1/log?since=N` | log lines after sequence `N` (missing → `0`), as a page with a `next` to ask for |
 
+With the package, the agent is a systemd service, shipped disabled. On the server:
+
+```sh
+sudo install -d -m 700 /etc/llamatop
+head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' | sudo tee /etc/llamatop/agent-token >/dev/null
+sudo chmod 600 /etc/llamatop/agent-token
+sudo systemctl enable --now llamatop-agent
+sudo ufw allow from 192.168.1.0/24 to any port 9099 proto tcp     # if a firewall filters the LAN
+sudo cat /etc/llamatop/agent-token                                 # the token to give to llamatop setup
+```
+
+By hand:
+
 ```sh
 llamatop agent --token-file /etc/llamatop/agent-token        # on the server
 llamatop --interval-ms 500 agent --listen 0.0.0.0:9099       # global flags come first
