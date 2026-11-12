@@ -86,3 +86,11 @@ llama.cpp address and key (and later OpenCode's). The remote machine panels need
 | [T23](T23-config-file.md) | Configuration file `~/.config/llamatop/config.toml` | T22 | validée |
 | [T24](T24-setup-wizard.md) | First-run setup, `llamatop setup` | T23 | validée |
 | T25 | `.deb` package (`scripts/build-deb.sh`) — by the orchestrator | T24 | validée |
+
+## Batch 5 — the agent: the server's machine panels on any machine (2026-11-12)
+
+| Sheet | Subject | Depends on | Status |
+|---|---|---|---|
+| [T26](T26-agent-protocol.md) | Agent protocol: request parsing, routing, log ring, token (pure) | T24 | prête |
+| [T27](T27-agent-server.md) | `llamatop agent`: the server | T26 | prête |
+| [T28](T28-agent-client.md) | Dashboard side: `--agent`, `[agent]`, setup question | T27 | prête |
