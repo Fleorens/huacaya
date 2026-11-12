@@ -24,7 +24,7 @@ pub const MIN_HEIGHT: u16 = 6;
 /// when hot, and edge; the edge alone when junction is absent, as NVIDIA reports it), the power and fan,
 /// and the load graph. When the inner height is at least 10, three extra rows show the core
 /// clock/voltage/fan, the DRAM temperature and GTT, and the PCIe link. No system snapshot or no GPU:
-/// title `GPU`, one `Dim` row `no AMD GPU`.
+/// title `GPU`, one `Dim` row `no GPU`.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
@@ -54,12 +54,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 
     match gpu {
         None => {
-            buf.set_line(
-                inner.x,
-                y0,
-                &Line::from(Span::styled("no AMD GPU", theme.fg(Role::Dim))),
-                inner.width,
-            );
+            buf.set_line(inner.x, y0, &Line::from(Span::styled("no GPU", theme.fg(Role::Dim))), inner.width);
         }
         Some(g) => {
             // Row 1: load.
