@@ -1,5 +1,5 @@
-//! The Memory panel: RAM and swap gauges, and the resident memory of the model process (or the router).
-//! See `docs/02-ui.md` § 2.2.
+//! The Memory panel: RAM and swap gauges, the model instance and router resident memory, available
+//! and cached RAM, and the disk usage. See `docs/02-ui.md` § 2.2.
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -10,18 +10,18 @@ use crate::app::App;
 use crate::collect::process::ServerRole;
 use crate::ui::frame::panel;
 use crate::ui::panels::{Ctx, gauge_row};
-use crate::ui::text::bytes_pair;
+use crate::ui::text::{bytes_pair, fit, pct};
 use crate::ui::theme::{PCT_THRESHOLDS, Role, Theme};
 use crate::util::bytes;
 
-/// Height needed, borders included (3 rows inside).
+/// Height needed, borders included (4 content rows; 3 fit at the minimum).
 pub const MIN_HEIGHT: u16 = 5;
 
-/// The Memory panel: `frame::panel("Memory", Role::Memory, false, theme)` and three rows — the RAM and
-/// swap gauges, then `model <rss>` for the first model instance, `server <rss>` for the router without
-/// one, or `model n/a` without any. A swap total of 0 shows `swap  none`. When the panel is tall enough,
-/// two more rows show the available and cached RAM, then the router's resident memory when row 3 is an
-/// instance.
+/// The Memory panel: `frame::panel("Memory", Role::Memory, false, theme)` and the rows below — the RAM
+/// and swap gauges, the model instance resident memory (with the router when it is a separate process,
+/// else `server <rss>` for the router alone, or `model n/a`), the available and cached RAM, then the
+/// disks as `disk  <mount> <pct>` joined by three spaces. Rows that do not fit are dropped from the
+/// bottom. A swap total of 0 shows `swap  none`.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
@@ -85,20 +85,22 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
             None => row(theme, buf, inner.x, y, inner.width, "swap  ", "n/a"),
         }
     }
-    // Row 3: resident memory of the model instance, then the router, then `n/a`.
+    // Row 3: the model instance resident memory, with the router when it is a separate process.
     let y = y0 + 2;
     if y < inner.bottom() {
-        let (label, value) = match procs.iter().find(|p| p.role == ServerRole::Instance) {
-            Some(p) => ("model", bytes(p.rss)),
+        let line = match procs.iter().find(|p| p.role == ServerRole::Instance) {
+            Some(inst) => match procs.iter().find(|p| p.role == ServerRole::Router) {
+                Some(r) => format!("model {} rss   router {}", bytes(inst.rss), bytes(r.rss)),
+                None => format!("model {} rss", bytes(inst.rss)),
+            },
             None => match procs.iter().find(|p| p.role == ServerRole::Router) {
-                Some(p) => ("server", bytes(p.rss)),
-                None => ("model", "n/a".to_string()),
+                Some(r) => format!("server {}", bytes(r.rss)),
+                None => "model n/a".to_string(),
             },
         };
-        let line = format!("{label} {value}");
         buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
     }
-    // Row 4: available and cached.
+    // Row 4: available and cached RAM.
     let y = y0 + 3;
     if y < inner.bottom() {
         let (avail, cached) = match mem {
@@ -114,15 +116,21 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         ]);
         buf.set_line(inner.x, y, &line, inner.width);
     }
-    // Row 5: router resident memory, only when row 3 already shows an instance (so the router is a
-    // separate process worth listing).
+    // Row 5: disk usage, one `disk  <mount> <pct>` per disk joined by three spaces.
     let y = y0 + 4;
-    if y < inner.bottom()
-        && procs.iter().any(|p| p.role == ServerRole::Instance)
-        && let Some(r) = procs.iter().find(|p| p.role == ServerRole::Router)
-    {
-        let line = format!("router {}", bytes(r.rss));
-        buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
+    if y < inner.bottom() {
+        let disks = app.system.as_ref().map(|s| s.disks.as_slice()).unwrap_or(&[]);
+        if !disks.is_empty() {
+            let parts: Vec<String> = disks
+                .iter()
+                .map(|d| {
+                    let ratio = if d.total > 0 { d.used as f64 / d.total as f64 * 100.0 } else { 0.0 };
+                    format!("{} {}", d.mount, pct(Some(ratio)))
+                })
+                .collect();
+            let line = fit(&format!("disk  {}", parts.join("   ")), inner.width as usize);
+            buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
+        }
     }
 }
 
