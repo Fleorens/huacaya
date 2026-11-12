@@ -18,8 +18,6 @@ use crate::http::{self, Client};
 use crate::settings::Settings;
 use crate::util::short_model_name;
 
-use serde_json;
-
 /// How the dialogue checks a server: `HttpProbe` for real, a fake in the tests.
 pub trait Probe {
     /// `GET <url>/health` without key; `Ok` on a 2xx answer.

@@ -313,57 +313,36 @@ fn agent_loop(
     let mut reachable: Option<bool> = None;
     loop {
         if stop.load(Ordering::Relaxed) {
-            break;
+            return;
         }
 
+        // One reachability verdict per round (ok only if both calls succeed), so a half-working agent
+        // cannot alternate `agent back` / `agent unreachable` every round.
+        let mut events = Vec::new();
+        let mut error = None;
         match client.system() {
-            Ok(snapshot) => {
-                if let Some(line) = reachability_line(&mut reachable, true, None)
-                    && tx.send(Event::Log(line)).is_err()
-                {
-                    break;
-                }
-                if tx.send(Event::System(snapshot)).is_err() {
-                    break;
-                }
-            }
-            Err(e) => {
-                if let Some(line) =
-                    reachability_line(&mut reachable, false, Some(format!("agent unreachable: {e}")))
-                    && tx.send(Event::Log(line)).is_err()
-                {
-                    break;
-                }
-            }
+            Ok(snapshot) => events.push(Event::System(snapshot)),
+            Err(e) => error = Some(format!("{e:#}")),
         }
-
         match client.log(since) {
             Ok(page) => {
-                if let Some(line) = reachability_line(&mut reachable, true, None)
-                    && tx.send(Event::Log(line)).is_err()
-                {
-                    break;
-                }
-                for line in page.lines {
-                    if tx.send(Event::Log(line)).is_err() {
-                        break;
-                    }
-                }
+                events.extend(page.lines.into_iter().map(Event::Log));
                 since = page.next;
                 if page.dropped {
                     let line = agent_message("agent log: some lines were missed", Level::Warn);
-                    if tx.send(Event::Log(line)).is_err() {
-                        break;
-                    }
+                    events.push(Event::Log(line));
                 }
             }
             Err(e) => {
-                if let Some(line) =
-                    reachability_line(&mut reachable, false, Some(format!("agent unreachable: {e}")))
-                    && tx.send(Event::Log(line)).is_err()
-                {
-                    break;
-                }
+                error.get_or_insert(format!("{e:#}"));
+            }
+        }
+        if let Some(line) = reachability_line(&mut reachable, error) {
+            events.insert(0, Event::Log(line));
+        }
+        for event in events {
+            if tx.send(event).is_err() {
+                return;
             }
         }
 
@@ -373,18 +352,13 @@ fn agent_loop(
 
 /// The reachability transition line, if the state changed this round: `agent back` (Info) on return,
 /// `agent unreachable: <error>` (Warn) on the way down. Never more than one per change.
-fn reachability_line(reachable: &mut Option<bool>, now_ok: bool, error: Option<String>) -> Option<LogLine> {
-    let prev = reachable.take();
-    let line = match (prev, now_ok) {
-        (Some(false), true) => Some(agent_message("agent back", Level::Info)),
-        (Some(true), false) | (None, false) => {
-            let text = error.unwrap_or_default();
-            Some(agent_message(&format!("agent unreachable: {text}"), Level::Warn))
-        }
+fn reachability_line(reachable: &mut Option<bool>, error: Option<String>) -> Option<LogLine> {
+    let prev = reachable.replace(error.is_none());
+    match (prev, error) {
+        (Some(false), None) => Some(agent_message("agent back", Level::Info)),
+        (Some(true) | None, Some(e)) => Some(agent_message(&format!("agent unreachable: {e}"), Level::Warn)),
         _ => None,
-    };
-    *reachable = if now_ok { Some(true) } else { Some(false) };
-    line
+    }
 }
 
 fn agent_message(text: &str, level: Level) -> LogLine {

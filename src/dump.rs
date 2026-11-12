@@ -61,7 +61,7 @@ pub fn run(cli: &Cli) -> Result<String> {
     // configured; else follow the log command for 700 ms (or until it ends).
     let (log_tail, log_error) = if let Some(url) = &agent_url {
         let client = AgentClient::new(url, agent_token.clone());
-        let page = client.log(0)?;
+        let page = client.log(0).with_context(|| format!("agent {url}"))?;
         let mut lines = page.lines;
         let log_tail = lines.split_off(lines.len().saturating_sub(20));
         (log_tail, None)
