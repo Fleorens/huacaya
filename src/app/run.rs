@@ -16,7 +16,7 @@ use crate::collect::llama_poll::Poller;
 use crate::collect::logs::{self, Level, LogLine};
 use crate::collect::sampler::Sampler;
 use crate::config::Cli;
-use crate::http::Client;
+use crate::http::{Client, is_loopback_url};
 use crate::ui::draw;
 use crate::ui::panels::Ctx;
 use crate::ui::theme::{ColorMode, Theme};
@@ -70,7 +70,13 @@ pub fn run(cli: &Cli) -> Result<()> {
         let poller_stop = stop.clone();
         let poller_tx = tx.clone();
         let poller_interval = interval.clone();
-        let poller = Poller::new(Client::new(&url, api_key, Duration::from_secs(2)));
+        // On a loopback URL, ask the loaded instance directly; from another machine, only the router.
+        let client = Client::new(&url, api_key, Duration::from_secs(2));
+        let poller = if is_loopback_url(&url) {
+            Poller::new(client).with_local_instances(cli.sysroot.clone())
+        } else {
+            Poller::new(client)
+        };
         thread::spawn(move || {
             let mut poller = poller;
             loop {
