@@ -161,7 +161,7 @@ fn render_with_active(
                 buf.set_line(inner.x + label_w, y, &line, rest);
             }
             Some(s) => {
-                let (used, n_ctx) = (s.n_prompt_tokens + s.n_decoded, s.n_ctx);
+                let (used, n_ctx) = (s.n_prompt_tokens.saturating_add(s.n_decoded), s.n_ctx);
                 let value = format!("{} / {}", count(used), count(n_ctx));
                 let value_w = value.chars().count() as u16;
                 let gap: u16 = 2;

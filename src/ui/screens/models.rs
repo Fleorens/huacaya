@@ -246,6 +246,7 @@ fn render_details(app: &App, llama: &LlamaSnapshot, theme: &Theme, area: Rect, b
     let path = model.model_path.clone().unwrap_or_else(|| "n/a".to_string());
     let context = match (model.ctx_size, model.ctx_train) {
         (Some(c), Some(t)) => format!("{} of {} trained", count(c), count(t)),
+        (Some(c), None) => count(c),
         _ => "n/a".to_string(),
     };
     let ngl = model.n_gpu_layers.map(|n| n.to_string()).unwrap_or_else(|| "-".to_string());
@@ -296,7 +297,13 @@ fn render_details(app: &App, llama: &LlamaSnapshot, theme: &Theme, area: Rect, b
             "slot",
             active
                 .and_then(|a| a.slots.first())
-                .map(|s| format!("{} / {} tokens", count(s.n_prompt_tokens + s.n_decoded), count(s.n_ctx)))
+                .map(|s| {
+                    format!(
+                        "{} / {} tokens",
+                        count(s.n_prompt_tokens.saturating_add(s.n_decoded)),
+                        count(s.n_ctx)
+                    )
+                })
                 .unwrap_or_else(|| "n/a".to_string()),
             None,
         ));
