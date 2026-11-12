@@ -86,7 +86,12 @@ pub struct Poller<F: Fetch> {
     /// When set, each round reads the loaded instances under `sysroot` and asks them directly.
     local_instances: bool,
     sysroot: PathBuf,
+    /// After a refused key, no request until this instant: each refusal prints a warning in the server's log.
+    refused_until: Option<Instant>,
 }
+
+/// How long a poller waits after the server refused its API key before asking again.
+pub const UNAUTHORIZED_RETRY: Duration = Duration::from_secs(30);
 
 impl<F: Fetch> Poller<F> {
     /// Creates a poller over `fetch`, with no props cached yet.
@@ -99,6 +104,7 @@ impl<F: Fetch> Poller<F> {
             live: HashMap::new(),
             local_instances: false,
             sysroot: PathBuf::new(),
+            refused_until: None,
         }
     }
 
@@ -111,6 +117,15 @@ impl<F: Fetch> Poller<F> {
 
     /// One round. Never panics, never returns an error: failures end up in `health` or as `None`s.
     pub fn poll(&mut self, now: Instant) -> LlamaSnapshot {
+        // 0. A refused key is refused again until someone fixes it: asking every second would only flood the
+        // server's log with `Invalid API Key` warnings. Wait `UNAUTHORIZED_RETRY`, sending nothing.
+        if let Some(until) = self.refused_until {
+            if now < until {
+                return self.empty_snapshot(Health::Unauthorized);
+            }
+            self.refused_until = None;
+        }
+
         // 1. `/health`. Any failure stops the round, keeping last-known props in the snapshot.
         if let Err(e) = self.fetch.get("/health", &[]) {
             // `{:#}` keeps the cause chain (connection refused, timeout), not just the outer context.
@@ -151,6 +166,7 @@ impl<F: Fetch> Poller<F> {
             Err(e) => {
                 let msg = format!("{e:#}");
                 if msg.contains("HTTP 401") {
+                    self.refused_until = Some(now + UNAUTHORIZED_RETRY);
                     return self.empty_snapshot(Health::Unauthorized);
                 }
                 return self.empty_snapshot(Health::Down(msg));

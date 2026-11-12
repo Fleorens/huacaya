@@ -347,3 +347,22 @@ fn spawn_stops_when_sink_refuses() {
     handle.join().expect("the thread joins as soon as the sink refuses");
     assert!(started.elapsed() < Duration::from_secs(1));
 }
+
+#[test]
+fn refused_key_backs_off() {
+    // Each refused request prints a warning in the server's log: after a 401, stay silent for 30 s.
+    let (fetch, calls) = FakeFetch::new();
+    fetch.give("/health", r#"{"status":"ok"}"#);
+    fetch.give("/props", llama("props-router.json"));
+    fetch.give_error("/v1/models", "GET /v1/models: HTTP 401");
+    let mut poller = Poller::new(fetch);
+    let t0 = Instant::now();
+    assert_eq!(poller.poll(t0).health, Health::Unauthorized);
+    let after_first = calls.lock().unwrap().len();
+    for s in 1..30 {
+        assert_eq!(poller.poll(t0 + Duration::from_secs(s)).health, Health::Unauthorized);
+    }
+    assert_eq!(calls.lock().unwrap().len(), after_first, "no request during the back-off");
+    poller.poll(t0 + UNAUTHORIZED_RETRY);
+    assert!(calls.lock().unwrap().len() > after_first, "asks again after the back-off");
+}
