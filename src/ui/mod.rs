@@ -7,6 +7,7 @@ pub mod gauge;
 pub mod graph;
 pub mod layout;
 pub mod panels;
+pub mod screens;
 pub mod snapshot;
 pub mod text;
 pub mod theme;

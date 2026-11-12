@@ -4,11 +4,12 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::text::{Line, Span};
 
-use crate::app::App;
+use crate::app::{App, Screen};
 use crate::ui::compact;
 use crate::ui::layout::{self, Tier};
 use crate::ui::panels::Ctx;
 use crate::ui::panels::{cpu, gpu, header, log, memory, model, request};
+use crate::ui::screens;
 use crate::ui::theme::Role;
 
 /// Draws one whole frame of `app` into `area`.
@@ -23,6 +24,16 @@ pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         Tier::TooSmall => draw_too_small(ctx, area, buf),
         Tier::Compact => compact::render(app, ctx, area, buf),
         _ => {
+            // The Models screen shows the same header, then its own table + details on the body.
+            if app.screen == Screen::Models {
+                let layout = layout::overview(area);
+                let body =
+                    Rect::new(area.x, area.y.saturating_add(3), area.width, area.height.saturating_sub(3));
+                let ctx = Ctx { theme: ctx.theme, graphs: layout.graphs, clock: ctx.clock };
+                header::render(app, &ctx, layout.header, buf);
+                screens::models::render(app, &ctx, body, buf);
+                return;
+            }
             let layout = layout::overview(area);
             let ctx = Ctx { theme: ctx.theme, graphs: layout.graphs, clock: ctx.clock };
             header::render(app, &ctx, layout.header, buf);
