@@ -19,7 +19,7 @@ pub const MIN_HEIGHT: u16 = 3;
 /// The log panel: `frame::panel("Log", Role::Server, false, theme)` with the filter and follow/scroll
 /// indicators right-aligned on the top border, then the last `h` visible lines (oldest at the top),
 /// each `<time> ` in `Role::Dim` then the text coloured by level and cut to the panel width. No line:
-/// one `Dim` row `no log line yet`.
+/// one `Dim` row `no log line yet`; lines that are all hidden: `<n> lines hidden — x proxy  e level  / filter`.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
@@ -34,12 +34,14 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 
     let v = app.visible_logs();
     if v.is_empty() {
-        buf.set_line(
-            inner.x,
-            inner.y,
-            &Line::from(Span::styled("no log line yet", theme.fg(Role::Dim))),
-            inner.width,
-        );
+        // Lines that exist but are all filtered out (typically llamatop's own proxy lines) must not look
+        // like an empty log.
+        let text = if app.logs.is_empty() {
+            "no log line yet".to_string()
+        } else {
+            format!("{} lines hidden — x proxy  e level  / filter", app.logs.len())
+        };
+        buf.set_line(inner.x, inner.y, &Line::from(Span::styled(text, theme.fg(Role::Dim))), inner.width);
         return;
     }
 

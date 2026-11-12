@@ -313,3 +313,20 @@ fn log_long_filter_stays_inside() {
     assert!(top.contains("follow ● ╮"), "{top:?}");
     assert!(top.contains("/a filter"), "{top:?}");
 }
+
+#[test]
+fn log_all_lines_hidden() {
+    // The router's proxy lines, llamatop's own polling, can fill the whole journal window: say so.
+    let theme = Theme::new(ColorMode::TrueColor);
+    let ctx = Ctx { theme: &theme, graphs: true, clock: "10:21:03" };
+    let mut app = App::new(1000);
+    let line = "2026-11-12T11:20:05.402493+01:00 aibox-flo llama-server[1194]: 1581.51.785.561 I srv  \
+                proxy_reques: proxying request to model m on port 35335";
+    for _ in 0..3 {
+        app.apply(Event::Log(llamatop::collect::logs::parse_line(line)));
+    }
+    let mut buf = Buffer::empty(Rect::new(0, 0, 70, 5));
+    llamatop::ui::panels::log::render(&app, &ctx, Rect::new(0, 0, 70, 5), &mut buf);
+    let row: String = (0..70).map(|x| buf[(x, 1)].symbol().to_string()).collect();
+    assert!(row.contains("3 lines hidden — x proxy"), "{row}");
+}

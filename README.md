@@ -45,7 +45,7 @@ SSH_OPTS="-F $HOME/work/.aibox-access/ssh_config" scripts/deploy-aibox.sh aibox
 llamatop --api-key-file ~/llama-api-key       # on the aibox
 llamatop --demo                               # generated data, no server needed
 llamatop --url http://192.168.1.203:8080 --api-key-file key \
-         --log-cmd "ssh aibox journalctl -u llama-server -f -n 200 --no-pager -q -o short-iso-precise"
+         --log-cmd "ssh aibox journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise"
 ```
 
 The machine panels describe the machine llamatop runs on; run it on the server's machine to see the GPU.
@@ -56,7 +56,7 @@ The user running llamatop needs to read the journal (group `systemd-journal`) fo
 |---|---|---|
 | `--url` | `http://127.0.0.1:8080` | server, router or single model (`LLAMATOP_URL`) |
 | `--api-key-file` | — | `LLAMATOP_API_KEY_FILE` |
-| `--log-cmd` | `journalctl -u llama-server -f -n 200 …` | any command whose output is the log (`LLAMATOP_LOG_CMD`) |
+| `--log-cmd` | `journalctl -u llama-server -f -n 2000 …` | any command whose output is the log (`LLAMATOP_LOG_CMD`) |
 | `--interval-ms` | `1000` | refresh period, 200–10000 |
 | `--mount` | `/ /srv/models /srv/data` | disks shown (missing ones are skipped) |
 | `--sysroot` | `/` | where `proc/` and `sys/` are read (tests) |

@@ -28,7 +28,7 @@ pub struct Cli {
     #[arg(
         long,
         env = "LLAMATOP_LOG_CMD",
-        default_value = "journalctl -u llama-server -f -n 200 --no-pager -q -o short-iso-precise"
+        default_value = "journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise"
     )]
     pub log_cmd: String,
 
