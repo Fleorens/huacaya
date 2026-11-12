@@ -268,3 +268,109 @@ impl CpuReader {
         (usage, per_core_pct)
     }
 }
+
+/// The CPU's name and physical core count, from `proc/cpuinfo`.
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+pub struct CpuInfo {
+    /// `short_cpu_name` of the first `model name`.
+    pub model: Option<String>,
+    /// The first `cpu cores` value.
+    pub cores: Option<u32>,
+    /// The number of `processor` lines.
+    pub threads: Option<u32>,
+}
+
+/// Parses `/proc/cpuinfo`. Missing fields are `None` (`threads` is `None` when there is no `processor` line).
+pub fn parse_cpuinfo(text: &str) -> CpuInfo {
+    let mut model = None;
+    let mut cores = None;
+    let mut threads = 0;
+    for line in text.lines() {
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        match key.trim() {
+            // The kernel repeats `model name` for every logical processor: keep the first.
+            "model name" if model.is_none() => {
+                model = Some(short_cpu_name(value.trim()));
+            }
+            "cpu cores" if cores.is_none() => {
+                cores = value.trim().parse().ok();
+            }
+            "processor" => threads += 1,
+            _ => {}
+        }
+    }
+    CpuInfo { model, cores, threads: if threads == 0 { None } else { Some(threads) } }
+}
+
+/// Reads `proc/cpuinfo` under `sysroot`; all `None` when unreadable.
+pub fn read_cpuinfo(sysroot: &Path) -> CpuInfo {
+    match read_trimmed(sysroot, "proc/cpuinfo") {
+        Some(text) => parse_cpuinfo(&text),
+        None => CpuInfo::default(),
+    }
+}
+
+/// A short CPU name: remove `(R)`, `(TM)`, `(tm)`; cut from ` @ ` on; cut from ` with ` on; remove a
+/// trailing `<N>-Core Processor`, `Processor` or `CPU` (a middle `CPU` is kept); remove a leading
+/// `<N>th/st/nd/rd Gen `; collapse runs of spaces and trim.
+pub fn short_cpu_name(raw: &str) -> String {
+    let mut s = raw.replace("(R)", "").replace("(TM)", "").replace("(tm)", "");
+    if let Some(idx) = s.find(" @ ") {
+        s.truncate(idx);
+    }
+    if let Some(idx) = s.find(" with ") {
+        s.truncate(idx);
+    }
+    if let Some(before) = s.strip_suffix("-Core Processor")
+        && before.chars().last().is_some_and(|c| c.is_ascii_digit())
+    {
+        s = before[..before.len() - trailing_len(before, |c| c.is_ascii_digit())].to_string();
+    } else if let Some(n) = suffix_len(&s, "Processor") {
+        s.truncate(s.len() - n);
+    } else if let Some(n) = suffix_len(&s, "CPU") {
+        s.truncate(s.len() - n);
+    }
+    if let Some(n) = leading_gen_prefix(&s) {
+        s = s[n..].to_string();
+    }
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The byte length of the trailing run of characters satisfying `pred` (0 when the last char does not).
+fn trailing_len(s: &str, pred: impl Fn(char) -> bool) -> usize {
+    let mut n = 0;
+    for c in s.chars().rev() {
+        if pred(c) {
+            n += c.len_utf8();
+        } else {
+            break;
+        }
+    }
+    n
+}
+
+/// The length of the suffix `word` when `s` ends with it, else `None`.
+fn suffix_len(s: &str, word: &str) -> Option<usize> {
+    s.strip_suffix(word).map(|_| word.len())
+}
+
+/// The bytes to strip to remove a leading `<N>th/st/nd/rd Gen `, or `None`.
+fn leading_gen_prefix(s: &str) -> Option<usize> {
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() && bytes[i].is_ascii_digit() {
+        i += 1;
+    }
+    if i == 0 {
+        return None;
+    }
+    for ord in ["th", "st", "nd", "rd"] {
+        let prefix = format!("{} Gen ", ord);
+        if s[i..].starts_with(prefix.as_str()) {
+            return Some(i + prefix.len());
+        }
+    }
+    None
+}

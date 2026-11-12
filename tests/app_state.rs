@@ -6,7 +6,7 @@ use llamatop::collect::llama::{ModelInfo, ModelState, SlotInfo};
 use llamatop::collect::llama_poll::{ActiveModel, Health, LlamaSnapshot};
 use llamatop::collect::logs::{Level, LogEvent, LogLine, parse_line};
 use llamatop::collect::sampler::SystemSnapshot;
-use llamatop::collect::system::CpuSample;
+use llamatop::collect::system::{CpuInfo, CpuSample};
 // --- Key + snapshot builders (the sheet forbids these in `src/`) -------------------------------
 fn key(c: char) -> KeyEvent {
     KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE)
@@ -53,6 +53,7 @@ fn system(busy: Option<f32>, cpu: Option<f32>) -> SystemSnapshot {
         disks: vec![],
         nets: vec![],
         procs: vec![],
+        cpu_info: CpuInfo::default(),
     }
 }
 fn model(id: &str, state: ModelState) -> ModelInfo {

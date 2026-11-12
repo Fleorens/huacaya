@@ -11,7 +11,7 @@ use ratatui::layout::Rect;
 use llamatop::app::App;
 use llamatop::collect::nvidia::{BACKOFF_PERIOD, SmiBackoff, parse_smi};
 use llamatop::collect::sampler::{Sampler, SystemSnapshot};
-use llamatop::collect::system::CpuSample;
+use llamatop::collect::system::{CpuInfo, CpuSample};
 use llamatop::ui::panels::{Ctx, gpu};
 use llamatop::ui::theme::{ColorMode, Theme};
 
@@ -134,6 +134,7 @@ fn gpu_panel_nvidia() {
         disks: Vec::new(),
         nets: Vec::new(),
         procs: Vec::new(),
+        cpu_info: CpuInfo::default(),
     });
 
     let rows = draw(|area, buf| gpu::render(&app, &ctx, area, buf), 60, 9);

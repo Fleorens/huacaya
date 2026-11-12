@@ -15,7 +15,7 @@ use crate::collect::net::NetSample;
 use crate::collect::process::{ProcSample, ServerRole};
 use crate::collect::sampler::SystemSnapshot;
 use crate::collect::sensors::TempReading;
-use crate::collect::system::{CpuFreq, CpuSample, LoadAvg, MemSample};
+use crate::collect::system::{CpuFreq, CpuInfo, CpuSample, LoadAvg, MemSample};
 
 /// The model id of the loaded one (model 4 below).
 pub(crate) const LOADED_ID: &str = "peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M";
@@ -181,6 +181,7 @@ pub fn system(t: f64, state: DemoState) -> SystemSnapshot {
             tx_total: (195_824_906.0 + 15000.0 * t) as u64,
         }],
         procs,
+        cpu_info: CpuInfo { model: Some("Intel Core i7-11700K".into()), cores: Some(8), threads: Some(16) },
     }
 }
 

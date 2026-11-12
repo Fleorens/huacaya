@@ -14,7 +14,9 @@ use crate::collect::net::{NetReader, NetSample};
 use crate::collect::nvidia::{SmiBackoff, parse_smi, run_smi};
 use crate::collect::process::{ProcSample, read_server_procs};
 use crate::collect::sensors::{TempReading, cpu_temp, nvme_temp, read_temps};
-use crate::collect::system::{CpuReader, CpuSample, MemSample, read_hostname, read_mem, read_uptime};
+use crate::collect::system::{
+    CpuInfo, CpuReader, CpuSample, MemSample, read_cpuinfo, read_hostname, read_mem, read_uptime,
+};
 
 /// One snapshot of the machine, assembled from every system collector (T02–T04).
 #[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
@@ -30,6 +32,9 @@ pub struct SystemSnapshot {
     pub disks: Vec<DiskSample>,
     pub nets: Vec<NetSample>,
     pub procs: Vec<ProcSample>,
+    /// CPU name and core count, from `proc/cpuinfo`. Kept readable by older agents (`#[serde(default)]`).
+    #[serde(default)]
+    pub cpu_info: CpuInfo,
 }
 
 /// Owns what must persist between two samples: the CPU and network references used to derive the
@@ -93,6 +98,7 @@ impl Sampler {
             },
             nets: self.net.sample(sysroot, now),
             procs: read_server_procs(sysroot),
+            cpu_info: read_cpuinfo(sysroot),
         }
     }
 }

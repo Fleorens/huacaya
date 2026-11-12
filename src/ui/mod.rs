@@ -1,5 +1,6 @@
 //! Theme (true colour / 16 colours / `NO_COLOR`), the widgets and the responsive Overview layout.
 
+pub mod big;
 pub mod compact;
 pub mod draw;
 pub mod frame;
