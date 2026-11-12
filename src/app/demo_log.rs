@@ -1,6 +1,6 @@
 //! The live demo cycle's raw log lines (T11), separated out so `demo.rs` stays under 400 lines.
 //!
-//! Each line is `<ts> aibox-flo llama-server[1194]: <body>`; `demo::log_lines` builds and classifies
+//! Each line is `<ts> gpu-box llama-server[1194]: <body>`; `demo::log_lines` builds and classifies
 //! them. Only the times and the task number depend on the cycle.
 
 use crate::app::demo::LOADED_ID;
@@ -93,9 +93,9 @@ pub(crate) fn cycle_lines(n: u64) -> Vec<(f64, String)> {
     out
 }
 
-/// The full journal line: `<ts> aibox-flo llama-server[1194]: <body>`.
+/// The full journal line: `<ts> gpu-box llama-server[1194]: <body>`.
 pub(crate) fn raw_line(e: f64, body: &str) -> String {
-    format!("{} aibox-flo llama-server[1194]: {}", timestamp(e), body)
+    format!("{} gpu-box llama-server[1194]: {}", timestamp(e), body)
 }
 
 /// The ISO timestamp of event time `e`: `36_000 + e` seconds of the day (modulo 86 400), on 2026-11-12.

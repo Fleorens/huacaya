@@ -188,7 +188,7 @@ fn compact_rows() {
     let ctx = Ctx { theme: &theme, graphs: true, clock: "10:21:03" };
     let rows =
         rows(|area, buf| llamatop::ui::draw::draw(&demo_app(DemoState::Generating), &ctx, area, buf), 50, 15);
-    assert!(rows[0].contains("llamatop · aibox-flo · ● server ok"));
+    assert!(rows[0].contains("llamatop · gpu-box · ● server ok"));
     assert!(rows[1].contains("GENERATING"));
     assert!(rows[1].contains("t/s"));
     assert!(rows[2].contains("GPU 95% 73°C 15.9 G │ CPU 50% │ RAM 21.6 G"));

@@ -139,7 +139,7 @@ pub fn system(t: f64, state: DemoState) -> SystemSnapshot {
     }
 
     SystemSnapshot {
-        hostname: Some("aibox-flo".into()),
+        hostname: Some("gpu-box".into()),
         uptime_s: Some(356_400 + t as u64),
         cpu,
         cpu_temp_c: Some(cpu_temp_c),

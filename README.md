@@ -1,15 +1,15 @@
 # llamatop
 
 A terminal dashboard for a [llama.cpp](https://github.com/ggml-org/llama.cpp) server and the machine that
-runs it: the loaded model and its state, generation and prompt speed, context fill, prompt-cache reuse,
-speculative-decoding acceptance, GPU / CPU / RAM / temperatures, disks, network, and the live server log.
+runs it: the loaded model and its state, live generation and prompt speed, context fill, prompt-cache reuse,
+speculative-decoding acceptance, GPU / CPU / RAM / temperatures, disks, network, and the server log.
 
-It is written for one machine (an AMD Radeon box running llama.cpp in router mode) but runs anywhere: a
-value it cannot read shows `n/a`, and it works without an AMD GPU, without `journalctl` and with the
-server down. It is **read-only**: it never loads, unloads or configures a model.
+It works with a single `llama-server` or a router serving several models, on the server itself or from another
+machine. It is **read-only**: it never loads, unloads or configures a model. A value it cannot read shows
+`n/a`, so it runs without a GPU, without `journalctl`, or with the server down.
 
 ```
-╭ llamatop ─ aibox-flo ─ up 4d 3h ───────────────────────────────── ● server ok  b12151 ─ 10:21:03 ╮
+╭ llamatop ─ gpu-box ─ up 4d 3h ─────────────────────────────────── ● server ok  b12151 ─ 10:21:03 ╮
 │ 1 Overview   2 Models   3 Logs   4 System                                              ? help  q │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭ Model ─────────────────────────────────────────╮╭ GPU  RX 7800 XT ───────────────────────────────╮
@@ -20,63 +20,91 @@ server down. It is **read-only**: it never loads, unloads or configures a model.
 │ctx    ████████▏░░░░░░░░░░░░░░░░  63.8K / 196.6K││⣿⣿⣾⣿⣿⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣾⣿⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣾⣿⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿│
 │draft  64 %   ctx-size 196.6K   n-cpu-moe 21   …││⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿│
 ╰────────────────────────────────────────────────╯╰────────────────────────────────────────────────╯
+╭ CPU ───────────────────────────────────────────╮╭ Memory ────────────────────────────────────────╮
 ```
 
-(`llamatop --snapshot 100x30`, demo data. More frames in `tests/snapshots/`.)
+(`llamatop --snapshot 100x30`, demo data — try `llamatop --demo`.)
 
 ## Install
 
-As a Debian package (Debian, Ubuntu…), built on the devbox:
+Linux x86_64, any distribution (a static binary, no dependency):
 
 ```sh
-scripts/build-deb.sh                           # prints the path of llamatop_<version>_amd64.deb
-sudo apt install ./llamatop_0.2.0_amd64.deb    # /usr/bin/llamatop
-llamatop                                       # the first run asks for the server and its key
+curl -fsSL https://raw.githubusercontent.com/Fleorens/llamatop/main/install.sh | sh
 ```
 
-From source (Rust 2024, no system library needed):
+It installs `llamatop` into `/usr/local/bin` (with `sudo` when needed) or `~/.local/bin` (`--user`).
+Debian and Ubuntu can use the package of the [latest release](https://github.com/Fleorens/llamatop/releases/latest)
+instead:
 
 ```sh
-cargo build --release          # the binary is target/release/llamatop
+curl -fsSLO https://github.com/Fleorens/llamatop/releases/latest/download/llamatop_amd64.deb
+sudo apt install ./llamatop_amd64.deb
 ```
 
-To the aibox, over SSH, from the devbox:
+From source (Rust 1.88+): `cargo install --git https://github.com/Fleorens/llamatop`.
+
+## First run
 
 ```sh
-scripts/deploy-aibox.sh <ssh-target>                 # installs ~/.local/bin/llamatop on the target
-SSH_OPTS="-F $HOME/work/.aibox-access/ssh_config" scripts/deploy-aibox.sh aibox
+llamatop
 ```
 
-## Run
+With no configuration yet, llamatop asks where the server is (`http://127.0.0.1:8080` by default), its API
+key if it has one (typed without echo, checked against the server), and how to read its log, then saves the
+answers to `~/.config/llamatop/config.toml` (mode 600) and starts. `llamatop setup` asks again anytime.
 
-```sh
-llamatop --api-key-file ~/llama-api-key       # on the aibox
-llamatop --demo                               # generated data, no server needed
-llamatop --url http://192.168.1.203:8080 --api-key-file key \
-         --log-cmd "ssh aibox journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise"
-```
+## What it shows
 
-The machine panels describe the machine llamatop runs on; run it on the server's machine to see the GPU.
-The API key is read from `LLAMA_API_KEY`, else from the first line of `--api-key-file`; it is never printed.
-The user running llamatop needs to read the journal (group `systemd-journal`) for the log panel.
+| Screen | |
+|---|---|
+| `1` Overview | model state (idle, prompt, generating, loading), live t/s, context fill, last request, GPU, CPU, memory, log |
+| `2` Models | every model the server knows, its settings, the details of the selected one |
+| `3` Logs | the server log, full screen: follow, scroll, text and level filters |
+| `4` System | per-core usage, every temperature sensor, disks, network, `llama-server` processes |
+
+The machine panels describe the machine llamatop runs on. To see the server's machine from elsewhere, run the
+[agent](#agent) on the server. GPU support: AMD (amdgpu sysfs); NVIDIA is coming.
+
+The log comes from any command whose output is the server's log: by default
+`journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise`, which suits llama.cpp run as a
+systemd unit named `llama-server` (the user needs the `systemd-journal` group). Others: `tail -F
+/path/to/server.log`, `docker logs -f <container>`, `ssh host journalctl …`.
+
+## Options
 
 | Flag | Default | |
 |---|---|---|
-| `--url` | `http://127.0.0.1:8080` | server, router or single model (`LLAMATOP_URL`) |
-| `--api-key-file` | — | `LLAMATOP_API_KEY_FILE` |
-| `--log-cmd` | `journalctl -u llama-server -f -n 2000 …` | any command whose output is the log (`LLAMATOP_LOG_CMD`) |
-| `--interval-ms` | `1000` | refresh period, 200–10000 |
-| `--mount` | `/ /srv/models /srv/data` | disks shown (missing ones are skipped) |
-| `--sysroot` | `/` | where `proc/` and `sys/` are read (tests) |
+| `--url` | `http://127.0.0.1:8080` | the server, router or single model (`LLAMATOP_URL`) |
+| `--api-key-file` | — | file holding the key (`LLAMATOP_API_KEY_FILE`); `LLAMA_API_KEY` also works |
+| `--log-cmd` | `journalctl -u llama-server -f …` | the command whose output is the log (`LLAMATOP_LOG_CMD`) |
+| `--interval-ms` | `1000` | refresh period, 200–10000 (`+` / `-` change it live) |
+| `--mount` | `/` | a mount point to show, repeatable |
+| `--agent` | — | URL of a llamatop agent on the server (`LLAMATOP_AGENT`), see below |
+| `--config` | `~/.config/llamatop/config.toml` | the configuration file (`LLAMATOP_CONFIG`) |
+| `--demo` | | generated data, no server needed |
 | `--dump` | | one JSON report of every data source, then exit |
-| `--demo` | | generated data |
 | `--snapshot WxH` | | one frame of the demo on stdout (`--demo-state`, `--screen`, `--ansi`) |
+
+Order of precedence: flag, then environment variable, then configuration file, then default.
+
+```toml
+# ~/.config/llamatop/config.toml
+[llama]
+url = "http://192.168.1.10:8080"
+api_key = "sk-..."              # or api_key_file = "/path/to/key"
+log_cmd = "ssh 192.168.1.10 journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise"
+
+[agent]
+url = "http://192.168.1.10:9099"
+token = "..."
+```
 
 ## Keys
 
 | Key | Action |
 |---|---|
-| `1`–`4`, `Tab`, `Shift-Tab` | Overview, Models, Logs, System |
+| `1`–`4`, `Tab`, `Shift-Tab` | switch screen |
 | `q`, `Ctrl-C` | quit |
 | `?` | help |
 | `p` | pause the display (data keeps flowing) |
@@ -85,87 +113,43 @@ The user running llamatop needs to read the journal (group `systemd-journal`) fo
 | `f` | follow the log |
 | `/` | filter the log (`Enter` keeps it, `Esc` clears it) |
 | `e` | level filter: all → warnings + errors → errors |
-| `x` | show the router's `proxying request` lines (hidden: llamatop's own polling prints two per second) |
-
-## Configuration
-
-llamatop reads one optional configuration file, at `$XDG_CONFIG_HOME/llamatop/config.toml` (or
-`~/.config/llamatop/config.toml` when `XDG_CONFIG_HOME` is not set), overridable with `--config` or the
-`LLAMATOP_CONFIG` environment variable. The file is created with mode 600; it may hold the API key:
-
-```toml
-[llama]
-url = "http://127.0.0.1:8080"
-api_key = "sk-..."
-api_key_file = "/etc/llamatop/key"
-log_cmd = "journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise"
-```
-
-Every field is optional. Each value is taken from the flag, then the environment variable, then the file, then
-the built-in default — the first that is set wins (`flag > environment > file > default`).
-
-## Setup
-
-Installed as a package, `llamatop` works the first time it is typed: when there is no configuration yet, it
-asks where the llama.cpp server is and its API key, checks them against the server, saves the file, and
-starts. It is a plain question-and-answer dialogue on the terminal, before the dashboard: no TUI. The same
-dialogue runs anytime with `llamatop setup`.
-
-On the first run it starts automatically, on a terminal, when the file does not exist, no `--url` was given
-and `--demo` is off. It asks for the server URL (and checks `<url>/health`), the API key (empty keeps the
-current one; the key is never shown on screen), and the log command — a local `journalctl` for a server on
-the machine, otherwise an `ssh` to its host. The answers are written to the configuration file (mode 600).
+| `r` | raw / compact log lines |
+| `x` | show the router's `proxying request` lines (hidden by default) |
 
 ## Agent
 
-`llamatop agent`, run on the server's machine (by hand or a systemd unit), samples that machine and follows
-its log exactly as the dashboard does locally, and publishes three endpoints for remote llamatop dashboards:
+To watch the server's GPU, sensors and log from another machine, run `llamatop agent` on the server. It
+samples that machine and follows its log like the dashboard does, and serves them over HTTP to remote
+dashboards (`/v1/health`, `/v1/system`, `/v1/log`). A token is required as soon as it listens beyond loopback.
 
-| Endpoint | Answer |
-|---|---|
-| `/v1/health` | `{"version":"…"}`, no token needed |
-| `/v1/system` | the machine snapshot as JSON (`503` until the first sample) |
-| `/v1/log?since=N` | log lines after sequence `N` (missing → `0`), as a page with a `next` to ask for |
-
-With the package, the agent is a systemd service, shipped disabled. On the server:
+With the Debian package, the agent is a systemd service, shipped disabled:
 
 ```sh
 sudo install -d -m 700 /etc/llamatop
 head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' | sudo tee /etc/llamatop/agent-token >/dev/null
 sudo chmod 600 /etc/llamatop/agent-token
-sudo systemctl enable --now llamatop-agent
-sudo ufw allow from 192.168.1.0/24 to any port 9099 proto tcp     # if a firewall filters the LAN
-sudo cat /etc/llamatop/agent-token                                 # the token to give to llamatop setup
+sudo systemctl enable --now llamatop-agent          # listens on 0.0.0.0:9099; open the port if a firewall filters it
 ```
 
-By hand:
-
-```sh
-llamatop agent --token-file /etc/llamatop/agent-token        # on the server
-llamatop --interval-ms 500 agent --listen 0.0.0.0:9099       # global flags come first
-```
-
-The agent reads the machine through the same global flags as the dashboard (`--sysroot`, `--mount`,
-`--log-cmd`, `--interval-ms`). It listens on `--listen` (default `0.0.0.0:9099`); the token is the first line
-of `--token-file` (`LLAMATOP_AGENT_TOKEN_FILE`). A token is required as soon as the agent listens beyond
-loopback, unless `--no-auth` is given (trusted network only) or a token is set. A client sends it as
-`Authorization: Bearer <token>`; `/v1/system` and `/v1/log` answer `401` without it, `/v1/health` does not.
-
-Point a dashboard at such an agent to show the server's machine instead of its own: `llamatop setup` asks for
-it (an `agent URL`, then a token), or set it per run with `--agent http://192.168.1.203:9099` (+
-`--agent-token-file` or `[agent]` in the configuration file). With an agent, the system and log panels read
-the agent's machine over HTTP; the llama.cpp panels keep talking to the server as before, and `--dump` reports
-the agent's machine. Without an agent, nothing changes.
+Without the package: `llamatop agent --token-file /path/to/token` (`--listen 0.0.0.0:9099` by default).
+Then, on the other machine, `llamatop setup` asks for the agent's URL (`http://<server>:9099`) and the token.
 
 ## The safety rule
 
-On a llama.cpp router with autoload, a request naming a model that is not loaded **loads it** (tens of GB,
-evicting the running model). llamatop therefore queries `/metrics` and `/slots` only for models that the same
-polling round's `/v1/models` lists as `loaded`. See `docs/01-architecture.md` § 2.2; a test guards it.
+On a llama.cpp router with autoload, a request naming a model that is not loaded **loads it**: tens of GB read,
+the running model evicted. llamatop therefore asks `/metrics` and `/slots` only about models that the same
+polling round's `/v1/models` lists as `loaded`, and, on the server itself, asks the loaded instance directly
+(which also keeps llamatop out of the server's log). A test guards the rule.
 
 ## Development
 
 - `bash .devbox/check`: `cargo fmt --check`, `clippy -D warnings`, tests, 400-line limit per file.
 - `cargo run -- --sysroot tests/fixtures/sysroot --dump`: the collectors on a fake machine.
-- Golden files: `UPDATE_GOLDEN=1 cargo test` rewrites `tests/snapshots/*.txt` after an intended change.
-- Design: `docs/01-architecture.md` (data), `docs/02-ui.md` (screens); history of the work: `tasks/`.
+- `UPDATE_GOLDEN=1 cargo test` rewrites the golden frames in `tests/snapshots/` after an intended change.
+- `scripts/release.sh <version>`: static binary, `.deb`, GitHub release.
+- Design: `docs/01-architecture.md` (data), `docs/02-ui.md` (screens). The project was built sheet by sheet
+  by a local model driven by Claude Code: `tasks/` holds every sheet.
+
+## License
+
+MIT.

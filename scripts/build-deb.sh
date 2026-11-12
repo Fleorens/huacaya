@@ -2,23 +2,22 @@
 # Builds the Debian package of llamatop: <target dir>/debian/llamatop_<version>_<arch>.deb
 # Run on a Debian-like machine (needs dpkg-deb). Install with: sudo apt install ./llamatop_<version>_<arch>.deb
 #
-# The package holds the release binary (/usr/bin/llamatop), the README and the agent's systemd unit
-# (installed disabled). The binary links against the C library and libgcc_s (unwinding): libc6 at the
-# version it was built with, and libgcc-s1.
+# The package holds the static (musl) binary in /usr/bin/llamatop, the README and the agent's systemd unit
+# (installed disabled). Static: no library dependency, so it installs on any Debian or Ubuntu release.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
-arch="$(dpkg --print-architecture)"
-glibc="$(getconf GNU_LIBC_VERSION | cut -d' ' -f2)"
+arch=amd64   # the binary is built for x86_64 below, whatever this machine is
+target=x86_64-unknown-linux-musl
 
-cargo build --release --locked
+cargo build --release --locked --target "$target"
 target_dir="$(cargo metadata --format-version 1 --no-deps | grep -o '"target_directory":"[^"]*"' | cut -d'"' -f4)"
 out="$target_dir/debian"
 stage="$out/llamatop_${version}_${arch}"
 rm -rf "$stage"
 install -d "$stage/DEBIAN" "$stage/usr/bin" "$stage/usr/share/doc/llamatop" "$stage/usr/lib/systemd/system"
-install -m 755 "$target_dir/release/llamatop" "$stage/usr/bin/llamatop"
+install -m 755 "$target_dir/$target/release/llamatop" "$stage/usr/bin/llamatop"
 install -m 644 README.md "$stage/usr/share/doc/llamatop/README.md"
 # The agent's unit is shipped disabled: it needs a token first (see the README, "Agent").
 install -m 644 packaging/llamatop-agent.service "$stage/usr/lib/systemd/system/llamatop-agent.service"
@@ -28,8 +27,8 @@ cat > "$stage/DEBIAN/control" <<EOF
 Package: llamatop
 Version: $version
 Architecture: $arch
-Maintainer: Florian
-Depends: libc6 (>= $glibc), libgcc-s1
+Maintainer: Fleorens
+Homepage: https://github.com/Fleorens/llamatop
 Recommends: openssh-client
 Section: utils
 Priority: optional

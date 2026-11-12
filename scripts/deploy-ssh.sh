@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Run ON THE DEVBOX. Builds the release binary and installs it on the aibox over SSH.
+# Builds the release binary here and installs it on another machine over SSH.
 #
-#   scripts/deploy-aibox.sh <ssh-target> [remote path]
+#   scripts/deploy-ssh.sh <ssh-target> [remote path]
 #
 # The remote path defaults to ~/.local/bin/llamatop (relative paths are relative to the remote home).
-# Extra ssh options go through SSH_OPTS, e.g. SSH_OPTS="-F $HOME/work/.aibox-access/ssh_config".
+# Extra ssh options go through SSH_OPTS, e.g. SSH_OPTS="-F ~/.ssh/other_config".
 # The binary is copied next to its destination then renamed, so a running llamatop is not disturbed.
 # The remote commands are built here on purpose: $dest is expanded client side.
 # shellcheck disable=SC2029

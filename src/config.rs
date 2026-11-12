@@ -28,7 +28,7 @@ pub struct Cli {
     pub sysroot: PathBuf,
 
     /// Mount points whose usage is shown. A path that does not exist is skipped.
-    #[arg(long = "mount", default_values = ["/", "/srv/models", "/srv/data"])]
+    #[arg(long = "mount", default_values = ["/"])]
     pub mounts: Vec<PathBuf>,
 
     /// Command whose standard output is followed as the server log, split on spaces.
@@ -184,7 +184,7 @@ mod tests {
         let cli = Cli::parse_from(["llamatop"]);
         assert_eq!(cli.url, "http://127.0.0.1:8080");
         assert_eq!(cli.sysroot, PathBuf::from("/"));
-        assert_eq!(cli.mounts.len(), 3);
+        assert_eq!(cli.mounts.len(), 1);
         assert_eq!(cli.interval_ms, 1000);
         assert!(!cli.dump);
     }

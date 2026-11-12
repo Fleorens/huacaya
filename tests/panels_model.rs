@@ -57,7 +57,7 @@ fn header_generating() {
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
     let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 100, 3);
-    assert!(rows[0].contains("llamatop ─ aibox-flo ─ up 4d 3h"), "{:?}", rows[0]);
+    assert!(rows[0].contains("llamatop ─ gpu-box ─ up 4d 3h"), "{:?}", rows[0]);
     assert!(rows[0].contains("● server ok  b12151 ─ 10:21:03"), "{:?}", rows[0]);
     assert!(rows[0].ends_with('╮'), "{:?}", rows[0]);
     assert!(rows[1].contains("1 Overview"), "{:?}", rows[1]);

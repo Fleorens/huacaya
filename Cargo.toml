@@ -1,7 +1,14 @@
 [package]
 name = "llamatop"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
+rust-version = "1.88"
+description = "Terminal dashboard for a llama.cpp server and the machine that runs it"
+license = "MIT"
+repository = "https://github.com/Fleorens/llamatop"
+readme = "README.md"
+keywords = ["llama-cpp", "tui", "dashboard", "llm", "monitoring"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0.104"
