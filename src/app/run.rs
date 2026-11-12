@@ -139,7 +139,7 @@ fn dashboard_loop(
     interval: &Arc<AtomicU64>,
     rx: &Receiver<Event>,
 ) -> Result<()> {
-    draw_frame(terminal, app, theme, offset)?;
+    let mut shown_clock = draw_frame(terminal, app, theme, offset)?;
     loop {
         let mut drew = false;
         let event = match rx.recv() {
@@ -154,8 +154,9 @@ fn dashboard_loop(
         if app.quit {
             break;
         }
-        if drew {
-            draw_frame(terminal, app, theme, offset)?;
+        // The header clock must tick even when nothing else moves (idle server, long interval).
+        if drew || wall_clock(offset) != shown_clock {
+            shown_clock = draw_frame(terminal, app, theme, offset)?;
         }
     }
     Ok(())
@@ -173,12 +174,23 @@ fn apply_event(app: &mut App, event: Event, interval: &Arc<AtomicU64>) -> bool {
 }
 
 /// Draws one frame, computing the wall clock for this frame from the system time.
-fn draw_frame(terminal: &mut ratatui::DefaultTerminal, app: &App, theme: &Theme, offset: i32) -> Result<()> {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
-    let wall = clock::hms(now, offset);
+/// Returns the clock it showed.
+fn draw_frame(
+    terminal: &mut ratatui::DefaultTerminal,
+    app: &App,
+    theme: &Theme,
+    offset: i32,
+) -> Result<String> {
+    let wall = wall_clock(offset);
     let ctx = Ctx { theme, graphs: true, clock: wall.as_str() };
     terminal.draw(|f| draw::draw(app, &ctx, f.area(), f.buffer_mut()))?;
-    Ok(())
+    Ok(wall)
+}
+
+/// The local wall-clock time, `HH:MM:SS`.
+fn wall_clock(offset: i32) -> String {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
+    clock::hms(now, offset)
 }
 
 /// The events of the live demo between two instants of the demo clock `t0 < t1` (seconds since start):
@@ -204,7 +216,9 @@ fn demo_loop(tx: Sender<Event>, stop: Arc<AtomicBool>, interval: Arc<AtomicU64>)
     let mut prev = 0.0;
     while !stop.load(Ordering::Relaxed) {
         let now = start.elapsed().as_secs_f64();
-        for event in demo_events(prev, now, interval.load(Ordering::Relaxed) as f64) {
+        // The shared interval is in milliseconds, `demo_events` takes seconds.
+        let interval_s = interval.load(Ordering::Relaxed) as f64 / 1000.0;
+        for event in demo_events(prev, now, interval_s) {
             if tx.send(event).is_err() {
                 return;
             }
