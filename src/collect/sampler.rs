@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 
-use crate::collect::disk::{DiskSample, read_disks};
+use crate::collect::disk::{DiskSample, auto_mounts, read_disks};
 use crate::collect::gpu::{GpuSample, read_gpus};
 use crate::collect::net::{NetReader, NetSample};
 use crate::collect::process::{ProcSample, read_server_procs};
@@ -61,7 +61,11 @@ impl Sampler {
             mem: read_mem(sysroot),
             gpus: read_gpus(sysroot),
             temps,
-            disks: read_disks(&self.mounts),
+            disks: if self.mounts.is_empty() {
+                read_disks(&auto_mounts(sysroot))
+            } else {
+                read_disks(&self.mounts)
+            },
             nets: self.net.sample(sysroot, now),
             procs: read_server_procs(sysroot),
         }

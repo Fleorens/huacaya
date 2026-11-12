@@ -101,5 +101,5 @@ The repository goes public: llamatop must suit any llama.cpp machine, not only t
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T29](T29-auto-mounts.md) | Show the machine's real disks by default | T28 | prête |
+| [T29](T29-auto-mounts.md) | Show the machine's real disks by default | T28 | livrée |
 | [T30](T30-nvidia.md) | NVIDIA GPUs through `nvidia-smi` | T29 | prête |
