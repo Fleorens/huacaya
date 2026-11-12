@@ -20,6 +20,8 @@ pub const HISTORY_CAPACITY: usize = 300;
 pub const INTERVAL_STEPS: [u64; 6] = [200, 500, 1000, 2000, 5000, 10_000];
 /// Lines moved by `PgUp` / `PgDn`.
 pub const PAGE: usize = 10;
+/// Requests kept in `App::requests`.
+pub const REQUEST_HISTORY: usize = 50;
 
 /// What reaches the UI thread.
 #[derive(Debug, Clone)]
@@ -153,6 +155,10 @@ pub struct App {
     /// `live_gen_tps` of the first active model (0 when it is not generating).
     pub gen_tps: History,
     pub last_request: Option<LastRequest>,
+    /// Every request seen in the log, oldest first, at most REQUEST_HISTORY; the last one is last_request.
+    pub requests: VecDeque<LastRequest>,
+    /// (id_task, frame) when the first active model's slot 0 started processing that task.
+    pub task_started: Option<(i64, u64)>,
     pub screen: Screen,
     pub help: bool,
     pub paused: bool,
@@ -177,6 +183,8 @@ impl App {
             cpu_usage: History::new(HISTORY_CAPACITY),
             gen_tps: History::new(HISTORY_CAPACITY),
             last_request: None,
+            requests: VecDeque::new(),
+            task_started: None,
             screen: Screen::Overview,
             help: false,
             paused: false,
@@ -212,6 +220,13 @@ impl App {
             Event::Llama(s) => {
                 if !s.active.is_empty() {
                     self.gen_tps.push(s.active[0].live_gen_tps.unwrap_or(0.0) as f32);
+                }
+                if let Some(slot) = s.active.first().and_then(|m| m.slots.first())
+                    && slot.is_processing
+                {
+                    self.task_started.get_or_insert((slot.id_task, self.frame));
+                } else {
+                    self.task_started = None;
                 }
                 // The first list of models selects the loaded one: it is the model one wants to read about.
                 let first_list = self.llama.as_ref().is_none_or(|l| l.models.is_empty());
@@ -292,6 +307,7 @@ impl App {
                     draft_pct: None,
                     ctx_tokens: None,
                 });
+                self.sync_request(false);
             }
             Some(LogEvent::GenTiming { tokens, tps }) => {
                 if let Some(req) = &mut self.last_request
@@ -299,6 +315,7 @@ impl App {
                 {
                     req.gen_tokens = Some(*tokens);
                     req.gen_tps = Some(*tps);
+                    self.sync_request(true);
                 } else {
                     self.last_request = Some(LastRequest {
                         task: line.task,
@@ -310,6 +327,7 @@ impl App {
                         draft_pct: None,
                         ctx_tokens: None,
                     });
+                    self.sync_request(false);
                 }
             }
             Some(LogEvent::DraftAcceptance { accepted, generated }) => {
@@ -319,6 +337,7 @@ impl App {
                     && req.task == line.task
                 {
                     req.draft_pct = draft_pct;
+                    self.sync_request(true);
                 } else {
                     self.last_request = Some(LastRequest {
                         task: line.task,
@@ -330,6 +349,7 @@ impl App {
                         draft_pct,
                         ctx_tokens: None,
                     });
+                    self.sync_request(false);
                 }
             }
             Some(LogEvent::Released { n_tokens }) => {
@@ -337,6 +357,7 @@ impl App {
                     && req.task == line.task
                 {
                     req.ctx_tokens = Some(*n_tokens);
+                    self.sync_request(true);
                 } else {
                     self.last_request = Some(LastRequest {
                         task: line.task,
@@ -348,9 +369,31 @@ impl App {
                         draft_pct: None,
                         ctx_tokens: Some(*n_tokens),
                     });
+                    self.sync_request(false);
                 }
             }
             _ => {}
+        }
+    }
+
+    /// Seconds since `task_started`, from the 100 ms ticks (`(frame - start) / 10`); `None` without a task.
+    pub fn task_elapsed_s(&self) -> Option<u64> {
+        let (_, start) = self.task_started?;
+        Some(self.frame.saturating_sub(start) / 10)
+    }
+
+    /// Keep `requests` in step with `last_request`: replace the back when filling, else push a new one.
+    fn sync_request(&mut self, fill: bool) {
+        let Some(req) = self.last_request.clone() else {
+            return;
+        };
+        if fill {
+            self.requests.back_mut().into_iter().for_each(|back| *back = req.clone());
+        } else {
+            self.requests.push_back(req);
+            while self.requests.len() > REQUEST_HISTORY {
+                self.requests.pop_front();
+            }
         }
     }
 }
