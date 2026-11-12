@@ -296,3 +296,20 @@ fn check_inside(buf: &Buffer) {
         }
     }
 }
+
+/// A filter longer than the border stays inside the area, keeps the title and the right corner.
+#[test]
+fn log_long_filter_stays_inside() {
+    let theme = true_color();
+    let ctx = make_ctx(&theme);
+    let mut app = demo_app(DemoState::Generating);
+    app.log_view.filter = "a filter much longer than the panel".to_string();
+    let area = Rect::new(5, 2, 30, 6);
+    let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
+    log::render(&app, &ctx, area, &mut buf);
+    check_inside(&buf);
+    let top = &rows_of(&buf)[2];
+    assert!(top.contains(" Log "), "{top:?}");
+    assert!(top.contains("follow ● ╮"), "{top:?}");
+    assert!(top.contains("/a filter"), "{top:?}");
+}

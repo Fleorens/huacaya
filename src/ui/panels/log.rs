@@ -61,28 +61,37 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 /// The top-border indicators: ` /<filter> ` (Warning) when the filter is not empty, then ` follow ● `
 /// (Good) when following, else ` scroll −<scroll> ` (Warning).
 fn render_indicators(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer) {
-    let mut parts: Vec<(String, Role)> = Vec::new();
-    if !app.log_view.filter.is_empty() {
-        parts.push((format!(" /{}", app.log_view.filter), Role::Warning));
-    }
-    if app.log_view.follow {
-        parts.push((" follow ● ".to_string(), Role::Good));
+    let state = if app.log_view.follow {
+        (" follow ● ".to_string(), Role::Good)
     } else {
-        parts.push((format!(" scroll −{}", app.log_view.scroll), Role::Warning));
-    }
+        (format!(" scroll −{} ", app.log_view.scroll), Role::Warning)
+    };
+    // Between the two corners, leaving the title "Log" readable (`╭ Log ` = 6 columns).
+    let left = area.x.saturating_add(6).min(area.x + area.width.saturating_sub(1));
+    let right = area.x + area.width.saturating_sub(1);
+    let avail = right.saturating_sub(left) as usize;
+    let state_w = state.0.chars().count();
 
-    // Place the parts right-aligned on the top border, the last one at the right edge.
+    let mut parts: Vec<(String, Role)> = Vec::new();
+    let filter = &app.log_view.filter;
+    // ` /` + at least one character + ` ` must fit beside the state, else the filter is omitted.
+    if !filter.is_empty() && avail >= state_w + 4 {
+        let filter_w = avail - state_w - 3;
+        parts.push((format!(" /{} ", fit(filter, filter_w)), Role::Warning));
+    }
+    parts.push(state);
+
+    // Place the parts right-aligned on the top border, the last one just before the right corner.
     let y = area.y;
-    let right = area.x + area.width;
     let mut x = right;
     for (text, role) in parts.into_iter().rev() {
         let w = text.chars().count() as u16;
-        x = x.saturating_sub(w);
+        x = x.saturating_sub(w).max(left);
         let color = theme.color(role);
         for (i, ch) in text.chars().enumerate() {
             let cx = x + i as u16;
             if cx >= right {
-                continue;
+                break;
             }
             let Some(cell) = buf.cell_mut((cx, y)) else { continue };
             cell.set_char(ch);

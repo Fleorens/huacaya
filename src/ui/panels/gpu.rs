@@ -70,22 +70,27 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
             // Row 2: VRAM.
             let y = y0 + 1;
             if y < inner.bottom() {
-                let (ratio, value) = match (g.vram_used, g.vram_total) {
-                    (Some(u), Some(t)) => (u as f64 / t as f64, bytes_pair(u, t)),
-                    _ => (0.0, "n/a".to_string()),
-                };
-                gauge_row(
-                    buf,
-                    inner.x,
-                    y,
-                    inner.width,
-                    "VRAM  ",
-                    ratio,
-                    Role::Gpu,
-                    PCT_THRESHOLDS,
-                    &value,
-                    theme,
-                );
+                match (g.vram_used, g.vram_total) {
+                    (Some(u), Some(t)) if t > 0 => gauge_row(
+                        buf,
+                        inner.x,
+                        y,
+                        inner.width,
+                        "VRAM  ",
+                        u as f64 / t as f64,
+                        Role::Gpu,
+                        PCT_THRESHOLDS,
+                        &bytes_pair(u, t),
+                        theme,
+                    ),
+                    _ => {
+                        let line = Line::from(vec![
+                            Span::styled("VRAM  ", theme.fg(Role::Dim)),
+                            Span::styled("n/a", theme.fg(Role::Text)),
+                        ]);
+                        buf.set_line(inner.x, y, &line, inner.width);
+                    }
+                }
             }
             // Row 3: junction/edge temperatures, junction marked when hot.
             let y = y0 + 2;
