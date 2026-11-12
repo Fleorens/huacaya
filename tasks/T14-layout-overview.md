@@ -50,7 +50,7 @@ Rules. `header` is always the top 3 rows; `body` is the rest. Splits of a width 
 part `w / 2` (floor) and the right part the rest. Heights are exact, in rows:
 
 - **Wide** — `graphs` true. Body in two columns. Left: `model` 8 rows, `request` 5 rows, `log` the rest.
-  Right: `gpu` `body.height * 55 / 100` rows, then `cpu` | `memory` side by side on the rest.
+  Right: `gpu` `body.height * 45 / 100` rows (55 in the first version: too tall on large terminals), then `cpu` | `memory` side by side on the rest.
 - **Medium** — `graphs` true. Band 1, 8 rows: `model` | `gpu`. Band 2, 6 rows: `cpu` | `memory`. `log`: the
   rest, full width. No `request`.
 - **Narrow** — `graphs` false. One column: `model` 8, `gpu` 6, `cpu` | `memory` 5, `log` the rest.

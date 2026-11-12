@@ -53,7 +53,7 @@ pub enum Role {
 /// The true-colour palette of `docs/02-ui.md` § 4, independent of the mode (used for gradients).
 pub fn rgb(role: Role) -> (u8, u8, u8) {
     match role {
-        Role::Border => (0x3b, 0x42, 0x61),
+        Role::Border => (0x54, 0x5c, 0x7e),
         Role::BorderFocused => (0x7a, 0xa2, 0xf7),
         Role::Text => (0xc0, 0xca, 0xf5),
         Role::Dim => (0x56, 0x5f, 0x89),
@@ -143,6 +143,8 @@ pub const PCT_THRESHOLDS: (f32, f32) = (75.0, 90.0);
 pub const GPU_JUNCTION_THRESHOLDS: (f32, f32) = (85.0, 95.0);
 /// CPU package temperature, °C.
 pub const CPU_TEMP_THRESHOLDS: (f32, f32) = (80.0, 95.0);
+/// VRAM, percent: a loaded model fills it by design, so only a really full card warns.
+pub const VRAM_THRESHOLDS: (f32, f32) = (98.0, 99.5);
 
 /// Per channel `from + (to - from) * t` in `f32`, `t` clamped to 0..=1, then `.round()` to `u8`.
 pub fn lerp_rgb(from: (u8, u8, u8), to: (u8, u8, u8), t: f32) -> (u8, u8, u8) {

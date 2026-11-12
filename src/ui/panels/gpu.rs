@@ -11,7 +11,9 @@ use crate::ui::frame::panel;
 use crate::ui::graph::BrailleGraph;
 use crate::ui::panels::{Ctx, gauge_row};
 use crate::ui::text::{bytes_pair, pct, temp};
-use crate::ui::theme::{GPU_JUNCTION_THRESHOLDS, PCT_THRESHOLDS, Role, Severity, hot_mark, severity};
+use crate::ui::theme::{
+    GPU_JUNCTION_THRESHOLDS, PCT_THRESHOLDS, Role, Severity, VRAM_THRESHOLDS, hot_mark, severity,
+};
 
 /// Height needed, borders included (4 rows inside).
 pub const MIN_HEIGHT: u16 = 6;
@@ -79,7 +81,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                         "VRAM  ",
                         u as f64 / t as f64,
                         Role::Gpu,
-                        PCT_THRESHOLDS,
+                        VRAM_THRESHOLDS,
                         &bytes_pair(u, t),
                         theme,
                     ),

@@ -28,14 +28,15 @@ pub fn braille_rows(values: &[f32], max: f32, width: u16, height: u16) -> Vec<St
     let n = (width as usize) * 2;
     let start = values.len().saturating_sub(n);
     let m = values.len() - start;
-    let mut samples = vec![0.0; n - m];
+    // NaN marks "no sample yet": blank, unlike a real 0 which shows the baseline dot.
+    let mut samples = vec![f32::NAN; n - m];
     samples.extend_from_slice(&values[start..]);
 
     // `grid[row][cell]` accumulates the braille bits; row 0 is the top graph row.
     let mut grid = vec![vec![0u8; width as usize]; height as usize];
     for cell in 0..width as usize {
         for (sub_bits, v) in [(LEFT_BITS, samples[2 * cell]), (RIGHT_BITS, samples[2 * cell + 1])] {
-            let h = if max_ok && v > 0.0 {
+            let h = if max_ok && v >= 0.0 {
                 let raw = ((v / max).min(1.0) as f64 * height as f64 * 4.0).round() as u32;
                 raw.max(1).min(height as u32 * 4)
             } else {

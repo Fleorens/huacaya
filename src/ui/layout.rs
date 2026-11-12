@@ -68,7 +68,7 @@ fn wide(area: Rect, header: Rect, body: Rect) -> OverviewLayout {
     let model = Rect::new(area.x, body.y, left_w, 8);
     let request = Rect::new(area.x, body.y + 8, left_w, 5);
 
-    let gpu_h = body.height * 55 / 100;
+    let gpu_h = body.height * 45 / 100;
     let rest_h = body.height.saturating_sub(gpu_h);
     let cpu_w = right_w / 2;
     let gpu = Rect::new(right_x, body.y, right_w, gpu_h);

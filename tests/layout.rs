@@ -56,9 +56,9 @@ fn wide_layout() {
     assert_eq!(l.model, Some(Rect::new(0, 3, 70, 8)));
     assert_eq!(l.request, Some(Rect::new(0, 11, 70, 5)));
     assert_eq!(l.log, Some(Rect::new(0, 16, 70, 24)));
-    assert_eq!(l.gpu, Some(Rect::new(70, 3, 70, 20)));
-    assert_eq!(l.cpu, Some(Rect::new(70, 23, 35, 17)));
-    assert_eq!(l.memory, Some(Rect::new(105, 23, 35, 17)));
+    assert_eq!(l.gpu, Some(Rect::new(70, 3, 70, 16)));
+    assert_eq!(l.cpu, Some(Rect::new(70, 19, 35, 21)));
+    assert_eq!(l.memory, Some(Rect::new(105, 19, 35, 21)));
     assert!(l.graphs);
 }
 

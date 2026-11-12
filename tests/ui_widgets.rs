@@ -127,12 +127,14 @@ fn gauge_without_colour() {
 
 #[test]
 fn braille_one_row() {
-    assert_eq!(braille_rows(&[0.0, 1.0, 2.0, 3.0, 4.0], 4.0, 3, 1), [" ⣠⣾".to_string()]);
+    // A 0 sample shows the baseline dot; the slot with no sample yet stays blank.
+    assert_eq!(braille_rows(&[0.0, 1.0, 2.0, 3.0, 4.0], 4.0, 3, 1), ["⢀⣠⣾".to_string()]);
+    assert_eq!(braille_rows(&[1.0, 2.0, 3.0, 4.0], 4.0, 3, 1), [" ⣠⣾".to_string()]);
 }
 
 #[test]
 fn braille_two_rows() {
-    assert_eq!(braille_rows(&[8.0, 4.0, 1.0, 0.0], 8.0, 2, 2), ["⡇ ".to_string(), "⣿⡀".to_string()]);
+    assert_eq!(braille_rows(&[8.0, 4.0, 1.0, 0.0], 8.0, 2, 2), ["⡇ ".to_string(), "⣿⣀".to_string()]);
 }
 
 #[test]
@@ -152,7 +154,7 @@ fn braille_degenerate() {
 fn graph_renders_with_accent() {
     let t = Theme::new(ColorMode::TrueColor);
     let mut buf = Buffer::empty(Rect::new(0, 0, 3, 1));
-    let graph = BrailleGraph { values: &[0.0, 1.0, 2.0, 3.0, 4.0], max: 4.0, accent: Role::Gpu, theme: &t };
+    let graph = BrailleGraph { values: &[1.0, 2.0, 3.0, 4.0], max: 4.0, accent: Role::Gpu, theme: &t };
     graph.render(*buf.area(), &mut buf);
     assert_eq!(lines(&buf), [" ⣠⣾".to_string()]);
     assert_eq!(buf[(1, 0)].fg, Color::Rgb(0xbb, 0x9a, 0xf7));
@@ -168,7 +170,7 @@ fn panel_rounded_frame() {
     let block = panel("GPU", Role::Gpu, false, &t);
     block.render(*buf.area(), &mut buf);
     assert_eq!(lines(&buf), ["╭ GPU ─────────────╮", "│                  │", "╰──────────────────╯"]);
-    assert_eq!(buf[(0, 0)].fg, Color::Rgb(0x3b, 0x42, 0x61));
+    assert_eq!(buf[(0, 0)].fg, Color::Rgb(0x54, 0x5c, 0x7e));
     assert_eq!(buf[(2, 0)].fg, Color::Rgb(0xbb, 0x9a, 0xf7));
     assert!(buf[(2, 0)].modifier.contains(Modifier::BOLD));
 }

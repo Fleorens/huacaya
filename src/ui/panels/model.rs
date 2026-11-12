@@ -125,9 +125,13 @@ fn render_with_active(
         // PROMPT (processing, nothing decoded yet) shows the average, like IDLE.
         let generating = s.map(|s| s.is_processing && s.n_decoded > 0).unwrap_or(false);
         let gen_speed = if generating { m.live_gen_tps } else { metrics.and_then(|m| m.avg_gen_tps()) };
-        let line = format!("gen    {} t/s{}", tps(gen_speed), if generating { "" } else { " avg" });
-        let text_w = line.chars().count() as u16;
-        buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
+        let value = format!("{} t/s{}", tps(gen_speed), if generating { "" } else { " avg" });
+        let text_w = 7 + value.chars().count() as u16;
+        let line = Line::from(vec![
+            Span::styled("gen    ", theme.fg(Role::Dim)),
+            Span::styled(value, theme.fg(Role::Text)),
+        ]);
+        buf.set_line(inner.x, y, &line, inner.width);
         let remaining = inner.width.saturating_sub(text_w);
         if graphs && remaining.saturating_sub(2) >= 8 {
             let vals = app.gen_tps.tail(usize::MAX);
@@ -187,7 +191,7 @@ fn render_with_active(
     let y = inner.y + 5;
     if y < inner.y + inner.height {
         let draft = metrics.and_then(|m| m.draft_acceptance_pct());
-        let mut parts = vec![format!("draft  {}", pct(draft))];
+        let mut parts = vec![pct(draft)];
         if let Some(info) = info {
             if let Some(v) = info.ctx_size {
                 parts.push(format!("   ctx-size {}", count(v)));
@@ -199,8 +203,12 @@ fn render_with_active(
                 parts.push(format!("   threads {v}"));
             }
         }
-        let fitted = fit(&parts.concat(), inner.width as usize);
-        buf.set_line(inner.x, y, &Line::from(Span::styled(fitted, theme.fg(Role::Text))), inner.width);
+        let fitted = fit(&parts.concat(), (inner.width as usize).saturating_sub(7));
+        let line = Line::from(vec![
+            Span::styled("draft  ", theme.fg(Role::Dim)),
+            Span::styled(fitted, theme.fg(Role::Text)),
+        ]);
+        buf.set_line(inner.x, y, &line, inner.width);
     }
 }
 
