@@ -59,7 +59,7 @@ In `src/ui/panels/memory.rs`, after row 3 (`model …` / `server …`), when the
 
 ## Acceptance criteria
 
-- [ ] GPU and Memory panels show the extra rows only when tall enough; no public API changed.
-- [ ] The 4 tests above exist under these names and pass; every earlier test passes unchanged.
-- [ ] The golden files are regenerated and read; only GPU and Memory panels changed.
-- [ ] `bash .devbox/check` is green.
+- [x] GPU and Memory panels show the extra rows only when tall enough; no public API changed.
+- [x] The 4 tests above exist under these names and pass; every earlier test passes unchanged.
+- [x] The golden files are regenerated and read; only GPU and Memory panels changed.
+- [x] `bash .devbox/check` is green.

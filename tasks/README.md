@@ -73,4 +73,4 @@ first three are fixed by the orchestrator (commit "first on-screen review"); the
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
 | [T20](T20-compact-log.md) | Compact log lines (`r` toggles raw) | T18 | livrée |
-| [T21](T21-gpu-memory-details.md) | More GPU and memory details when there is room | T20 | prête |
+| [T21](T21-gpu-memory-details.md) | More GPU and memory details when there is room | T20 | livrée |

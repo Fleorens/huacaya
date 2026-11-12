@@ -14,14 +14,16 @@ use crate::ui::text::{bytes_pair, pct, temp};
 use crate::ui::theme::{
     GPU_JUNCTION_THRESHOLDS, PCT_THRESHOLDS, Role, Severity, VRAM_THRESHOLDS, hot_mark, severity,
 };
+use crate::util::bytes;
 
 /// Height needed, borders included (4 rows inside).
 pub const MIN_HEIGHT: u16 = 6;
 
 /// The GPU panel of `system.gpus[0]`: `frame::panel` with a `"GPU  <name>"` title (leading `Radeon `
 /// removed), the load and VRAM gauges, the junction/edge temperatures (junction marked when hot), the
-/// power and fan, and the load graph. No system snapshot or no GPU: title `GPU`, one `Dim` row
-/// `no AMD GPU`.
+/// power and fan, and the load graph. When the inner height is at least 10, three extra rows show the
+/// core clock/voltage/fan, the DRAM temperature and GTT, and the PCIe link. No system snapshot or no
+/// GPU: title `GPU`, one `Dim` row `no AMD GPU`.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
@@ -130,9 +132,54 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                 let line = format!("power {} / {}   fan {} rpm", watts(g.power_w), watts(g.power_cap_w), fan);
                 buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
             }
-            // Row 5: load graph on all the rows left.
+            // Rows 5–7: extra detail, shown only when the panel is tall enough (inner height >= 10).
+            if inner.height >= 10 {
+                // Row 5: core clock, voltage, fan.
+                let y = y0 + 4;
+                if y < inner.bottom() {
+                    let sclk =
+                        g.sclk_mhz.map(|v| format!("{:.0} MHz", v)).unwrap_or_else(|| "n/a MHz".to_string());
+                    let mv = g.vddgfx_mv.map(|v| format!("{} mV", v)).unwrap_or_else(|| "n/a mV".to_string());
+                    let line = Line::from(vec![
+                        Span::styled("clock ", theme.fg(Role::Dim)),
+                        Span::styled(sclk, theme.fg(Role::Text)),
+                        Span::styled("   ", theme.fg(Role::Text)),
+                        Span::styled(mv, theme.fg(Role::Text)),
+                        Span::styled("   ", theme.fg(Role::Text)),
+                        Span::styled("fan   ", theme.fg(Role::Dim)),
+                        Span::styled(pct(g.fan_pct.map(|v| v as f64)), theme.fg(Role::Text)),
+                    ]);
+                    buf.set_line(inner.x, y, &line, inner.width);
+                }
+                // Row 6: DRAM temperature and GTT usage.
+                let y = y0 + 5;
+                if y < inner.bottom() {
+                    let temp_mem = temp(g.temp_mem_c);
+                    let gtt = g.gtt_used.map(bytes).unwrap_or_else(|| "n/a".to_string());
+                    let line = Line::from(vec![
+                        Span::styled("mem   ", theme.fg(Role::Dim)),
+                        Span::styled(temp_mem, theme.fg(Role::Text)),
+                        Span::styled("   ", theme.fg(Role::Text)),
+                        Span::styled("GTT   ", theme.fg(Role::Dim)),
+                        Span::styled(gtt, theme.fg(Role::Text)),
+                    ]);
+                    buf.set_line(inner.x, y, &line, inner.width);
+                }
+                // Row 7: PCIe link.
+                let y = y0 + 6;
+                if y < inner.bottom() {
+                    let link = g.link.as_deref().unwrap_or("n/a");
+                    let line = Line::from(vec![
+                        Span::styled("link  ", theme.fg(Role::Dim)),
+                        Span::styled(link, theme.fg(Role::Text)),
+                    ]);
+                    buf.set_line(inner.x, y, &line, inner.width);
+                }
+            }
+            // Row 8: load graph on all the rows left.
             if ctx.graphs && inner.height > 4 {
-                let grect = Rect::new(inner.x, y0 + 4, inner.width, inner.height - 4);
+                let rows_before = if inner.height >= 10 { 7 } else { 4 };
+                let grect = Rect::new(inner.x, y0 + rows_before, inner.width, inner.height - rows_before);
                 BrailleGraph { values: &app.gpu_load.tail(usize::MAX), max: 100.0, accent: Role::Gpu, theme }
                     .render(grect, buf);
             }
