@@ -33,8 +33,8 @@ pub struct SystemSnapshot {
 }
 
 /// Owns what must persist between two samples: the CPU and network references used to derive the
-/// rates, whether `nvidia-smi` was found missing (so we stop spawning it), and its failure backoff. Everything else is read
-/// fresh each time; a missing source yields `None`/empty, never a panic.
+/// rates, whether `nvidia-smi` was found missing (so we stop spawning it), and its failure backoff.
+/// Everything else is read fresh each time; a missing source yields `None`/empty, never a panic.
 pub struct Sampler {
     sysroot: PathBuf,
     mounts: Vec<PathBuf>,

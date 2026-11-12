@@ -88,6 +88,7 @@ pub(crate) fn run_smi() -> Result<String, ErrorKind> {
         .arg("--query-gpu")
         .arg(QUERY)
         .arg("--format=csv,noheader,nounits")
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
@@ -112,6 +113,8 @@ pub(crate) fn run_smi() -> Result<String, ErrorKind> {
         return Err(ErrorKind::Other);
     }
 
+    // Read only after exit: fine while the output (~100 bytes per GPU) stays far below the ~64 KiB
+    // pipe buffer; a larger query would block `nvidia-smi` on write and hit the timeout.
     let mut stdout = child.stdout.take().ok_or(ErrorKind::Other)?;
     let mut text = String::new();
     stdout.read_to_string(&mut text).map_err(|e| e.kind())?;
