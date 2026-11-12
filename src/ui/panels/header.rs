@@ -70,7 +70,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         .title_top(Line::from(right_spans).right_aligned());
     let inner = block.inner(area);
     block.render(area, buf);
-    let y = inner.y + inner.height - 1;
+    let y = inner.y;
     let mut tabs = Vec::new();
     for (i, sc) in Screen::ALL.iter().enumerate() {
         let style = if *sc == app.screen {

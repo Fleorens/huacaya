@@ -122,7 +122,8 @@ fn render_with_active(
     // Row 3: `gen    <tps> t/s` (+ graph), or the average when not generating.
     let y = inner.y + 2;
     if y < inner.y + inner.height {
-        let generating = s.map(|s| s.is_processing).unwrap_or(false);
+        // PROMPT (processing, nothing decoded yet) shows the average, like IDLE.
+        let generating = s.map(|s| s.is_processing && s.n_decoded > 0).unwrap_or(false);
         let gen_speed = if generating { m.live_gen_tps } else { metrics.and_then(|m| m.avg_gen_tps()) };
         let line = format!("gen    {} t/s{}", tps(gen_speed), if generating { "" } else { " avg" });
         let text_w = line.chars().count() as u16;
@@ -198,7 +199,7 @@ fn render_with_active(
                 parts.push(format!("   threads {v}"));
             }
         }
-        let fitted = fit(&parts.join(" "), inner.width as usize);
+        let fitted = fit(&parts.concat(), inner.width as usize);
         buf.set_line(inner.x, y, &Line::from(Span::styled(fitted, theme.fg(Role::Text))), inner.width);
     }
 }
