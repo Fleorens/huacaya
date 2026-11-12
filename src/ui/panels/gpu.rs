@@ -146,7 +146,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                         Span::styled("   ", theme.fg(Role::Text)),
                         Span::styled(mv, theme.fg(Role::Text)),
                         Span::styled("   ", theme.fg(Role::Text)),
-                        Span::styled("fan   ", theme.fg(Role::Dim)),
+                        Span::styled("fan ", theme.fg(Role::Dim)),
                         Span::styled(pct(g.fan_pct.map(|v| v as f64)), theme.fg(Role::Text)),
                     ]);
                     buf.set_line(inner.x, y, &line, inner.width);
@@ -160,7 +160,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                         Span::styled("mem   ", theme.fg(Role::Dim)),
                         Span::styled(temp_mem, theme.fg(Role::Text)),
                         Span::styled("   ", theme.fg(Role::Text)),
-                        Span::styled("GTT   ", theme.fg(Role::Dim)),
+                        Span::styled("GTT ", theme.fg(Role::Dim)),
                         Span::styled(gtt, theme.fg(Role::Text)),
                     ]);
                     buf.set_line(inner.x, y, &line, inner.width);
