@@ -213,6 +213,11 @@ impl App {
                 if !s.active.is_empty() {
                     self.gen_tps.push(s.active[0].live_gen_tps.unwrap_or(0.0) as f32);
                 }
+                // The first list of models selects the loaded one: it is the model one wants to read about.
+                let first_list = self.llama.as_ref().is_none_or(|l| l.models.is_empty());
+                if first_list && let Some(i) = s.models.iter().position(|m| m.state == ModelState::Loaded) {
+                    self.model_selected = i;
+                }
                 self.model_selected = self.model_selected.min(s.models.len().saturating_sub(1));
                 self.llama = Some(s);
                 !self.paused

@@ -379,3 +379,15 @@ fn model_selection() {
     app.apply(Event::Key(code(KeyCode::Down)));
     assert_eq!(app.model_selected, before);
 }
+
+#[test]
+fn first_models_list_selects_the_loaded_model() {
+    use llamatop::app::demo::{DemoState, llama as demo_llama};
+    let mut app = App::new(1000);
+    app.apply(Event::Llama(demo_llama(0.0, DemoState::Idle)));
+    assert_eq!(app.model_selected, 3, "the demo's loaded model is the 4th");
+    // Later lists keep the user's choice.
+    app.model_selected = 0;
+    app.apply(Event::Llama(demo_llama(1.0, DemoState::Idle)));
+    assert_eq!(app.model_selected, 0);
+}
