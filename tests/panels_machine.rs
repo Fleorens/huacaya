@@ -8,6 +8,7 @@ use ratatui::style::Color;
 use llamatop::app::demo::{DemoState, app as demo_app};
 use llamatop::app::{App, Event};
 use llamatop::collect::logs::parse_line;
+use llamatop::ui::big::level_bars;
 use llamatop::ui::panels::{Ctx, cpu, gauge_row, gpu, log, memory};
 use llamatop::ui::theme::{ColorMode, PCT_THRESHOLDS, Role, Theme};
 
@@ -140,15 +141,17 @@ fn cpu_generating() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    let rows = draw(|area, buf| cpu::render(&app, &ctx, area, buf), 40, 6);
+    let rows = draw(|area, buf| cpu::render(&app, &ctx, area, buf), 48, 9);
     let all: String = rows.join("\n");
-    assert!(all.contains("50 %"), "{:?}", rows);
-    assert!(all.contains("temp  60 °C   3.5 GHz avg"), "{:?}", rows);
+    assert!(rows[0].contains("CPU  Intel Core i7-11700K"), "{:?}", rows[0]);
+    let per_core = app.system.as_ref().unwrap().cpu.per_core_pct.clone();
+    assert!(all.contains(&format!("cores {}  16 thr", level_bars(&per_core))), "{:?}", rows);
+    assert!(all.contains("temp  60 °C   freq 3.5 GHz"), "{:?}", rows);
     assert!(all.contains("load  8.33 7.14 5.56"), "{:?}", rows);
 
     // With graphs off, no braille character anywhere.
     let ctx = Ctx { theme: &theme, graphs: false, clock: "10:21:03" };
-    let rows = draw(|area, buf| cpu::render(&app, &ctx, area, buf), 40, 6);
+    let rows = draw(|area, buf| cpu::render(&app, &ctx, area, buf), 48, 9);
     let all: String = rows.join("\n");
     assert!(!all.chars().any(|c| (0x2800..=0x28ff).contains(&(c as u32))), "{:?}", rows);
 }
