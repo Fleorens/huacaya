@@ -1,0 +1,30 @@
+╭ llamatop ─ aibox-flo ─ up 4d 3h ───────────────────────────────── ● server ok  b12151 ─ 10:21:03 ╮
+│ 1 Overview   2 Models   3 Logs   4 System                                              ? help  q │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭ Model ─────────────────────────────────────────╮╭ GPU  RX 7800 XT ───────────────────────────────╮
+│Cyber-Tiel-Coder-35B-A3B   Q4_K_M               ││load  ██████████████████████████████████▏░  95 %│
+│◉ GENERATING   task 9000                        ││VRAM  ████████████████████████████▉  15.9/16.0 G│
+│gen    49.3 t/s  ⣿⣷⣾⣿⣶⣿⣷⣿⣿⣶⣿⣶⣾⣷⣾⣿⣷⣿⣷⣾⣿⣶⣿⣷⣿⣿⣾⣿⣶⣾⣷││temp  73 °C junction   62 °C edge               │
+│prompt 591 t/s   cache 98 %                     ││power 117 W / 212 W   fan 1233 rpm              │
+│ctx    ████████▏░░░░░╭ Help ────────────────────────────────────────────────╮⣿⣷⣿⣿⣿⣿⣿⣿⣿⣾⣿⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿│
+│draft  64 %   ctx-siz│1-4 Tab S-Tab  switch screen                          │⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿│
+╰─────────────────────│q Ctrl-C       quit                                   │─────────────────────╯
+╭ CPU ────────────────│? Esc          close this help                        │─────────────────────╮
+│usage ███████████████│p              pause / resume the display             │░░░░░░░░  21.6/31.1 G│
+│temp  60 °C   3.5 GHz│+ -            faster / slower refresh (now 1.0 s)    │░░░░░░░░░░  0.0/8.0 G│
+│load  8.33 7.14 5.56 │↑ ↓ PgUp PgDn  scroll (Logs, Models)                  │                     │
+│⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤│Home End       top / bottom                           │                     │
+╰─────────────────────│f              follow the log                         │─────────────────────╯
+╭ Log ────────────────│/              filter the log, Esc clears             │─────────── follow ● ╮
+│10:00:18 slot print_t│e              level filter: all, warnings, errors    │ tg_3s =  53.00 t/s  │
+│10:00:21 slot print_t│x              show / hide the router's proxy lines   │ tg_3s =  53.00 t/s  │
+│10:00:24 slot print_t╰──────────────────────────────────────────────────────╯ tg_3s =  53.00 t/s  │
+│10:00:27 slot print_timing: id  0 | task 9000 | n_gen = 780, tg =  52.10 t/s, tg_3s =  53.00 t/s  │
+│10:00:30 slot print_timing: id  0 | task 9000 | n_gen = 936, tg =  52.10 t/s, tg_3s =  53.00 t/s  │
+│10:00:32 slot print_timing: id  0 | task 9000 |        eval time =   20000.00 ms /  1040 tokens (…│
+│10:00:32 slot print_timing: id  0 | task 9000 |       total time =   29195.00 ms /  9232 tokens   │
+│10:00:32 slot print_timing: id  0 | task 9000 | draft acceptance = 0.70000 (  728 accepted /  104…│
+│10:00:32 slot      release: id  0 | task 9000 | stop processing: n_tokens = 9232, truncated = 0   │
+│10:00:32 srv  log_server_r: request: POST /v1/chat/completions 192.168.1.42 200                   │
+│10:00:32 srv  update_slots: all slots are idle                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
