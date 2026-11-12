@@ -2,6 +2,7 @@
 //!
 //! Architecture: `docs/01-architecture.md`. One module per data source; nothing here draws.
 
+pub mod app;
 pub mod collect;
 pub mod config;
 pub mod dump;
