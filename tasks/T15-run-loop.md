@@ -106,8 +106,8 @@ The last branch becomes `llamatop::app::run::run(&cli)`. `--dump` and `--snapsho
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; `src/main.rs` runs the dashboard.
-- [ ] The 6 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The files exist with the exact public API above; `src/main.rs` runs the dashboard.
+- [x] The 6 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) `cargo run -- --demo` shows a moving dashboard, `q` quits and gives the
       shell back clean; on the aibox `llamatop --api-key-file …` shows the real server.

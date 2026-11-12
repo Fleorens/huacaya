@@ -1,5 +1,6 @@
 use clap::Parser;
 
+use llamatop::app::run::run;
 use llamatop::app::{Screen, demo};
 use llamatop::config::Cli;
 use llamatop::ui::snapshot::{self, parse_size};
@@ -19,5 +20,5 @@ fn main() -> anyhow::Result<()> {
         print!("{}", snapshot::snapshot(&app, &Theme::new(ColorMode::detect()), w, h, cli.ansi));
         return Ok(());
     }
-    anyhow::bail!("the dashboard is not implemented yet (batch 2)")
+    run(&cli)
 }
