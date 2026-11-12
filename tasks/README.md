@@ -91,6 +91,6 @@ llama.cpp address and key (and later OpenCode's). The remote machine panels need
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T26](T26-agent-protocol.md) | Agent protocol: request parsing, routing, log ring, token (pure) | T24 | prête |
+| [T26](T26-agent-protocol.md) | Agent protocol: request parsing, routing, log ring, token (pure) | T24 | livrée |
 | [T27](T27-agent-server.md) | `llamatop agent`: the server | T26 | prête |
 | [T28](T28-agent-client.md) | Dashboard side: `--agent`, `[agent]`, setup question | T27 | prête |

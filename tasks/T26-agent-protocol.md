@@ -129,6 +129,6 @@ pub fn route(req: &Request, token: Option<&str>, system: Option<&SystemSnapshot>
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; no new dependency.
-- [ ] The 8 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The files exist with the exact public API above; no new dependency.
+- [x] The 8 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
