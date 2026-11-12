@@ -19,11 +19,12 @@ use crate::util::bytes;
 /// Height needed, borders included (4 rows inside).
 pub const MIN_HEIGHT: u16 = 6;
 
-/// The GPU panel of `system.gpus[0]`: `frame::panel` with a `"GPU  <name>"` title (leading `Radeon `
-/// removed), the load and VRAM gauges, the junction/edge temperatures (junction marked when hot), the
-/// power and fan, and the load graph. When the inner height is at least 10, three extra rows show the
-/// core clock/voltage/fan, the DRAM temperature and GTT, and the PCIe link. No system snapshot or no
-/// GPU: title `GPU`, one `Dim` row `no AMD GPU`.
+/// The GPU panel of `system.gpus[0]`: `frame::panel` with a `"GPU  <name>"` title (leading `Radeon `,
+/// `NVIDIA ` or `NVIDIA GeForce ` removed), the load and VRAM gauges, the temperature (junction marked
+/// when hot, and edge; the edge alone when junction is absent, as NVIDIA reports it), the power and fan,
+/// and the load graph. When the inner height is at least 10, three extra rows show the core
+/// clock/voltage/fan, the DRAM temperature and GTT, and the PCIe link. No system snapshot or no GPU:
+/// title `GPU`, one `Dim` row `no GPU`.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
@@ -31,7 +32,15 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let theme = ctx.theme;
     let gpu = app.system.as_ref().and_then(|s| s.gpus.first());
     let title = match &gpu {
-        Some(g) => format!("GPU  {}", g.name.strip_prefix("Radeon ").unwrap_or(&g.name)),
+        Some(g) => {
+            let name = g.name.as_str();
+            let name = name
+                .strip_prefix("NVIDIA GeForce ")
+                .or_else(|| name.strip_prefix("NVIDIA "))
+                .or_else(|| name.strip_prefix("Radeon "))
+                .unwrap_or(name);
+            format!("GPU  {name}")
+        }
         None => "GPU".to_string(),
     };
     let block = panel(&title, Role::Gpu, false, theme);
@@ -45,12 +54,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 
     match gpu {
         None => {
-            buf.set_line(
-                inner.x,
-                y0,
-                &Line::from(Span::styled("no AMD GPU", theme.fg(Role::Dim))),
-                inner.width,
-            );
+            buf.set_line(inner.x, y0, &Line::from(Span::styled("no GPU", theme.fg(Role::Dim))), inner.width);
         }
         Some(g) => {
             // Row 1: load.
@@ -96,27 +100,45 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                     }
                 }
             }
-            // Row 3: junction/edge temperatures, junction marked when hot.
+            // Row 3: temperature. NVIDIA reports only the edge temperature, shown plainly as `temp`; AMD
+            // reports junction (marked when hot) and edge, as before.
             let y = y0 + 2;
             if y < inner.bottom() {
-                let junction = g.temp_junction_c;
-                let edge = g.temp_edge_c;
-                let sev = junction
-                    .map(|j| severity(j, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
-                    .unwrap_or(Severity::Normal);
-                let style = match sev {
-                    Severity::Normal => theme.fg(Role::Text),
-                    Severity::Warning => theme.fg(Role::Warning),
-                    Severity::Critical => theme.fg(Role::Critical),
-                };
-                let line = Line::from(vec![
-                    Span::styled("temp  ", theme.fg(Role::Dim)),
-                    Span::styled(format!("{}{}", temp(junction), hot_mark(sev)), style),
-                    Span::styled(" junction   ", theme.fg(Role::Text)),
-                    Span::styled(temp(edge), theme.fg(Role::Text)),
-                    Span::styled(" edge", theme.fg(Role::Text)),
-                ]);
-                buf.set_line(inner.x, y, &line, inner.width);
+                if g.temp_junction_c.is_none() && g.temp_edge_c.is_some() {
+                    let edge = g.temp_edge_c;
+                    let sev = edge
+                        .map(|e| severity(e, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
+                        .unwrap_or(Severity::Normal);
+                    let style = match sev {
+                        Severity::Normal => theme.fg(Role::Text),
+                        Severity::Warning => theme.fg(Role::Warning),
+                        Severity::Critical => theme.fg(Role::Critical),
+                    };
+                    let line = Line::from(vec![
+                        Span::styled("temp  ", theme.fg(Role::Dim)),
+                        Span::styled(format!("{}{}", temp(edge), hot_mark(sev)), style),
+                    ]);
+                    buf.set_line(inner.x, y, &line, inner.width);
+                } else {
+                    let junction = g.temp_junction_c;
+                    let edge = g.temp_edge_c;
+                    let sev = junction
+                        .map(|j| severity(j, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
+                        .unwrap_or(Severity::Normal);
+                    let style = match sev {
+                        Severity::Normal => theme.fg(Role::Text),
+                        Severity::Warning => theme.fg(Role::Warning),
+                        Severity::Critical => theme.fg(Role::Critical),
+                    };
+                    let line = Line::from(vec![
+                        Span::styled("temp  ", theme.fg(Role::Dim)),
+                        Span::styled(format!("{}{}", temp(junction), hot_mark(sev)), style),
+                        Span::styled(" junction   ", theme.fg(Role::Text)),
+                        Span::styled(temp(edge), theme.fg(Role::Text)),
+                        Span::styled(" edge", theme.fg(Role::Text)),
+                    ]);
+                    buf.set_line(inner.x, y, &line, inner.width);
+                }
             }
             // Row 4: power and fan.
             let y = y0 + 3;

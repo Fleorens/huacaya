@@ -89,7 +89,7 @@ the `Sampler`, that `nvidia-smi` is missing after the first failed spawn with `N
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; NVIDIA GPUs appear in every screen through the same `GpuSample`.
-- [ ] The 4 tests above exist under these names and pass; every earlier test passes.
-- [ ] `bash .devbox/check` is green.
+- [x] The public API above exists; NVIDIA GPUs appear in every screen through the same `GpuSample`.
+- [x] The 4 tests above exist under these names and pass; every earlier test passes.
+- [x] `bash .devbox/check` is green.
 - [ ] (Not by the model) checked on a machine with an NVIDIA card.

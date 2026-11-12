@@ -130,7 +130,7 @@ fn gpu_missing() {
     let app = App::new(1000);
     let rows = draw(|area, buf| gpu::render(&app, &ctx, area, buf), 40, 6);
     let all: String = rows.join("\n");
-    assert!(all.contains("no AMD GPU"), "{:?}", rows);
+    assert!(all.contains("no GPU"), "{:?}", rows);
 }
 
 // --------------------------------------------------------------------------- CPU

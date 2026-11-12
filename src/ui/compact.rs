@@ -13,9 +13,9 @@ use crate::ui::theme::{Role, Theme};
 ///
 /// Row 0 `llamatop · <hostname> · <dot> <status>` (the header's status text and role); row 1 the Model
 /// panel's badge and speed (`<badge> <short model> <tps> t/s`, badge alone without a model); row 2
-/// `GPU <busy>% <junction>°C <vram> │ CPU <usage>% │ RAM <used>` (`n/a` for a missing value, no space
-/// before `%` or `°C`); then the end of `visible_logs()` as `<time> <text>` coloured by level. Every
-/// row is cut at the width.
+/// `GPU <busy>% <temp>°C <vram> │ CPU <usage>% │ RAM <used>` (`temp` = junction, else edge; `n/a` for a
+/// missing value, no space before `%` or `°C`); then the end of `visible_logs()` as `<time> <text>`
+/// coloured by level. Every row is cut at the width.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.width == 0 || area.height == 0 {
         return;
@@ -65,12 +65,15 @@ fn render_row_1(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
     }
 }
 
-/// Row 2: `GPU <busy>% <junction>°C <vram> │ CPU <usage>% │ RAM <used>`.
+/// Row 2: `GPU <busy>% <temp>°C <vram> │ CPU <usage>% │ RAM <used>` (`temp` = junction, else edge;
+/// `n/a` for a missing value, no space before `%` or `°C`).
 fn render_row_2(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
     let gpu = app.system.as_ref().and_then(|s| s.gpus.first());
     let busy = gpu.and_then(|g| g.busy_pct).map(|b| format!("{b:.0}%")).unwrap_or_else(|| "n/a".to_string());
-    let junction =
-        gpu.and_then(|g| g.temp_junction_c).map(|j| format!("{j:.0}°C")).unwrap_or_else(|| "n/a".to_string());
+    let junction = gpu
+        .and_then(|g| g.temp_junction_c.or(g.temp_edge_c))
+        .map(|j| format!("{j:.0}°C"))
+        .unwrap_or_else(|| "n/a".to_string());
     let vram = gpu.and_then(|g| g.vram_used).map(crate::util::bytes).unwrap_or_else(|| "n/a".to_string());
     let usage = app
         .system

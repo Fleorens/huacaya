@@ -23,6 +23,7 @@ pub mod llama;
 pub mod llama_poll;
 pub mod logs;
 pub mod net;
+pub mod nvidia;
 pub mod process;
 pub mod sampler;
 pub mod sensors;

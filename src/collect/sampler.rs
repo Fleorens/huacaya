@@ -1,6 +1,6 @@
 //! Assembles one `SystemSnapshot` from every T02–T04 collector, and the thread that samples it.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
@@ -11,6 +11,7 @@ use serde::Serialize;
 use crate::collect::disk::{DiskSample, auto_mounts, read_disks};
 use crate::collect::gpu::{GpuSample, read_gpus};
 use crate::collect::net::{NetReader, NetSample};
+use crate::collect::nvidia::{SmiBackoff, parse_smi, run_smi};
 use crate::collect::process::{ProcSample, read_server_procs};
 use crate::collect::sensors::{TempReading, cpu_temp, nvme_temp, read_temps};
 use crate::collect::system::{CpuReader, CpuSample, MemSample, read_hostname, read_mem, read_uptime};
@@ -32,24 +33,48 @@ pub struct SystemSnapshot {
 }
 
 /// Owns what must persist between two samples: the CPU and network references used to derive the
-/// rates. Everything else is read fresh each time; a missing source yields `None`/empty, never a panic.
+/// rates, whether `nvidia-smi` was found missing (so we stop spawning it), and its failure backoff.
+/// Everything else is read fresh each time; a missing source yields `None`/empty, never a panic.
 pub struct Sampler {
     sysroot: PathBuf,
     mounts: Vec<PathBuf>,
     cpu: CpuReader,
     net: NetReader,
+    nvidia_missing: bool,
+    nvidia_backoff: SmiBackoff,
 }
 
 impl Sampler {
     /// A sampler rooted at `sysroot`, reading the given `mounts` for disk usage.
     pub fn new(sysroot: PathBuf, mounts: Vec<PathBuf>) -> Self {
-        Self { sysroot, mounts, cpu: CpuReader::new(), net: NetReader::new() }
+        Self {
+            sysroot,
+            mounts,
+            cpu: CpuReader::new(),
+            net: NetReader::new(),
+            nvidia_missing: false,
+            nvidia_backoff: SmiBackoff::default(),
+        }
     }
 
     /// Reads every system source once. Never panics; missing sources give `None`/empty. The first
     /// sample has no baseline, so `cpu.usage_pct` and the network rates are `None`.
     pub fn sample(&mut self, now: Instant) -> SystemSnapshot {
         let sysroot = &self.sysroot;
+
+        // AMD cards first, then the NVIDIA ones (only on a real machine, `sysroot == /`, never for a
+        // test sysroot). Only a spawn that fails with `NotFound` stops the tries for good; other
+        // failures are retried, once a minute after 3 in a row (`SmiBackoff`).
+        let mut gpus = read_gpus(sysroot);
+        if !self.nvidia_missing && sysroot.as_path() == Path::new("/") && self.nvidia_backoff.should_try(now)
+        {
+            let result = run_smi();
+            self.nvidia_backoff.record(result.is_ok(), now);
+            match result {
+                Ok(text) => gpus.extend(parse_smi(&text)),
+                Err(kind) => self.nvidia_missing = kind == std::io::ErrorKind::NotFound,
+            }
+        }
 
         let temps = read_temps(sysroot);
         SystemSnapshot {
@@ -59,7 +84,7 @@ impl Sampler {
             cpu_temp_c: cpu_temp(&temps),
             nvme_temp_c: nvme_temp(&temps),
             mem: read_mem(sysroot),
-            gpus: read_gpus(sysroot),
+            gpus,
             temps,
             disks: if self.mounts.is_empty() {
                 read_disks(&auto_mounts(sysroot))
