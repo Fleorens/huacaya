@@ -50,6 +50,20 @@ pub fn wizard(
     probe: &dyn Probe,
     current: &Settings,
 ) -> Result<Settings> {
+    dialogue(input, out, secret, probe, current, None)
+}
+
+/// The dialogue. `effective_key` is the key the dashboard would use (environment, key file): an empty answer
+/// with no `current.llama.api_key` checks the server with it, without saving it in `api_key`.
+fn dialogue(
+    input: &mut dyn BufRead,
+    out: &mut dyn Write,
+    secret: &mut dyn FnMut(&str) -> Result<String>,
+    probe: &dyn Probe,
+    current: &Settings,
+    effective_key: Option<String>,
+) -> Result<Settings> {
+    let mut input = Input { inner: input, ended: false };
     writeln!(out, "llamatop setup")?;
     writeln!(out)?;
 
@@ -57,13 +71,13 @@ pub fn wizard(
     let default_url = current.llama.url.clone().unwrap_or_else(|| "http://127.0.0.1:8080".to_string());
     let mut refused = 0usize;
     let url = loop {
-        let mut line = String::new();
-        writeln!(out, "llama.cpp server URL [<{}>]: ", default_url)?;
-        read_line(input, &mut line)?;
-        let entered = line.trim().to_string();
+        write!(out, "llama.cpp server URL [{}]: ", default_url)?;
+        out.flush()?;
+        let entered = input.answer()?;
         let url = if entered.is_empty() { default_url.clone() } else { normalize_url(&entered) };
 
         write!(out, "checking {}/health … ", url)?;
+        out.flush()?;
         match probe.health(&url) {
             Ok(()) => {
                 writeln!(out, "ok")?;
@@ -71,10 +85,10 @@ pub fn wizard(
             }
             Err(err) => {
                 writeln!(out, "unreachable: {}", err)?;
-                let mut answer = String::new();
-                writeln!(out, "use it anyway? [y/N] ")?;
-                read_line(input, &mut answer)?;
-                if answer.trim().eq_ignore_ascii_case("yes") || answer.trim() == "y" {
+                write!(out, "use it anyway? [y/N] ")?;
+                out.flush()?;
+                let answer = input.answer()?;
+                if answer.eq_ignore_ascii_case("yes") || answer.eq_ignore_ascii_case("y") {
                     break url;
                 }
                 refused += 1;
@@ -87,6 +101,13 @@ pub fn wizard(
 
     // 2. The API key, checked against `/v1/models`, up to three refusals.
     let default_key = current.llama.api_key.clone();
+    // Only for the check: a key from the environment or a key file is never copied into `api_key`.
+    let probe_default = default_key.clone().or(effective_key).or_else(|| {
+        let path = current.llama.api_key_file.as_ref()?;
+        let text = std::fs::read_to_string(path).ok()?;
+        let key = text.lines().next()?.trim().to_string();
+        (!key.is_empty()).then_some(key)
+    });
     let prompt = match &default_key {
         Some(_) => "API key (empty: keep the current one): ".to_string(),
         None => "API key (empty: none): ".to_string(),
@@ -94,9 +115,14 @@ pub fn wizard(
     let mut key_refused = 0usize;
     let api_key = loop {
         let entered = secret(&prompt)?;
-        let key = if entered.is_empty() { default_key.clone() } else { Some(entered) };
+        let (key, probe_key) = if entered.is_empty() {
+            (default_key.clone(), probe_default.clone())
+        } else {
+            (Some(entered.clone()), Some(entered))
+        };
         write!(out, "checking models … ")?;
-        match probe.models(&url, key.as_deref()) {
+        out.flush()?;
+        match probe.models(&url, probe_key.as_deref()) {
             Ok(models) => {
                 let loaded: Vec<&ModelInfo> =
                     models.iter().filter(|m| m.state == ModelState::Loaded).collect();
@@ -125,14 +151,10 @@ pub fn wizard(
 
     // 3. The log command: the value from the file, else a local `journalctl` or an `ssh` to the host.
     let default_log = current.llama.log_cmd.clone().or_else(|| default_log_for(&url));
-    let mut line = String::new();
-    writeln!(out, "log command [<{}>]: ", default_log.as_deref().unwrap_or(""))?;
-    let mut eof = false;
-    line.clear();
-    if input.read_line(&mut line)? == 0 {
-        eof = true;
-    }
-    let log_cmd = if eof || line.trim().is_empty() { default_log } else { Some(line.trim().to_string()) };
+    write!(out, "log command [{}]: ", default_log.as_deref().unwrap_or(""))?;
+    out.flush()?;
+    let entered = input.answer()?;
+    let log_cmd = if entered.is_empty() { default_log } else { Some(entered) };
 
     Ok(Settings {
         llama: crate::settings::LlamaSettings {
@@ -150,7 +172,9 @@ fn default_log_for(url: &str) -> Option<String> {
     if http::is_loopback_url(url) {
         return Some(JOURNALCTL.to_string());
     }
-    host_of(url).map(|host| format!("ssh {} {}", host, JOURNALCTL))
+    http::host_of(url)
+        .map(|host| host.trim_start_matches('[').trim_end_matches(']').to_string())
+        .map(|host| format!("ssh {} {}", host, JOURNALCTL))
 }
 
 /// `url` with `http://` added when it has no scheme and without trailing `/`; surrounding spaces trimmed.
@@ -193,7 +217,12 @@ pub fn read_secret(prompt: &str) -> Result<String> {
                     return Err(anyhow!("setup cancelled"));
                 }
                 KeyCode::Esc => return Err(anyhow!("setup cancelled")),
-                KeyCode::Enter => return Ok(result),
+                KeyCode::Enter => {
+                    // Raw mode echoes nothing, not even the line break.
+                    write!(out, "\r\n")?;
+                    out.flush()?;
+                    return Ok(result);
+                }
                 KeyCode::Backspace => {
                     result.pop();
                 }
@@ -209,26 +238,37 @@ pub fn read_secret(prompt: &str) -> Result<String> {
 /// `wizard` on stdin / stdout with `read_secret` and `HttpProbe`, then `settings::save(path, …)`, then prints
 /// `saved <path>`. Returns the saved settings.
 pub fn run(path: &Path, current: &Settings) -> Result<Settings> {
+    run_with_key(path, current, None)
+}
+
+/// `run`, where an empty key answer checks the server with `effective_key` (the key `Cli::api_key` resolved
+/// from the environment or a key file) without saving it.
+pub fn run_with_key(path: &Path, current: &Settings, effective_key: Option<String>) -> Result<Settings> {
     let mut input = std::io::stdin().lock();
     let mut out = std::io::stdout().lock();
-    let settings = wizard(&mut input, &mut out, &mut read_secret, &HttpProbe, current)?;
+    let settings = dialogue(&mut input, &mut out, &mut read_secret, &HttpProbe, current, effective_key)?;
     crate::settings::save(path, &settings).context("save configuration file")?;
     writeln!(out, "saved {}", path.display())?;
     Ok(settings)
 }
 
-/// Reads one line into `line`. At end of input (`Ok(0)`) it is an error, so a test can never loop forever.
-fn read_line(input: &mut dyn BufRead, line: &mut String) -> Result<()> {
-    line.clear();
-    let read = input.read_line(line).context("read input")?;
-    if read == 0 {
-        return Err(anyhow!("setup aborted"));
-    }
-    Ok(())
+/// The answers. The first end of input reads as an empty answer; asking again after it is `setup aborted`,
+/// so a test can never loop forever.
+struct Input<'a> {
+    inner: &'a mut dyn BufRead,
+    ended: bool,
 }
 
-/// The host of a URL, for the remote log command.
-fn host_of(url: &str) -> Option<String> {
-    let rest = url.split("://").nth(1)?;
-    rest.split([':', '/']).next().map(str::to_string)
+impl Input<'_> {
+    /// The next answer, trimmed.
+    fn answer(&mut self) -> Result<String> {
+        if self.ended {
+            return Err(anyhow!("setup aborted"));
+        }
+        let mut line = String::new();
+        if self.inner.read_line(&mut line).context("read input")? == 0 {
+            self.ended = true;
+        }
+        Ok(line.trim().to_string())
+    }
 }

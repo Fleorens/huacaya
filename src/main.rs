@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     // `llamatop setup`: run the dialogue and save, then exit.
     if let Some(Command::Setup) = cli.command {
         let path = path.as_deref().ok_or_else(|| anyhow!("no configuration file path"))?;
-        setup::run(path, &current.unwrap_or_default())?;
+        setup::run_with_key(path, &current.unwrap_or_default(), cli.api_key())?;
         return Ok(());
     }
 
@@ -49,6 +49,7 @@ fn main() -> Result<()> {
     // First run: no configuration file yet, no URL by flag or environment, demo off, both a terminal.
     let url_is_default = matches.value_source("url") == Some(ValueSource::DefaultValue);
     if current.is_none()
+        && path.is_some()
         && url_is_default
         && !cli.demo
         && std::io::stdin().is_terminal()
@@ -56,7 +57,7 @@ fn main() -> Result<()> {
     {
         let path = path.ok_or_else(|| anyhow!("no configuration file path"))?;
         println!("no configuration yet: {}", path.display());
-        let saved = setup::run(&path, &Settings::default())?;
+        let saved = setup::run_with_key(&path, &Settings::default(), cli.api_key())?;
         cli.apply_settings(&matches, &saved);
     }
 

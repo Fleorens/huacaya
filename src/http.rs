@@ -75,7 +75,7 @@ pub fn is_loopback_url(url: &str) -> bool {
 }
 
 /// The host of a URL: the text between `://` and the next `:` or `/`, brackets kept for an IPv6 literal.
-fn host_of(url: &str) -> Option<String> {
+pub(crate) fn host_of(url: &str) -> Option<String> {
     let rest = url.split("://").nth(1)?;
     if let Some(after_open) = rest.strip_prefix('[') {
         // IPv6 literal: `[...]` up to the closing `]`, brackets kept.
