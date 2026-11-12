@@ -9,7 +9,7 @@ use ratatui::widgets::Widget;
 
 use crate::app::App;
 use crate::collect::llama::{ModelInfo, ModelState};
-use crate::collect::llama_poll::Health;
+use crate::collect::llama_poll::{Health, LlamaSnapshot};
 use crate::ui::frame::panel;
 use crate::ui::panels::Ctx;
 use crate::ui::text::{fit, pct, tps};
@@ -42,9 +42,17 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     }
 
     // The table gets the models plus the header row and borders, capped at half the area, at least 4.
-    let table_h = (llama.models.len() as u16 + 3).min(area.height / 2).max(4);
-    render_table(app, theme, Rect::new(area.x, area.y, area.width, table_h), buf);
-    render_details(app, theme, Rect::new(area.x, area.y + table_h, area.width, area.height - table_h), buf);
+    let rows = u16::try_from(llama.models.len()).unwrap_or(u16::MAX).saturating_add(3);
+    let table_h = rows.min(area.height / 2).max(4).min(area.height);
+    let details_h = area.height - table_h;
+    render_table(
+        &llama.models,
+        app.model_selected,
+        theme,
+        Rect::new(area.x, area.y, area.width, table_h),
+        buf,
+    );
+    render_details(app, llama, theme, Rect::new(area.x, area.y + table_h, area.width, details_h), buf);
 }
 
 /// The "no model" case: the table panel over the whole area, a single `Dim` row with the reason.
@@ -60,16 +68,17 @@ fn render_no_model(theme: &Theme, area: Rect, buf: &mut Buffer, reason: &str) {
     buf.set_line(inner.x, inner.y, &Line::from(Span::styled(msg, theme.fg(Role::Dim))), w);
 }
 
-/// The table's side columns (identity, header label, width). The name column sits between `state` and
-/// the first of these; columns are dropped from the right (`vision`, `spec`, …) when the panel is narrow.
-const SIDE: [(&str, &str, usize); 6] = [
-    ("state", "state", 11),
-    ("quant", "quant", 8),
-    ("ctx", "ctx", 8),
-    ("moe", "moe", 5),
-    ("spec", "spec", 13),
-    ("vision", "img", 4),
-];
+/// The table's side columns, in display order (identity, header label, width). The name column sits
+/// between `state` and the first of these.
+const SIDE: [(&str, &str, usize); 5] =
+    [("quant", "quant", 8), ("ctx", "ctx", 8), ("moe", "moe", 5), ("spec", "spec", 13), ("vision", "img", 4)];
+
+/// The order in which side columns are dropped when the panel is narrow (contract order).
+const DROP_ORDER: [&str; 5] = ["vision", "spec", "moe", "quant", "ctx"];
+
+/// Widths of the marker and state columns.
+const MARKER_W: usize = 2;
+const STATE_W: usize = 11;
 
 /// The state cell of the table: the one-column marker, the word, and its role.
 fn state_cell(m: &ModelInfo) -> (String, Role) {
@@ -87,65 +96,80 @@ pub fn params(n: u64) -> String {
     if n >= 1_000_000_000 { format!("{:.1}B", n as f64 / 1e9) } else { format!("{:.1}M", n as f64 / 1e6) }
 }
 
-/// The name column width: the remainder after the marker (2), `state` (11), the kept side columns, and
-/// the single-space separators between every shown column.
+/// The name column width: the remainder after the marker, `state`, the kept side columns, and the
+/// single-space separators between every shown column.
 fn name_width(total: u16, side: &[(&str, &str, usize)]) -> usize {
-    let side_rest: usize = side.iter().skip(1).map(|(_, _, w)| *w).sum();
-    let sep = side.len() + 1; // marker + state + name + sides, minus one
-    (total as usize).saturating_sub(13 + side_rest).saturating_sub(sep)
+    let fixed: usize = MARKER_W + STATE_W + side.iter().map(|(_, _, w)| *w).sum::<usize>();
+    let sep = side.len() + 2; // marker, state, name and the sides: one space between each pair
+    (total as usize).saturating_sub(fixed).saturating_sub(sep)
 }
 
-/// The widths of the non-marker columns, in order: `state`, name, then the kept side columns.
+/// The side columns kept at `total` columns: dropped in `DROP_ORDER` until the name has at least 12.
+fn kept_side(total: u16) -> Vec<(&'static str, &'static str, usize)> {
+    let mut side: Vec<_> = SIDE.to_vec();
+    for drop in DROP_ORDER {
+        if name_width(total, &side) >= 12 {
+            break;
+        }
+        side.retain(|(id, _, _)| *id != drop);
+    }
+    side
+}
+
+/// The widths of every column, in order: marker, `state`, name, then the kept side columns.
 fn col_widths(side: &[(&str, &str, usize)], name_w: usize) -> Vec<usize> {
-    let mut w = vec![11, name_w];
-    w.extend(side.iter().skip(1).map(|(_, _, w)| *w));
+    let mut w = vec![MARKER_W, STATE_W, name_w];
+    w.extend(side.iter().map(|(_, _, w)| *w));
     w
 }
 
-/// Lay out one row: `cells[i]` at column `widths[i]`, one space between cells, the whole row cut to
-/// `row_w`. Writes only inside the panel body, never past its right border.
-fn place_row(buf: &mut Buffer, inner: Rect, y: u16, row_w: u16, cells: &[(String, Style)], theme: &Theme) {
+/// Lay out one row: each cell cut and padded to its column width, one space between cells, the whole
+/// row cut to the panel body so nothing is written past its right border.
+fn place_row(
+    buf: &mut Buffer,
+    inner: Rect,
+    y: u16,
+    cells: &[(String, Style)],
+    widths: &[usize],
+    theme: &Theme,
+) {
     let mut spans: Vec<Span> = Vec::with_capacity(cells.len() * 2);
-    for (i, (text, style)) in cells.iter().enumerate() {
+    for (i, ((text, style), w)) in cells.iter().zip(widths).enumerate() {
         if i > 0 {
             spans.push(Span::styled(" ".to_string(), theme.fg(Role::Text)));
         }
-        spans.push(Span::styled(text.clone(), *style));
+        let w = *w;
+        spans.push(Span::styled(format!("{:<w$}", fit(text, w)), *style));
     }
-    let line = Line::from(spans);
-    buf.set_line(inner.x, y, &line, row_w);
+    buf.set_line(inner.x, y, &Line::from(spans), inner.width);
 }
 
 /// The table: a header row, then one row per model, the selected one bold, scrolled when it overflows.
-fn render_table(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
+fn render_table(models: &[ModelInfo], selected: usize, theme: &Theme, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
     }
     let block = panel("Models", Role::Server, true, theme);
     let inner = block.inner(area);
     block.render(area, buf);
-    if inner.height < 2 {
+    if inner.height < 2 || models.is_empty() {
         return;
     }
 
-    // Drop the right-most side columns until the name has at least 12 columns.
-    let mut side = &SIDE[..];
-    while !side.is_empty() && name_width(inner.width, side) < 12 {
-        side = &side[..side.len() - 1];
-    }
+    let side = kept_side(inner.width);
+    let widths = col_widths(&side, name_width(inner.width, &side));
 
     // Header row: the empty marker column, then `state`, `model`, then the kept side labels (`Dim`, bold).
     let style = theme.fg(Role::Dim).add_modifier(Modifier::BOLD);
     let mut cells: Vec<(String, Style)> = vec![(String::new(), theme.fg(Role::Text))];
     cells.push(("state".to_string(), style));
     cells.push(("model".to_string(), style));
-    for (_, label, _) in side.iter().skip(1) {
+    for (_, label, _) in &side {
         cells.push((label.to_string(), style));
     }
-    place_row(buf, inner, inner.y, inner.width, &cells, theme);
+    place_row(buf, inner, inner.y, &cells, &widths, theme);
 
-    let models = &app.llama.as_ref().unwrap().models;
-    let selected = app.model_selected.min(models.len() - 1);
+    let selected = selected.min(models.len() - 1);
     let visible = inner.height.saturating_sub(1) as usize; // data rows that fit
     let top = if models.len() > visible {
         (selected.saturating_sub(visible - 1)).min(models.len().saturating_sub(visible))
@@ -158,59 +182,49 @@ fn render_table(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
         if y >= inner.y + inner.height {
             break;
         }
-        render_row(theme, m, i == selected, side, inner, y, buf);
+        render_row(theme, m, i == selected, &side, &widths, inner, y, buf);
     }
 }
 
 /// One model row: marker, state, name, then the side columns in order. The selected row is bold.
+#[allow(clippy::too_many_arguments)]
 fn render_row(
     theme: &Theme,
     m: &ModelInfo,
     selected: bool,
     side: &[(&str, &str, usize)],
+    widths: &[usize],
     inner: Rect,
     y: u16,
     buf: &mut Buffer,
 ) {
-    let widths = col_widths(side, name_width(inner.width, side));
-    let name_w = widths[1];
     let (state_text, state_role) = state_cell(m);
     let (name, quant) = short_model_name(&m.id);
 
-    let mark_style =
-        if selected { theme.fg(Role::Server).add_modifier(Modifier::BOLD) } else { theme.fg(Role::Text) };
-    let text_style =
-        if selected { theme.fg(Role::Text).add_modifier(Modifier::BOLD) } else { theme.fg(Role::Text) };
+    let bold = |s: Style| if selected { s.add_modifier(Modifier::BOLD) } else { s };
+    let mark_style = if selected { bold(theme.fg(Role::Server)) } else { theme.fg(Role::Text) };
+    let text_style = bold(theme.fg(Role::Text));
 
     let marker = if selected { "▶ " } else { "  " };
-    let mut cells: Vec<(String, Style)> = vec![
-        (marker.to_string(), mark_style),
-        (state_text.clone(), theme.fg(state_role).add_modifier(Modifier::BOLD)),
-        (fit(&name, name_w), text_style),
-    ];
-    for (id, _, _) in side.iter().skip(1) {
+    let mut cells: Vec<(String, Style)> =
+        vec![(marker.to_string(), mark_style), (state_text, bold(theme.fg(state_role))), (name, text_style)];
+    for (id, _, _) in side {
         let value = match *id {
             "quant" => quant.clone().unwrap_or_default(),
             "ctx" => m.ctx_size.map(count).unwrap_or_else(|| "n/a".to_string()),
             "moe" => m.n_cpu_moe.map(|n| n.to_string()).unwrap_or_else(|| "-".to_string()),
             "spec" => m.spec_type.clone().unwrap_or_else(|| "-".to_string()),
-            "vision" => {
-                if m.vision {
-                    "img".to_string()
-                } else {
-                    String::new()
-                }
-            }
+            "vision" if m.vision => "img".to_string(),
             _ => String::new(),
         };
         cells.push((value, text_style));
     }
-    place_row(buf, inner, y, inner.width, &cells, theme);
+    place_row(buf, inner, y, &cells, widths, theme);
 }
 
 /// The details of the selected model: one `label value` row each, then the live metrics of the active
 /// model. Rows that do not fit are dropped from the bottom.
-fn render_details(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
+fn render_details(app: &App, llama: &LlamaSnapshot, theme: &Theme, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
     }
@@ -221,7 +235,6 @@ fn render_details(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
         return;
     }
 
-    let llama = app.llama.as_ref().unwrap();
     let Some(model) = llama.models.get(app.model_selected) else {
         return;
     };

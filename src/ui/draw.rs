@@ -17,7 +17,8 @@ use crate::ui::theme::Role;
 /// By `tier(area.width, area.height)`: `TooSmall` → `terminal too small` centred (`Dim`), and on the
 /// next row, when it fits, `<w>×<h>, need 30×8`; `Compact` → `compact::render`; otherwise the header on
 /// `layout.header`, then each present panel on its rectangle, with `Ctx { graphs: layout.graphs, ..*ctx }`.
-/// The Models, Logs and System screens show the Overview body too (the header says which tab is selected).
+/// The Models screen draws `screens::models::render` on the body under the header instead of the panels;
+/// the Logs and System screens show the Overview body too (the header says which tab is selected).
 /// Never panics, whatever the size (0 × 0 included).
 pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     match layout::tier(area.width, area.height) {
@@ -27,8 +28,9 @@ pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
             // The Models screen shows the same header, then its own table + details on the body.
             if app.screen == Screen::Models {
                 let layout = layout::overview(area);
+                let h = layout.header.height;
                 let body =
-                    Rect::new(area.x, area.y.saturating_add(3), area.width, area.height.saturating_sub(3));
+                    Rect::new(area.x, area.y.saturating_add(h), area.width, area.height.saturating_sub(h));
                 let ctx = Ctx { theme: ctx.theme, graphs: layout.graphs, clock: ctx.clock };
                 header::render(app, &ctx, layout.header, buf);
                 screens::models::render(app, &ctx, body, buf);

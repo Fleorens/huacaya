@@ -2,12 +2,12 @@
 │ 1 Overview   2 Models   3 Logs   4 System                          ? help  q │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭ Models ──────────────────────────────────────────────────────────────────────╮
-│ state model quant ctx moe spec img                                           │
-│   ○ unloaded Ornith-1.5-35B-A3B Q4_K_M 163.8K 16 - img                       │
-│   ○ unloaded gsq-qwen3.8-27b  65.5K - draft-mtp                              │
-│   ○ unloaded muse-glimmer-30b  131.1K - draft-dflash                         │
-│▶  ● loaded Cyber-Tiel-Coder-35… Q4_K_M 196.6K 21 draft-mtp                   │
-│   ○ unloaded Qwen3-8B Q4_K_M 32.8K - -                                       │
+│   state       model                quant    ctx      moe   spec          img │
+│   ○ unloaded  Ornith-1.5-35B-A3B   Q4_K_M   163.8K   16    -             img │
+│   ○ unloaded  gsq-qwen3.8-27b               65.5K    -     draft-mtp         │
+│   ○ unloaded  muse-glimmer-30b              131.1K   -     draft-dflash      │
+│▶  ● loaded    Cyber-Tiel-Coder-35… Q4_K_M   196.6K   21    draft-mtp         │
+│   ○ unloaded  Qwen3-8B             Q4_K_M   32.8K    -     -                 │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭ Details ─────────────────────────────────────────────────────────────────────╮
 │id          peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M             │

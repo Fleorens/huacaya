@@ -147,8 +147,25 @@ fn narrow_drops_columns() {
     assert!(!header.contains("spec"));
     assert!(!header.contains("moe"));
     assert!(!header.contains("img"));
+    assert!(rows.iter().all(|r| !r.contains("draft-mtp") && !r.contains("img")));
     // The name column is kept (cut), so a model name still appears.
     assert!(rows.iter().any(|r| r.contains("Cyber-Tiel")));
+}
+
+#[test]
+fn narrow_drops_quant_before_ctx() {
+    let theme = true_color();
+    // At 42 columns (40 inside the borders) quant no longer fits, ctx still does.
+    let rows = draw(
+        |area, buf| models::render(&models_app(DemoState::Idle, 0), &make_ctx(&theme), area, buf),
+        42,
+        20,
+    );
+    let header = rows.iter().find(|r| r.contains("model")).unwrap();
+    assert!(header.contains("ctx"));
+    assert!(!header.contains("quant"));
+    assert!(rows.iter().all(|r| !r.contains("Q4_K_M")));
+    assert!(rows.iter().any(|r| r.contains("196.6K")));
 }
 
 #[test]
