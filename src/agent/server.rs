@@ -65,7 +65,11 @@ pub fn start(config: AgentConfig, stop: Arc<AtomicBool>) -> Result<(SocketAddr, 
                 true
             }) {
                 Ok(mut follower) => {
-                    sleep_in_slices(Duration::from_millis(100), &stop);
+                    // Keep the command running for the agent's whole life: dropping or stopping the
+                    // follower kills it, and a live journal must keep streaming.
+                    while !stop.load(Ordering::Relaxed) {
+                        thread::sleep(Duration::from_millis(100));
+                    }
                     follower.stop();
                 }
                 Err(err) => {

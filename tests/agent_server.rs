@@ -167,3 +167,35 @@ fn no_token_beyond_loopback_is_refused() {
     assert!(server::check_token_policy(&public, None, true).is_ok());
     assert!(server::check_token_policy(&public, Some("t"), false).is_ok());
 }
+
+#[test]
+fn live_log_keeps_streaming() {
+    // A live journal prints lines long after start: the agent must keep its command running.
+    let script = std::env::temp_dir().join(format!("llamatop-live-log-{}.sh", std::process::id()));
+    std::fs::write(&script, "#!/bin/sh\necho early\nsleep 1\necho late\nsleep 30\n")
+        .expect("write the script");
+    let mut perms = std::fs::metadata(&script).expect("script metadata").permissions();
+    std::os::unix::fs::PermissionsExt::set_mode(&mut perms, 0o755);
+    std::fs::set_permissions(&script, perms).expect("make it executable");
+
+    let stop = Arc::new(AtomicBool::new(false));
+    let mut cfg = config();
+    cfg.log_cmd = script.display().to_string();
+    let (addr, handle) = server::start(cfg, stop.clone()).expect("the agent starts");
+    let http = agent();
+    let start = Instant::now();
+    let texts = loop {
+        let (_status, body) = get(&http, addr.port(), "/v1/log?since=0", Some("t"));
+        let page: LogPage = serde_json::from_str(&body).expect("a valid log page");
+        let texts: Vec<String> = page.lines.into_iter().map(|l| l.text).collect();
+        if texts.iter().any(|t| t == "late") || start.elapsed() > Duration::from_secs(4) {
+            break texts;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    };
+    stop.store(true, Ordering::Relaxed);
+    let _ = handle.join();
+    let _ = std::fs::remove_file(&script);
+    assert!(texts.iter().any(|t| t == "late"), "the line printed after 1 s never arrived: {texts:?}");
+    assert!(!texts.iter().any(|t| t.starts_with("log source ended")), "{texts:?}");
+}
