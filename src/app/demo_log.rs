@@ -1,7 +1,7 @@
 //! The live demo cycle's raw log lines (T11), separated out so `demo.rs` stays under 400 lines.
 //!
 //! Each line is `<ts> aibox-flo llama-server[1194]: <body>`; `demo::log_lines` builds and classifies
-//! them. Times, task number and the loaded model id are the only things cycle-dependent.
+//! them. Only the times and the task number depend on the cycle.
 
 use crate::app::demo::LOADED_ID;
 

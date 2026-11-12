@@ -345,7 +345,8 @@ pub fn app(state: DemoState) -> App {
 /// The log lines of the live cycle whose event time `e` satisfies `t0 <= e < t1`, in time order;
 /// empty when `t1 <= t0`. Pure, and independent of how the range is split.
 pub fn log_lines(t0: f64, t1: f64) -> Vec<LogLine> {
-    if t1 <= t0 {
+    // A non-finite bound would make the cycle range below astronomically long.
+    if t1 <= t0 || !t0.is_finite() || !t1.is_finite() {
         return Vec::new();
     }
     let mut out = Vec::new();
