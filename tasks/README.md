@@ -103,3 +103,19 @@ The repository goes public: llamatop must suit any llama.cpp machine, not only t
 |---|---|---|---|
 | [T29](T29-auto-mounts.md) | Show the machine's real disks by default | T28 | livrée |
 | [T30](T30-nvidia.md) | NVIDIA GPUs through `nvidia-smi` | T29 | livrée |
+
+## Batch 7 — the TUI v2 (mockups validated by Florian on 2026-11-12)
+
+Mockups: the design canvas "llamatop TUI" (Overview, Agents, 80×24, Models, Logs, System).
+
+| Sheet | Subject | Depends on | Status |
+|---|---|---|---|
+| [T31](T31-tui2-data-widgets.md) | Data and widgets: request history, task timer, CPU name, big digits, level bars | T30 | prête |
+| [T32](T32-tui2-layout.md) | One-line header, Overview skeleton, Requests table, key bar | T31 | prête |
+| [T33](T33-tui2-panels.md) | Model band (big digits) and GPU / CPU / Memory panels v2 | T32 | prête |
+| [T34](T34-opencode-client.md) | OpenCode client, `[opencode]` settings, setup question | T33 | prête |
+| T35 | Agents screen (5) | T34 | outlined |
+| T36 | Models v2 | T33 | outlined |
+| T37 | Logs v2 | T33 | outlined |
+| T38 | System v2 | T33 | outlined |
+| T39 | 80×24 v2 | T33 | outlined |

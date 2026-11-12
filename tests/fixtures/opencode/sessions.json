@@ -1,0 +1,40 @@
+{
+ "data": [
+  {
+   "id": "ses_running0000000000000000",
+   "projectID": "p0000000000000000000000000000000000000000",
+   "agent": "nightshift",
+   "model": {"id": "example/Coder-35B-A3B-GGUF:Q4_K_M", "providerID": "local", "variant": "default"},
+   "cost": 0,
+   "tokens": {"input": 49133, "output": 35718, "reasoning": 0, "cache": {"read": 1524584, "write": 0}},
+   "time": {"created": 1794513338596, "updated": 1794513338773},
+   "title": "#136 Execute tasks/T30-nvidia.md",
+   "location": {"directory": "/work/.wt/demo-136"}
+  },
+  {
+   "id": "ses_done000000000000000000",
+   "projectID": "p0000000000000000000000000000000000000000",
+   "agent": "nightshift",
+   "model": {"id": "example/Coder-35B-A3B-GGUF:Q4_K_M", "providerID": "local", "variant": "default"},
+   "cost": 0,
+   "tokens": {"input": 145037, "output": 112226, "reasoning": 0, "cache": {"read": 7980971, "write": 0}},
+   "outcome": "succeeded",
+   "time": {"created": 1794498477270, "updated": 1794499167643, "idle": 1794501253463},
+   "title": "#131 Execute tasks/T24-setup-wizard.md",
+   "location": {"directory": "/work/.wt/demo-131"}
+  },
+  {
+   "id": "ses_manual00000000000000000",
+   "projectID": "p0000000000000000000000000000000000000000",
+   "agent": "build",
+   "model": {"id": "example/Other-8B", "providerID": "local", "variant": "default"},
+   "cost": 0,
+   "tokens": {"input": 1200, "output": 300, "reasoning": 0, "cache": {"read": 0, "write": 0}},
+   "outcome": "failed",
+   "time": {"created": 1794400000000, "updated": 1794400060000, "idle": 1794400090000},
+   "title": "Refactor the parser",
+   "location": {"directory": "/work/demo"}
+  }
+ ],
+ "cursor": {"previous": null, "next": null}
+}

@@ -89,3 +89,10 @@ fn auto_mounts_reads_the_sysroot() {
     assert!(auto_mounts(&empty_root).is_empty());
     std::fs::remove_dir_all(&empty_root).ok();
 }
+
+#[test]
+fn out_of_range_escape_is_kept() {
+    // `\777` is not a byte: kept as written instead of overflowing.
+    let mounts = llamatop::collect::disk::parse_mounts("/dev/sdf1 /x\\777y ext4 rw 0 0\n");
+    assert_eq!(mounts, vec![std::path::PathBuf::from("/x\\777y")]);
+}
