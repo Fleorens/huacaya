@@ -116,6 +116,8 @@ pub struct LogView {
     pub filter: String,
     /// `true` while the user types the filter after `/`.
     pub editing_filter: bool,
+    /// `true`: log lines are shown as printed; `false`: in compact form.
+    pub raw: bool,
     pub level: LevelFilter,
     /// `false`: lines whose event is `LogEvent::Proxy` are hidden. The router prints two of them for
     /// every polling round of llamatop itself, so they are noise by default.
@@ -165,7 +167,7 @@ pub struct App {
 
 impl App {
     /// Empty state: no snapshot, no line, `Screen::Overview`, follow on, filter empty, level `All`,
-    /// `show_proxy` false, histories of `HISTORY_CAPACITY`, `frame` 0, everything else false / 0.
+    /// `show_proxy` false, `raw` off, histories of `HISTORY_CAPACITY`, `frame` 0, everything else false / 0.
     pub fn new(interval_ms: u64) -> Self {
         App {
             system: None,
@@ -184,6 +186,7 @@ impl App {
                 scroll: 0,
                 filter: String::new(),
                 editing_filter: false,
+                raw: false,
                 level: LevelFilter::All,
                 show_proxy: false,
             },

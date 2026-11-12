@@ -55,11 +55,12 @@ fn status_runs(app: &App) -> Vec<Vec<(String, Role)>> {
             run_pair("filter ", &format!("\"{}\"", app.log_view.filter))
         };
         let proxy = run_pair("proxy ", if app.log_view.show_proxy { "shown" } else { "hidden" });
+        let lines = run_pair("lines ", if app.log_view.raw { "raw" } else { "compact" });
         let count = vec![
             (format!("{} of {}", app.visible_logs().len(), app.logs.len()), Role::Text),
             (" lines".to_string(), Role::Dim),
         ];
-        vec![state, level, filter, proxy, count]
+        vec![state, level, filter, proxy, lines, count]
     }
 }
 
@@ -86,7 +87,7 @@ fn render_status_row(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer) {
 
     // The key hint, right-aligned, only when it fits after the left segments (not while editing).
     if !app.log_view.editing_filter {
-        let hint = "f follow  / filter  e level  x proxy  ↑↓ scroll";
+        let hint = "f follow  / filter  e level  x proxy  r raw  ↑↓ scroll";
         let hint_w = hint.chars().count() as u16;
         if x + 3 + hint_w <= right {
             let hx = right - hint_w;

@@ -101,6 +101,10 @@ pub fn handle(app: &mut App, key: KeyEvent) {
             app.interval_ms = interval_above(app.interval_ms);
             true
         }
+        KeyCode::Char('r') => {
+            app.log_view.raw = !app.log_view.raw;
+            true
+        }
         _ => false,
     };
     if handled {

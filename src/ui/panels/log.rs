@@ -54,7 +54,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         if y >= inner.bottom() {
             break;
         }
-        render_line(line, theme, inner.x, y, inner.width, buf);
+        render_line(line, app.log_view.raw, theme, inner.x, y, inner.width, buf);
     }
 }
 
@@ -102,20 +102,35 @@ fn render_indicators(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer) {
     }
 }
 
-/// One log row: `<time> ` in `Role::Dim` (nothing without a time), then the text coloured by level and
-/// cut to `width` columns.
-fn render_line(line: &LogLine, theme: &Theme, x: u16, y: u16, width: u16, buf: &mut Buffer) {
+/// One log row: `<time> ` in `Role::Dim` (nothing without a time), then, when not `raw` and the task
+/// is a non-negative number, `#<task> ` in `Role::Dim`, then the text — `logtext::compact(line)` when
+/// not `raw`, `line.text` when `raw` — coloured by level and cut to `width` columns.
+pub(crate) fn render_line(
+    line: &LogLine,
+    raw: bool,
+    theme: &Theme,
+    x: u16,
+    y: u16,
+    width: u16,
+    buf: &mut Buffer,
+) {
     let role = match line.level {
         Level::Info => Role::Text,
         Level::Warn => Role::Warning,
         Level::Error => Role::Critical,
     };
     let time_w = line.time.as_ref().map(|t| t.chars().count() + 1).unwrap_or(0) as u16;
-    let text_w = width.saturating_sub(time_w);
+    let task = line.task.filter(|t| !raw && *t >= 0).map(|t| format!("#{t} "));
+    let task_w = task.as_ref().map(|t| t.chars().count()).unwrap_or(0) as u16;
+    let text_w = width.saturating_sub(time_w).saturating_sub(task_w);
     let mut spans = Vec::new();
     if let Some(t) = &line.time {
         spans.push(Span::styled(format!("{t} "), theme.fg(Role::Dim)));
     }
-    spans.push(Span::styled(fit(&line.text, text_w as usize), theme.fg(role)));
+    if let Some(t) = task {
+        spans.push(Span::styled(t, theme.fg(Role::Dim)));
+    }
+    let text = if raw { line.text.clone() } else { crate::ui::logtext::compact(line) };
+    spans.push(Span::styled(fit(&text, text_w as usize), theme.fg(role)));
     buf.set_line(x, y, &Line::from(spans), width);
 }

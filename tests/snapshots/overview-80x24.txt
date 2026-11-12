@@ -16,9 +16,9 @@
 │power 117 W / 212 W   fan 1233 rpm                                            │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭ Log ─────────────────────────────────────────────────────────────── follow ● ╮
-│10:00:32 slot print_timing: id  0 | task 9000 |       total time =   29195.00…│
-│10:00:32 slot print_timing: id  0 | task 9000 | draft acceptance = 0.70000 ( …│
-│10:00:32 slot      release: id  0 | task 9000 | stop processing: n_tokens = 9…│
-│10:00:32 srv  log_server_r: request: POST /v1/chat/completions 192.168.1.42 2…│
-│10:00:32 srv  update_slots: all slots are idle                                │
+│10:00:32 #9000 total time = 29195.00 ms / 9232 tokens                         │
+│10:00:32 #9000 draft 728/1040 accepted  70 %                                  │
+│10:00:32 #9000 released  ctx 9.2K                                             │
+│10:00:32 POST /v1/chat/completions 200                                        │
+│10:00:32 all slots are idle                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
