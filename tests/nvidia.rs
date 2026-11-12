@@ -3,13 +3,13 @@
 //! within 0.01.
 
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
 use llamatop::app::App;
-use llamatop::collect::nvidia::parse_smi;
+use llamatop::collect::nvidia::{BACKOFF_PERIOD, SmiBackoff, parse_smi};
 use llamatop::collect::sampler::{Sampler, SystemSnapshot};
 use llamatop::collect::system::CpuSample;
 use llamatop::ui::panels::{Ctx, gpu};
@@ -141,4 +141,36 @@ fn gpu_panel_nvidia() {
     assert!(all.contains("GPU  RTX 4090"), "{:?}", rows[0]);
     assert!(all.contains("temp  71 °C"), "{:?}", rows);
     assert!(!all.contains("junction"), "{:?}", rows);
+}
+
+#[test]
+fn smi_backoff_counter() {
+    let t0 = Instant::now();
+    let mut b = SmiBackoff::default();
+    assert!(b.should_try(t0));
+
+    // Two failures: still tried on every sample.
+    b.record(false, t0);
+    b.record(false, t0 + Duration::from_secs(1));
+    assert!(b.should_try(t0 + Duration::from_secs(2)));
+
+    // Third consecutive failure: only once per minute from then on.
+    let t3 = t0 + Duration::from_secs(2);
+    b.record(false, t3);
+    assert!(!b.should_try(t3 + Duration::from_secs(1)));
+    assert!(!b.should_try(t3 + BACKOFF_PERIOD - Duration::from_millis(1)));
+    assert!(b.should_try(t3 + BACKOFF_PERIOD));
+
+    // Another failure a minute later: wait a full minute again.
+    let t4 = t3 + BACKOFF_PERIOD;
+    b.record(false, t4);
+    assert!(!b.should_try(t4 + Duration::from_secs(30)));
+
+    // A success resets the counter: tried on every sample again.
+    let t5 = t4 + BACKOFF_PERIOD;
+    b.record(true, t5);
+    assert!(b.should_try(t5 + Duration::from_secs(1)));
+    b.record(false, t5 + Duration::from_secs(1));
+    b.record(false, t5 + Duration::from_secs(2));
+    assert!(b.should_try(t5 + Duration::from_secs(3)));
 }

@@ -2,7 +2,7 @@
 //! the `read_nvidia` layer only does I/O. A missing program, a failure, or a timeout yields no card.
 
 use std::io::{ErrorKind, Read};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
@@ -99,13 +99,11 @@ pub(crate) fn run_smi() -> Result<String, ErrorKind> {
             Ok(Some(status)) => break status,
             Ok(None) if start.elapsed() < TIMEOUT => std::thread::sleep(Duration::from_millis(20)),
             Ok(None) => {
-                let _ = child.kill();
-                let _ = child.wait();
+                kill_detached(child);
                 return Err(ErrorKind::TimedOut);
             }
             Err(e) => {
-                let _ = child.kill();
-                let _ = child.wait();
+                kill_detached(child);
                 return Err(e.kind());
             }
         }
@@ -118,4 +116,45 @@ pub(crate) fn run_smi() -> Result<String, ErrorKind> {
     let mut text = String::new();
     stdout.read_to_string(&mut text).map_err(|e| e.kind())?;
     Ok(text)
+}
+
+/// Kills `child` and reaps it on a detached thread: a `nvidia-smi` stuck in the kernel (state D, hung
+/// driver) survives `kill`, and waiting for it here would freeze the sampler thread and its `join`.
+fn kill_detached(mut child: Child) {
+    let _ = child.kill();
+    // If the thread cannot be created, the child is dropped unreaped: a zombie beats a frozen sampler.
+    let _ = std::thread::Builder::new().name("nvidia-smi-reap".into()).spawn(move || {
+        let _ = child.wait();
+    });
+}
+
+/// Consecutive failures after which `nvidia-smi` is only retried once per [BACKOFF_PERIOD].
+pub const BACKOFF_AFTER: u32 = 3;
+
+/// The retry period once `nvidia-smi` has failed [BACKOFF_AFTER] times in a row.
+pub const BACKOFF_PERIOD: Duration = Duration::from_secs(60);
+
+/// Spaces out `nvidia-smi` runs after repeated failures (error, non-zero exit, timeout), so a hung
+/// driver does not add 2 s to every sample. Pure: the caller passes the time.
+#[derive(Debug, Clone, Default)]
+pub struct SmiBackoff {
+    failures: u32,
+    last_try: Option<Instant>,
+}
+
+impl SmiBackoff {
+    /// Whether `nvidia-smi` should run at `now`: always below [BACKOFF_AFTER] consecutive failures,
+    /// then only once [BACKOFF_PERIOD] has passed since the last try.
+    pub fn should_try(&self, now: Instant) -> bool {
+        if self.failures < BACKOFF_AFTER {
+            return true;
+        }
+        self.last_try.is_none_or(|t| now.saturating_duration_since(t) >= BACKOFF_PERIOD)
+    }
+
+    /// Records the outcome of a try made at `now`: a success resets the failure count.
+    pub fn record(&mut self, ok: bool, now: Instant) {
+        self.last_try = Some(now);
+        self.failures = if ok { 0 } else { self.failures.saturating_add(1) };
+    }
 }
