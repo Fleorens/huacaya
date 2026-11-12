@@ -19,7 +19,9 @@ pub const MIN_HEIGHT: u16 = 5;
 
 /// The Memory panel: `frame::panel("Memory", Role::Memory, false, theme)` and three rows — the RAM and
 /// swap gauges, then `model <rss>` for the first model instance, `server <rss>` for the router without
-/// one, or `model n/a` without any. A swap total of 0 shows `swap  none`.
+/// one, or `model n/a` without any. A swap total of 0 shows `swap  none`. When the panel is tall enough,
+/// two more rows show the available and cached RAM, then the router's resident memory when row 3 is an
+/// instance.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
@@ -94,6 +96,32 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
             },
         };
         let line = format!("{label} {value}");
+        buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
+    }
+    // Row 4: available and cached.
+    let y = y0 + 3;
+    if y < inner.bottom() {
+        let (avail, cached) = match mem {
+            Some(m) => (bytes(m.available), bytes(m.cached)),
+            None => ("n/a".to_string(), "n/a".to_string()),
+        };
+        let line = Line::from(vec![
+            Span::styled("avail ", theme.fg(Role::Dim)),
+            Span::styled(avail, theme.fg(Role::Text)),
+            Span::styled("   ", theme.fg(Role::Text)),
+            Span::styled("cached ", theme.fg(Role::Dim)),
+            Span::styled(cached, theme.fg(Role::Text)),
+        ]);
+        buf.set_line(inner.x, y, &line, inner.width);
+    }
+    // Row 5: router resident memory, only when row 3 already shows an instance (so the router is a
+    // separate process worth listing).
+    let y = y0 + 4;
+    if y < inner.bottom()
+        && procs.iter().any(|p| p.role == ServerRole::Instance)
+        && let Some(r) = procs.iter().find(|p| p.role == ServerRole::Router)
+    {
+        let line = format!("router {}", bytes(r.rss));
         buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
     }
 }
