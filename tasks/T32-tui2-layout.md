@@ -113,6 +113,6 @@ New expected values:
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented; the Overview has the new skeleton at every tier.
-- [ ] The updated and new tests pass; golden files regenerated and read.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented; the Overview has the new skeleton at every tier.
+- [x] The updated and new tests pass; golden files regenerated and read.
+- [x] `bash .devbox/check` is green.

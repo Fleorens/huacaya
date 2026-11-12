@@ -52,43 +52,49 @@ fn tiers() {
 #[test]
 fn wide_layout() {
     let l = llamatop::ui::layout::overview(Rect::new(0, 0, 140, 40));
-    assert_eq!(l.header, Rect::new(0, 0, 140, 3));
-    assert_eq!(l.model, Some(Rect::new(0, 3, 70, 8)));
-    assert_eq!(l.request, Some(Rect::new(0, 11, 70, 5)));
-    assert_eq!(l.log, Some(Rect::new(0, 16, 70, 24)));
-    assert_eq!(l.gpu, Some(Rect::new(70, 3, 70, 16)));
-    assert_eq!(l.cpu, Some(Rect::new(70, 19, 35, 21)));
-    assert_eq!(l.memory, Some(Rect::new(105, 19, 35, 21)));
+    assert_eq!(l.header, Rect::new(0, 0, 140, 1));
+    assert_eq!(l.model, Some(Rect::new(0, 1, 140, 6)));
+    assert_eq!(l.gpu, Some(Rect::new(0, 7, 46, 9)));
+    assert_eq!(l.cpu, Some(Rect::new(46, 7, 47, 9)));
+    assert_eq!(l.memory, Some(Rect::new(93, 7, 47, 9)));
+    assert_eq!(l.log, Some(Rect::new(0, 16, 88, 23)));
+    assert_eq!(l.request, Some(Rect::new(88, 16, 52, 23)));
+    assert_eq!(l.keybar, Some(Rect::new(0, 39, 140, 1)));
     assert!(l.graphs);
 }
 
 #[test]
 fn medium_layout() {
     let l = llamatop::ui::layout::overview(Rect::new(0, 0, 100, 30));
-    assert_eq!(l.model, Some(Rect::new(0, 3, 50, 8)));
-    assert_eq!(l.gpu, Some(Rect::new(50, 3, 50, 8)));
-    assert_eq!(l.cpu, Some(Rect::new(0, 11, 50, 6)));
-    assert_eq!(l.memory, Some(Rect::new(50, 11, 50, 6)));
-    assert_eq!(l.log, Some(Rect::new(0, 17, 100, 13)));
+    assert_eq!(l.header, Rect::new(0, 0, 100, 1));
+    assert_eq!(l.model, Some(Rect::new(0, 1, 100, 6)));
+    assert_eq!(l.gpu, Some(Rect::new(0, 7, 33, 8)));
+    assert_eq!(l.cpu, Some(Rect::new(33, 7, 33, 8)));
+    assert_eq!(l.memory, Some(Rect::new(66, 7, 34, 8)));
+    assert_eq!(l.log, Some(Rect::new(0, 15, 100, 14)));
     assert_eq!(l.request, None);
+    assert_eq!(l.keybar, Some(Rect::new(0, 29, 100, 1)));
 }
 
 #[test]
 fn narrow_layout() {
-    // (80, 24): the log would get 2 rows, too few, so the cpu | memory band is dropped.
+    // (80, 24): the cpu | memory band fits (5 rows), the log gets 5 rows, the key bar the last.
     let l = llamatop::ui::layout::overview(Rect::new(0, 0, 80, 24));
-    assert_eq!(l.model, Some(Rect::new(0, 3, 80, 8)));
-    assert_eq!(l.gpu, Some(Rect::new(0, 11, 80, 6)));
-    assert_eq!(l.cpu, None);
-    assert_eq!(l.memory, None);
-    assert_eq!(l.log, Some(Rect::new(0, 17, 80, 7)));
+    assert_eq!(l.header, Rect::new(0, 0, 80, 1));
+    assert_eq!(l.model, Some(Rect::new(0, 1, 80, 6)));
+    assert_eq!(l.gpu, Some(Rect::new(0, 7, 80, 6)));
+    assert_eq!(l.cpu, Some(Rect::new(0, 13, 40, 5)));
+    assert_eq!(l.memory, Some(Rect::new(40, 13, 40, 5)));
+    assert_eq!(l.log, Some(Rect::new(0, 18, 80, 5)));
+    assert_eq!(l.keybar, Some(Rect::new(0, 23, 80, 1)));
     assert!(!l.graphs);
 
-    // (80, 30): the band fits, the log gets 8 rows.
+    // (80, 30): the band fits, the log gets 11 rows.
     let l = llamatop::ui::layout::overview(Rect::new(0, 0, 80, 30));
-    assert_eq!(l.cpu, Some(Rect::new(0, 17, 40, 5)));
-    assert_eq!(l.memory, Some(Rect::new(40, 17, 40, 5)));
-    assert_eq!(l.log, Some(Rect::new(0, 22, 80, 8)));
+    assert_eq!(l.cpu, Some(Rect::new(0, 13, 40, 5)));
+    assert_eq!(l.memory, Some(Rect::new(40, 13, 40, 5)));
+    assert_eq!(l.log, Some(Rect::new(0, 18, 80, 11)));
+    assert_eq!(l.keybar, Some(Rect::new(0, 29, 80, 1)));
 }
 
 // --------------------------------------------------------------------------- Invariants

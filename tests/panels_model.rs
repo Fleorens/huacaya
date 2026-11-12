@@ -56,13 +56,17 @@ fn header_generating() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 100, 3);
-    assert!(rows[0].contains("llamatop ─ gpu-box ─ up 4d 3h"), "{:?}", rows[0]);
-    assert!(rows[0].contains("● server ok  b12151 ─ 10:21:03"), "{:?}", rows[0]);
-    assert!(rows[0].ends_with('╮'), "{:?}", rows[0]);
-    assert!(rows[1].contains("1 Overview"), "{:?}", rows[1]);
-    assert!(rows[1].contains("4 System"), "{:?}", rows[1]);
-    assert!(rows[1].contains("? help"), "{:?}", rows[1]);
+    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 140, 1);
+    assert!(rows[0].contains("llamatop"), "{:?}", rows[0]);
+    assert!(rows[0].contains("gpu-box"), "{:?}", rows[0]);
+    assert!(rows[0].contains("up 4d 3h"), "{:?}", rows[0]);
+    assert!(rows[0].contains("● server ok"), "{:?}", rows[0]);
+    assert!(rows[0].contains("b12151"), "{:?}", rows[0]);
+    assert!(rows[0].contains("1 Overview"), "{:?}", rows[0]);
+    assert!(rows[0].contains("4 System"), "{:?}", rows[0]);
+    assert!(rows[0].contains("10:21:03"), "{:?}", rows[0]);
+    assert!(rows[0].contains("? help"), "{:?}", rows[0]);
+    assert!(!rows[0].contains("5 Agents"), "{:?}", rows[0]);
 }
 
 #[test]
@@ -71,19 +75,19 @@ fn header_states() {
 
     let ctx = make_ctx(&theme);
     let app = App::new(1000);
-    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 60, 3);
+    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 60, 1);
     assert!(rows[0].contains("○ waiting"), "{:?}", rows[0]);
 
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Down);
-    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 60, 3);
+    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 60, 1);
     assert!(rows[0].contains("● server down"), "{:?}", rows[0]);
 
     let ctx = make_ctx(&theme);
     let mut app = demo_app(DemoState::Generating);
     app.paused = true;
-    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 100, 3);
-    assert!(rows[1].contains("PAUSED"), "{:?}", rows[1]);
+    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 120, 1);
+    assert!(rows[0].contains("PAUSED"), "{:?}", rows[0]);
 }
 
 #[test]
@@ -94,11 +98,11 @@ fn header_current_tab() {
     app.screen = Screen::Logs;
     let mut buf = Buffer::empty(Rect::new(0, 0, 100, 3));
     header::render(&app, &ctx, Rect::new(0, 0, 100, 3), &mut buf);
-    let row1 = (0..100).map(|x| buf[(x, 1)].symbol().to_string()).collect::<String>();
-    let i3 = row1[..row1.find("3 Logs").unwrap()].chars().count();
-    let i1 = row1[..row1.find("1 Overview").unwrap()].chars().count();
-    assert!(buf[(i3 as u16, 1)].modifier.contains(Modifier::REVERSED));
-    assert!(!buf[(i1 as u16, 1)].modifier.contains(Modifier::REVERSED));
+    let row0 = (0..100).map(|x| buf[(x, 0)].symbol().to_string()).collect::<String>();
+    let i3 = row0[..row0.find("3 Logs").unwrap()].chars().count();
+    let i1 = row0[..row0.find("1 Overview").unwrap()].chars().count();
+    assert!(buf[(i3 as u16, 0)].modifier.contains(Modifier::REVERSED));
+    assert!(!buf[(i1 as u16, 0)].modifier.contains(Modifier::REVERSED));
 }
 
 // --------------------------------------------------------------------------- Badge
@@ -188,16 +192,20 @@ fn request_panel() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    let rows = draw(|area, buf| request::render(&app, &ctx, area, buf), 50, 5);
+    let rows = draw(|area, buf| request::render(&app, &ctx, area, buf), 50, 6);
     let all: String = rows.join("\n");
-    assert!(all.contains("prompt 8192 tok   891 t/s"), "{:?}", rows);
-    assert!(all.contains("gen    1040 tok   52.0 t/s"), "{:?}", rows);
-    assert!(all.contains("draft  70 %   ctx 9.2K   at 10:00:12"), "{:?}", rows);
+    assert!(all.contains("time"), "{:?}", rows);
+    assert!(all.contains("prompt"), "{:?}", rows);
+    assert!(all.contains("8 192"), "{:?}", rows);
+    assert!(all.contains("1 040"), "{:?}", rows);
+    assert!(all.contains("52.0"), "{:?}", rows);
+    assert!(all.contains("70 %"), "{:?}", rows);
+    assert!(all.contains("avg 52.0 t/s · 1 req · 9.2K tok"), "{:?}", rows);
 
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = App::new(1000);
-    let rows = draw(|area, buf| request::render(&app, &ctx, area, buf), 50, 5);
+    let rows = draw(|area, buf| request::render(&app, &ctx, area, buf), 50, 6);
     let all: String = rows.join("\n");
     assert!(all.contains("no request yet"), "{:?}", rows);
 }
@@ -216,27 +224,30 @@ fn panels_stay_inside() {
         let ctx = make_ctx(&theme);
         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
         header::render(&app, &ctx, area, &mut buf);
-        check_inside(&buf);
+        check_inside(&buf, area);
 
         let ctx = make_ctx(&theme);
         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
         model::render(&app, &ctx, area, &mut buf);
-        check_inside(&buf);
+        check_inside(&buf, area);
 
         let ctx = make_ctx(&theme);
         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
         request::render(&app, &ctx, area, &mut buf);
-        check_inside(&buf);
+        check_inside(&buf, area);
     }
 }
 
-/// Every cell outside the 30 × 6 area at (5, 2) is still a space.
-fn check_inside(buf: &Buffer) {
-    for y in 0..10 {
-        for x in 0..40 {
-            let inside = (5..35).contains(&x) && (2..8).contains(&y);
+/// Every cell outside `area` is still a space.
+fn check_inside(buf: &Buffer, area: Rect) {
+    let (x0, x1) = (area.x as usize, (area.x + area.width) as usize);
+    let (y0, y1) = (area.y as usize, (area.y + area.height) as usize);
+    let w = buf.area().width as usize;
+    for (y, row) in buf.content.chunks(w).enumerate() {
+        for (x, cell) in row.iter().enumerate() {
+            let inside = (x0..x1).contains(&x) && (y0..y1).contains(&y);
             if !inside {
-                assert_eq!(buf[(x, y)].symbol(), " ", "cell ({x},{y})");
+                assert_eq!(cell.symbol(), " ", "cell ({x},{y})");
             }
         }
     }

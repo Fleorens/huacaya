@@ -68,8 +68,8 @@ fn logs_status_row() {
     assert!(last.contains("lines compact"), "{:?}", last);
     assert!(last.contains("17 of 18 lines"), "{:?}", last);
     assert!(last.contains("r raw"), "{:?}", last);
-    // The Log panel title is on row 0.
-    assert!(rows[0].contains("Log"), "{:?}", rows[0]);
+    // The Activity panel title is on row 0.
+    assert!(rows[0].contains("Activity"), "{:?}", rows[0]);
 }
 
 #[test]

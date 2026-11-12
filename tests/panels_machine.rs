@@ -266,32 +266,35 @@ fn machine_panels_stay_inside() {
         let ctx = make_ctx(&theme);
         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
         gpu::render(&app, &ctx, area, &mut buf);
-        check_inside(&buf);
+        check_inside(&buf, area);
 
         let ctx = make_ctx(&theme);
         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
         cpu::render(&app, &ctx, area, &mut buf);
-        check_inside(&buf);
+        check_inside(&buf, area);
 
         let ctx = make_ctx(&theme);
         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
         memory::render(&app, &ctx, area, &mut buf);
-        check_inside(&buf);
+        check_inside(&buf, area);
 
         let ctx = make_ctx(&theme);
         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
         log::render(&app, &ctx, area, &mut buf);
-        check_inside(&buf);
+        check_inside(&buf, area);
     }
 }
 
-/// Every cell outside the 30 × 6 area at (5, 2) is still a space.
-fn check_inside(buf: &Buffer) {
-    for y in 0..10 {
-        for x in 0..40 {
-            let inside = (5..35).contains(&x) && (2..8).contains(&y);
+/// Every cell outside `area` is still a space.
+fn check_inside(buf: &Buffer, area: Rect) {
+    let (x0, x1) = (area.x as usize, (area.x + area.width) as usize);
+    let (y0, y1) = (area.y as usize, (area.y + area.height) as usize);
+    let w = buf.area().width as usize;
+    for (y, row) in buf.content.chunks(w).enumerate() {
+        for (x, cell) in row.iter().enumerate() {
+            let inside = (x0..x1).contains(&x) && (y0..y1).contains(&y);
             if !inside {
-                assert_eq!(buf[(x, y)].symbol(), " ", "cell ({x},{y})");
+                assert_eq!(cell.symbol(), " ", "cell ({x},{y})");
             }
         }
     }
@@ -304,12 +307,12 @@ fn log_long_filter_stays_inside() {
     let ctx = make_ctx(&theme);
     let mut app = demo_app(DemoState::Generating);
     app.log_view.filter = "a filter much longer than the panel".to_string();
-    let area = Rect::new(5, 2, 30, 6);
-    let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
+    let area = Rect::new(5, 2, 40, 6);
+    let mut buf = Buffer::empty(Rect::new(0, 0, 50, 10));
     log::render(&app, &ctx, area, &mut buf);
-    check_inside(&buf);
+    check_inside(&buf, area);
     let top = &rows_of(&buf)[2];
-    assert!(top.contains(" Log "), "{top:?}");
+    assert!(top.contains(" Activity "), "{top:?}");
     assert!(top.contains("follow ● ╮"), "{top:?}");
     assert!(top.contains("/a filter"), "{top:?}");
 }

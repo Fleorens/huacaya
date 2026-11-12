@@ -1,5 +1,20 @@
 //! Small text helpers shared by every panel: number, percentage, temperature, truncation and a
-//! bytes pair. Pure, no I/O — exercised by `tests/panels_model.rs`.
+//! bytes pair. Pure, no I/O — exercised by `tests/panels_model.rs` and `tests/tui2_layout.rs`.
+
+/// Token count with a thin grouping, a space every three digits: `0`, `999`, `1 043`, `1 234 567`.
+pub fn group_thousands(n: u64) -> String {
+    let chars: Vec<char> = n.to_string().chars().collect();
+    let total = chars.len();
+    let mut out: String = String::with_capacity(total + total / 3);
+    for (i, c) in chars.iter().enumerate() {
+        out.push(*c);
+        // A separator before a new group: three or more digits remain after this one.
+        if i + 1 < total && (total - i - 1).is_multiple_of(3) {
+            out.push(' ');
+        }
+    }
+    out
+}
 
 /// Tokens per second: one decimal below 100 (`62.5`), none from 100 (`643`); `None` → `n/a`.
 pub fn tps(v: Option<f64>) -> String {
