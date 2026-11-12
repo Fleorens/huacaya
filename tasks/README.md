@@ -111,10 +111,11 @@ Mockups: the design canvas "llamatop TUI" (Overview, Agents, 80×24, Models, Log
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
 | [T31](T31-tui2-data-widgets.md) | Data and widgets: request history, task timer, CPU name, big digits, level bars | T30 | prête |
-| T32 | Overview v2 | T31 | outlined |
-| T33 | OpenCode client, `[opencode]` settings, setup question | T32 | outlined |
-| T34 | Agents screen (5) | T33 | outlined |
-| T35 | Models v2 | T32 | outlined |
-| T36 | Logs v2 | T32 | outlined |
-| T37 | System v2 | T32 | outlined |
-| T38 | 80×24 v2 | T32 | outlined |
+| [T32](T32-tui2-layout.md) | One-line header, Overview skeleton, Requests table, key bar | T31 | prête |
+| T33 | Model band (big digits) and GPU / CPU / Memory panels v2 | T32 | outlined |
+| T34 | OpenCode client, `[opencode]` settings, setup question | T33 | outlined |
+| T35 | Agents screen (5) | T34 | outlined |
+| T36 | Models v2 | T33 | outlined |
+| T37 | Logs v2 | T33 | outlined |
+| T38 | System v2 | T33 | outlined |
+| T39 | 80×24 v2 | T33 | outlined |
