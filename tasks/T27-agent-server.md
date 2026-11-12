@@ -114,7 +114,7 @@ listen `127.0.0.1:0`.
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; `llamatop agent` runs; the token policy is enforced.
-- [ ] The 5 tests above exist under these names and pass.
-- [ ] README has the "Agent" section.
-- [ ] `bash .devbox/check` is green.
+- [x] The public API above exists; `llamatop agent` runs; the token policy is enforced.
+- [x] The 5 tests above exist under these names and pass.
+- [x] README has the "Agent" section.
+- [x] `bash .devbox/check` is green.
