@@ -1,5 +1,6 @@
 //! Command line and environment.
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use clap::Parser;
@@ -71,10 +72,22 @@ pub struct Cli {
 }
 
 /// A subcommand of `llamatop`.
-#[derive(Debug, Clone, Copy, clap::Subcommand)]
+#[derive(Debug, Clone, clap::Subcommand)]
 pub enum Command {
     /// Ask for the server address and key, check them, save the configuration file.
     Setup,
+    /// Publish this machine's panels (system and log) for remote llamatop dashboards.
+    Agent {
+        /// Address and port to listen on.
+        #[arg(long, default_value = "0.0.0.0:9099")]
+        listen: SocketAddr,
+        /// File holding the token clients must send (first line).
+        #[arg(long, env = "LLAMATOP_AGENT_TOKEN_FILE")]
+        token_file: Option<PathBuf>,
+        /// Accept clients without a token (only sensible on a trusted network).
+        #[arg(long)]
+        no_auth: bool,
+    },
 }
 
 impl Cli {
