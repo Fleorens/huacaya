@@ -249,7 +249,7 @@ In this order, the first matching block wins:
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; `src/lib.rs` declares `pub mod app;`.
-- [ ] Nothing outside the deliverable changed (except `tasks/`).
-- [ ] The 14 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The files exist with the exact public API above; `src/lib.rs` declares `pub mod app;`.
+- [x] Nothing outside the deliverable changed (except `tasks/`).
+- [x] The 14 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
