@@ -103,9 +103,9 @@ input).
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; with an agent, the dashboard and `--dump` show the agent's machine.
-- [ ] Without an agent, nothing changes: every earlier test passes (the setup tests with one more `\n`).
-- [ ] The 5 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The public API above exists; with an agent, the dashboard and `--dump` show the agent's machine.
+- [x] Without an agent, nothing changes: every earlier test passes (the setup tests with one more `\n`).
+- [x] The 5 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (Orchestrator, devbox → aibox) `llamatop --agent http://192.168.1.203:9099 …` on the devbox shows the
       aibox's GPU.

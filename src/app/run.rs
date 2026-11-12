@@ -9,6 +9,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 
+use crate::agent::client::AgentClient;
 use crate::app::clock;
 use crate::app::demo;
 use crate::app::{App, Event};
@@ -50,23 +51,11 @@ pub fn run(cli: &Cli) -> Result<()> {
         let url = cli.url.clone();
         let api_key = cli.api_key();
         let log_cmd = cli.log_cmd.clone();
+        let agent_url = cli.agent.clone();
+        let agent_token = cli.agent_token();
 
-        let sampler_stop = stop.clone();
-        let sampler_tx = tx.clone();
-        let sampler_interval = interval.clone();
-        thread::spawn(move || {
-            let mut sampler = Sampler::new(sysroot, mounts);
-            loop {
-                if sampler_stop.load(Ordering::Relaxed) {
-                    break;
-                }
-                if sampler_tx.send(Event::System(sampler.sample(Instant::now()))).is_err() {
-                    break;
-                }
-                sleep(&sampler_stop, sampler_interval.load(Ordering::Relaxed));
-            }
-        });
-
+        // The poller: unchanged (direct-instance mode needs a loopback URL, which a remote dashboard does
+        // not have). It runs with or without an agent.
         let poller_stop = stop.clone();
         let poller_tx = tx.clone();
         let poller_interval = interval.clone();
@@ -91,24 +80,49 @@ pub fn run(cli: &Cli) -> Result<()> {
             }
         });
 
-        // The log follower: keep it alive until `run` returns, so dropping it at the end kills the
-        // command. When the command cannot start, report once and keep going.
-        let log_tx = tx.clone();
-        _follower = match logs::follow(&log_cmd, move |line| log_tx.send(Event::Log(line)).is_ok()) {
-            Ok(follower) => Some(follower),
-            Err(e) => {
-                let _ = tx.send(Event::Log(LogLine {
-                    time: None,
-                    source: None,
-                    instance: None,
-                    task: None,
-                    level: Level::Warn,
-                    text: format!("log command failed: {e}"),
-                    event: None,
-                }));
-                None
-            }
-        };
+        // With an agent: one thread reads the server's machine panels and log (no sampler, no follower).
+        // Without it: the sampler and the log follower, as before.
+        if let Some(agent_url) = agent_url {
+            let agent_tx = tx.clone();
+            let agent_stop = stop.clone();
+            let agent_interval = interval.clone();
+            thread::spawn(move || agent_loop(agent_tx, agent_stop, agent_interval, agent_url, agent_token));
+        } else {
+            let sampler_stop = stop.clone();
+            let sampler_tx = tx.clone();
+            let sampler_interval = interval.clone();
+            thread::spawn(move || {
+                let mut sampler = Sampler::new(sysroot, mounts);
+                loop {
+                    if sampler_stop.load(Ordering::Relaxed) {
+                        break;
+                    }
+                    if sampler_tx.send(Event::System(sampler.sample(Instant::now()))).is_err() {
+                        break;
+                    }
+                    sleep(&sampler_stop, sampler_interval.load(Ordering::Relaxed));
+                }
+            });
+
+            // The log follower: keep it alive until `run` returns, so dropping it at the end kills the
+            // command. When the command cannot start, report once and keep going.
+            let log_tx = tx.clone();
+            _follower = match logs::follow(&log_cmd, move |line| log_tx.send(Event::Log(line)).is_ok()) {
+                Ok(follower) => Some(follower),
+                Err(e) => {
+                    let _ = tx.send(Event::Log(LogLine {
+                        time: None,
+                        source: None,
+                        instance: None,
+                        task: None,
+                        level: Level::Warn,
+                        text: format!("log command failed: {e}"),
+                        event: None,
+                    }));
+                    None
+                }
+            };
+        }
     }
 
     // Input and tick threads end on the stop flag.
@@ -282,5 +296,105 @@ fn sleep(stop: &Arc<AtomicBool>, interval_ms: u64) {
         let slice = (interval - slept).min(Duration::from_millis(100));
         thread::sleep(slice);
         slept += slice;
+    }
+}
+
+/// The agent thread: every shared interval, `system()` → `Event::System`, then `log(since)` → one
+/// `Event::Log` per line. Warns once on the transition to unreachable, says once on the return; never floods.
+fn agent_loop(
+    tx: Sender<Event>,
+    stop: Arc<AtomicBool>,
+    interval: Arc<AtomicU64>,
+    url: String,
+    token: Option<String>,
+) {
+    let client = AgentClient::new(&url, token);
+    let mut since = 0u64;
+    let mut reachable: Option<bool> = None;
+    loop {
+        if stop.load(Ordering::Relaxed) {
+            break;
+        }
+
+        match client.system() {
+            Ok(snapshot) => {
+                if let Some(line) = reachability_line(&mut reachable, true, None)
+                    && tx.send(Event::Log(line)).is_err()
+                {
+                    break;
+                }
+                if tx.send(Event::System(snapshot)).is_err() {
+                    break;
+                }
+            }
+            Err(e) => {
+                if let Some(line) =
+                    reachability_line(&mut reachable, false, Some(format!("agent unreachable: {e}")))
+                    && tx.send(Event::Log(line)).is_err()
+                {
+                    break;
+                }
+            }
+        }
+
+        match client.log(since) {
+            Ok(page) => {
+                if let Some(line) = reachability_line(&mut reachable, true, None)
+                    && tx.send(Event::Log(line)).is_err()
+                {
+                    break;
+                }
+                for line in page.lines {
+                    if tx.send(Event::Log(line)).is_err() {
+                        break;
+                    }
+                }
+                since = page.next;
+                if page.dropped {
+                    let line = agent_message("agent log: some lines were missed", Level::Warn);
+                    if tx.send(Event::Log(line)).is_err() {
+                        break;
+                    }
+                }
+            }
+            Err(e) => {
+                if let Some(line) =
+                    reachability_line(&mut reachable, false, Some(format!("agent unreachable: {e}")))
+                    && tx.send(Event::Log(line)).is_err()
+                {
+                    break;
+                }
+            }
+        }
+
+        sleep(&stop, interval.load(Ordering::Relaxed));
+    }
+}
+
+/// The reachability transition line, if the state changed this round: `agent back` (Info) on return,
+/// `agent unreachable: <error>` (Warn) on the way down. Never more than one per change.
+fn reachability_line(reachable: &mut Option<bool>, now_ok: bool, error: Option<String>) -> Option<LogLine> {
+    let prev = reachable.take();
+    let line = match (prev, now_ok) {
+        (Some(false), true) => Some(agent_message("agent back", Level::Info)),
+        (Some(true), false) | (None, false) => {
+            let text = error.unwrap_or_default();
+            Some(agent_message(&format!("agent unreachable: {text}"), Level::Warn))
+        }
+        _ => None,
+    };
+    *reachable = if now_ok { Some(true) } else { Some(false) };
+    line
+}
+
+fn agent_message(text: &str, level: Level) -> LogLine {
+    LogLine {
+        time: None,
+        source: None,
+        instance: None,
+        task: None,
+        level,
+        text: text.to_string(),
+        event: None,
     }
 }
