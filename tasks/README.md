@@ -75,3 +75,14 @@ first three are fixed by the orchestrator (commit "first on-screen review"); the
 | [T20](T20-compact-log.md) | Compact log lines (`r` toggles raw) | T18 | validée |
 | [T21](T21-gpu-memory-details.md) | More GPU and memory details when there is room | T20 | validée |
 | [T22](T22-direct-instance.md) | Poll the loaded instance directly (no proxy lines in the journal) | T21 | validée |
+
+## Batch 4 — a native Linux tool (2026-11-12)
+
+Florian: run it from any Linux machine, installed as a package, with a first-run setup that asks for the
+llama.cpp address and key (and later OpenCode's). The remote machine panels need an agent on the server: next.
+
+| Sheet | Subject | Depends on | Status |
+|---|---|---|---|
+| [T23](T23-config-file.md) | Configuration file `~/.config/llamatop/config.toml` | T22 | prête |
+| [T24](T24-setup-wizard.md) | First-run setup, `llamatop setup` | T23 | prête |
+| T25 | `.deb` package (`scripts/build-deb.sh`) — by the orchestrator | T24 | outlined |
