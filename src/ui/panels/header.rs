@@ -18,7 +18,7 @@ pub const HEIGHT: u16 = 3;
 
 /// `<dot> <status>` of the server: `○ waiting` when there is no snapshot, else the health dot and
 /// message, with its role.
-fn status(app: &App) -> (&'static str, Role) {
+pub(crate) fn status(app: &App) -> (&'static str, Role) {
     match &app.llama {
         None => ("○ waiting", Role::Dim),
         Some(llama) => match llama.health {

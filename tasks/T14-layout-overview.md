@@ -179,9 +179,9 @@ once that way to create them, then **read each file** and check it against `docs
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; `src/config.rs` gains exactly the five fields.
-- [ ] `cargo run -- --snapshot 140x40` prints the generating demo; `--snapshot 80x24 --demo-state down`
+- [x] The files exist with the exact public API above; `src/config.rs` gains exactly the five fields.
+- [x] `cargo run -- --snapshot 140x40` prints the generating demo; `--snapshot 80x24 --demo-state down`
       prints the Down state; `--snapshot 10` fails with the message above.
-- [ ] The 11 tests above exist under these names and pass; the five golden files are committed.
-- [ ] `bash .devbox/check` is green.
+- [x] The 11 tests above exist under these names and pass; the five golden files are committed.
+- [x] `bash .devbox/check` is green.
 - [ ] (Orchestrator) the golden files read right.

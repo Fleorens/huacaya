@@ -39,6 +39,22 @@ pub struct Cli {
     /// Print one JSON snapshot of every data source on standard output, then exit.
     #[arg(long)]
     pub dump: bool,
+
+    /// Show generated data instead of the real server and machine.
+    #[arg(long)]
+    pub demo: bool,
+    /// With `--snapshot`: the demo state to render.
+    #[arg(long, value_enum, default_value = "generating")]
+    pub demo_state: crate::app::demo::DemoState,
+    /// Render one frame of the demo at `WxH` (e.g. `140x40`) on standard output, then exit.
+    #[arg(long, value_name = "WxH")]
+    pub snapshot: Option<String>,
+    /// With `--snapshot`: keep the colours as ANSI escape sequences.
+    #[arg(long)]
+    pub ansi: bool,
+    /// With `--snapshot`: the screen to render, 1–4 (Overview, Models, Logs, System).
+    #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u8).range(1..=4))]
+    pub screen: u8,
 }
 
 impl Cli {
