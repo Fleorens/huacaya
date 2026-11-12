@@ -74,4 +74,4 @@ first three are fixed by the orchestrator (commit "first on-screen review"); the
 |---|---|---|---|
 | [T20](T20-compact-log.md) | Compact log lines (`r` toggles raw) | T18 | validée |
 | [T21](T21-gpu-memory-details.md) | More GPU and memory details when there is room | T20 | validée |
-| [T22](T22-direct-instance.md) | Poll the loaded instance directly (no proxy lines in the journal) | T21 | prête |
+| [T22](T22-direct-instance.md) | Poll the loaded instance directly (no proxy lines in the journal) | T21 | livrée |

@@ -110,9 +110,9 @@ both.
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; `run.rs` and `dump.rs` enable direct polling on a loopback URL only.
-- [ ] Every test of `tests/llama_poll.rs` passes unchanged; the 6 tests above exist and pass.
-- [ ] `docs/01-architecture.md` § 2.2 describes the direct path.
-- [ ] `bash .devbox/check` is green.
+- [x] The public API above exists; `run.rs` and `dump.rs` enable direct polling on a loopback URL only.
+- [x] Every test of `tests/llama_poll.rs` passes unchanged; the 6 tests above exist and pass.
+- [x] `docs/01-architecture.md` § 2.2 describes the direct path.
+- [x] `bash .devbox/check` is green.
 - [ ] (Orchestrator, on the aibox) with llamatop running, the journal no longer gets `proxying request` lines
       from it.
