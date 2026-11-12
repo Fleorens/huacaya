@@ -3,11 +3,11 @@
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Borders, Widget};
+use ratatui::widgets::Widget;
 
 use crate::app::App;
+use crate::ui::frame::panel;
 use crate::ui::panels::Ctx;
 use crate::ui::text::{pct, tps};
 use crate::ui::theme::Role;
@@ -25,14 +25,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         return;
     }
     let theme = ctx.theme;
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(theme.fg(Role::Border))
-        .title(Span::styled(
-            " Last request ".to_string(),
-            theme.fg(Role::Server).add_modifier(Modifier::BOLD),
-        ));
+    let block = panel("Last request", Role::Server, false, theme);
     let inner = block.inner(area);
     block.render(area, buf);
 

@@ -8,7 +8,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
 
 use crate::app::App;
-use crate::collect::llama::{Metrics, ModelState};
+use crate::collect::llama::{Metrics, ModelInfo, ModelState};
 use crate::collect::llama_poll::{ActiveModel, Health};
 use crate::ui::frame::{badge, panel};
 use crate::ui::gauge::Gauge;
@@ -64,7 +64,10 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     block.render(area, buf);
 
     match app.llama.as_ref().and_then(|l| l.active.first()) {
-        Some(m) => render_with_active(app, m, ctx.graphs, theme, inner, buf),
+        Some(m) => {
+            let models = app.llama.as_ref().map(|l| l.models.as_slice()).unwrap_or(&[]);
+            render_with_active(app, m, models, ctx.graphs, theme, inner, buf)
+        }
         None => render_without_active(app, theme, inner, buf),
     }
 }
@@ -81,12 +84,12 @@ fn badge_lit(text: &str, frame: u64) -> bool {
 fn render_with_active(
     app: &App,
     m: &ActiveModel,
+    models: &[ModelInfo],
     graphs: bool,
     theme: &Theme,
     inner: Rect,
     buf: &mut Buffer,
 ) {
-    let models = &app.llama.as_ref().unwrap().models;
     let info = models.iter().find(|mi| mi.id == m.id);
     let s = m.slots.first();
     let metrics: Option<&Metrics> = m.metrics.as_ref();
@@ -145,33 +148,38 @@ fn render_with_active(
         buf.set_line(inner.x, y, &line, inner.width);
     }
 
-    // Row 5: `ctx    <gauge>  <used> / <n_ctx>`.
+    // Row 5: `ctx    <gauge>  <used> / <n_ctx>`, or `ctx    n/a` without a slot.
     let y = inner.y + 4;
     if y < inner.y + inner.height {
-        let (used, n_ctx) = match s {
-            Some(s) => (s.n_prompt_tokens + s.n_decoded, s.n_ctx),
-            None => (0, 0),
-        };
-        let value = format!("{} / {}", count(used), count(n_ctx));
-        let value_w = value.chars().count() as u16;
-        let label_w: u16 = 7;
-        let gap: u16 = 2;
-        let gauge_w = inner.width.saturating_sub(label_w).saturating_sub(gap).saturating_sub(value_w);
+        let label_w: u16 = 7.min(inner.width);
         buf.set_line(inner.x, y, &Line::from(Span::styled("ctx    ", theme.fg(Role::Dim))), label_w);
-        let gauge_w_used = if gauge_w >= 4 {
-            let ratio = if n_ctx == 0 { 0.0 } else { used as f64 / n_ctx as f64 };
-            let grect = Rect::new(inner.x + label_w, y, gauge_w, 1);
-            Gauge { ratio, accent: Role::Server, thresholds: PCT_THRESHOLDS, theme }.render(grect, buf);
-            gauge_w
-        } else {
-            0
-        };
-        buf.set_line(
-            inner.x + label_w + gauge_w_used + gap,
-            y,
-            &Line::from(Span::styled(value, theme.fg(Role::Text))),
-            value_w,
-        );
+        let rest = inner.width - label_w;
+        match s {
+            None => {
+                let line = Line::from(Span::styled("n/a", theme.fg(Role::Text)));
+                buf.set_line(inner.x + label_w, y, &line, rest);
+            }
+            Some(s) => {
+                let (used, n_ctx) = (s.n_prompt_tokens + s.n_decoded, s.n_ctx);
+                let value = format!("{} / {}", count(used), count(n_ctx));
+                let value_w = value.chars().count() as u16;
+                let gap: u16 = 2;
+                let gauge_w = rest.saturating_sub(gap).saturating_sub(value_w);
+                let mut x = inner.x + label_w;
+                if gauge_w >= 4 {
+                    let ratio = if n_ctx == 0 { 0.0 } else { used as f64 / n_ctx as f64 };
+                    let grect = Rect::new(x, y, gauge_w, 1);
+                    Gauge { ratio, accent: Role::Server, thresholds: PCT_THRESHOLDS, theme }
+                        .render(grect, buf);
+                    x += gauge_w + gap;
+                }
+                // Clip the value to the inner area so a narrow panel never draws over its border.
+                if x < inner.right() {
+                    let line = Line::from(Span::styled(value, theme.fg(Role::Text)));
+                    buf.set_line(x, y, &line, inner.right() - x);
+                }
+            }
+        }
     }
 
     // Row 6: `draft  <pct>` then the key settings, the whole row truncated to the panel width.
@@ -221,19 +229,10 @@ fn render_without_active(app: &App, theme: &Theme, inner: Rect, buf: &mut Buffer
         Some(llama) => match &llama.health {
             Health::Down(msg) => msg.clone(),
             Health::Unauthorized => "set LLAMA_API_KEY or --api-key-file".to_string(),
-            Health::Ok => {
-                if llama.models.iter().any(|m| m.state == ModelState::Loading) {
-                    let n = llama
-                        .models
-                        .iter()
-                        .find(|m| m.state == ModelState::Loading)
-                        .map(|m| short_model_name(&m.id).0)
-                        .unwrap_or_default();
-                    format!("loading {n}…")
-                } else {
-                    format!("no model loaded — {}", llama.models.len())
-                }
-            }
+            Health::Ok => match llama.models.iter().find(|m| m.state == ModelState::Loading) {
+                Some(m) => format!("loading {}…", short_model_name(&m.id).0),
+                None => format!("no model loaded — {} available", llama.models.len()),
+            },
         },
     };
     let y = inner.y + 2;

@@ -37,33 +37,30 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     }
     let theme = ctx.theme;
 
-    // Left title: `llamatop ─ <hostname> ─ up <uptime>`.
+    // Left title: ` llamatop ─ <hostname> ─ up <uptime> `.
     let hostname = app.system.as_ref().and_then(|s| s.hostname.clone()).unwrap_or_else(|| "?".to_string());
     let uptime =
         app.system.as_ref().and_then(|s| s.uptime_s).map(duration).unwrap_or_else(|| "n/a".to_string());
-    let left = format!("llamatop ─ {hostname} ─ up {uptime}");
     let left_spans = Line::from(vec![
-        Span::styled("llamatop ", theme.fg(Role::BorderFocused).add_modifier(Modifier::BOLD)),
-        Span::styled(&left["llamatop ".len()..], theme.fg(Role::Text)),
+        Span::styled(" llamatop", theme.fg(Role::BorderFocused).add_modifier(Modifier::BOLD)),
+        Span::styled(format!(" ─ {hostname} ─ up {uptime} "), theme.fg(Role::Text)),
     ]);
 
-    // Right title: ` <dot> <status>  <build> ─ <clock>`.
+    // Right title: ` <dot> <status>  <build> ─ <clock> `; only `<dot> <status>` takes the status role.
     let (status, role) = status(app);
     let build = app
         .llama
         .as_ref()
         .and_then(|l| l.build_info.clone())
         .and_then(|b| b.split('-').next().map(str::to_string));
-    let dot_status = format!(" {status}");
-    let right_spans = match build {
-        Some(b) => Span::styled(
-            format!("{dot_status}  {b} ─ {}", ctx.clock),
-            theme.fg(role).add_modifier(Modifier::BOLD),
-        ),
-        None => {
-            Span::styled(format!("{dot_status} ─ {}", ctx.clock), theme.fg(role).add_modifier(Modifier::BOLD))
-        }
+    let tail = match build {
+        Some(b) => format!("  {b} ─ {} ", ctx.clock),
+        None => format!(" ─ {} ", ctx.clock),
     };
+    let right_spans = vec![
+        Span::styled(format!(" {status}"), theme.fg(role).add_modifier(Modifier::BOLD)),
+        Span::styled(tail, theme.fg(Role::Text)),
+    ];
 
     let block = Block::default()
         .borders(Borders::ALL)
@@ -74,28 +71,29 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let inner = block.inner(area);
     block.render(area, buf);
     let y = inner.y + inner.height - 1;
-    let tabs_line = Line::from(
-        Screen::ALL
-            .iter()
-            .enumerate()
-            .map(|(i, s)| {
-                let text = format!(" {} {} ", i + 1, s.title());
-                let style = if *s == app.screen {
-                    theme.fg(Role::BorderFocused).add_modifier(Modifier::BOLD | Modifier::REVERSED)
-                } else {
-                    theme.fg(Role::Dim)
-                };
-                Span::styled(text, style)
-            })
-            .collect::<Vec<_>>(),
-    );
-    let right = format!("{} ? help  q ", if app.paused { "PAUSED  " } else { "" });
+    let mut tabs = Vec::new();
+    for (i, sc) in Screen::ALL.iter().enumerate() {
+        let style = if *sc == app.screen {
+            theme.fg(Role::BorderFocused).add_modifier(Modifier::BOLD | Modifier::REVERSED)
+        } else {
+            theme.fg(Role::Dim)
+        };
+        tabs.push(Span::styled(format!(" {} {} ", i + 1, sc.title()), style));
+        tabs.push(Span::raw(" "));
+    }
+    let tabs_line = Line::from(tabs);
+    let mut right = Vec::new();
+    if app.paused {
+        right.push(Span::styled("PAUSED  ", theme.fg(Role::Warning).add_modifier(Modifier::BOLD)));
+    }
+    right.push(Span::styled("? help  q ", theme.fg(Role::Dim)));
+    let right_line = Line::from(right);
 
-    let avail = inner.width.saturating_sub(1);
-    let right_w = right.chars().count();
-    buf.set_line(inner.x + 1, y, &tabs_line, avail);
+    let avail = inner.width;
+    let right_w = right_line.width();
+    buf.set_line(inner.x, y, &tabs_line, avail);
     if tabs_line.width() + right_w <= avail as usize {
-        let x = inner.x + inner.width - 1 - right_w as u16;
-        buf.set_line(x, y, &Line::from(Span::styled(right, theme.fg(Role::Dim))), right_w as u16);
+        let x = inner.right() - right_w as u16;
+        buf.set_line(x, y, &right_line, right_w as u16);
     }
 }

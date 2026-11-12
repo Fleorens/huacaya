@@ -95,8 +95,8 @@ fn header_current_tab() {
     let mut buf = Buffer::empty(Rect::new(0, 0, 100, 3));
     header::render(&app, &ctx, Rect::new(0, 0, 100, 3), &mut buf);
     let row1 = (0..100).map(|x| buf[(x, 1)].symbol().to_string()).collect::<String>();
-    let i3 = row1.find("3 Logs").unwrap();
-    let i1 = row1.find("1 Overview").unwrap();
+    let i3 = row1[..row1.find("3 Logs").unwrap()].chars().count();
+    let i1 = row1[..row1.find("1 Overview").unwrap()].chars().count();
     assert!(buf[(i3 as u16, 1)].modifier.contains(Modifier::REVERSED));
     assert!(!buf[(i1 as u16, 1)].modifier.contains(Modifier::REVERSED));
 }
@@ -238,6 +238,21 @@ fn check_inside(buf: &Buffer) {
             if !inside {
                 assert_eq!(buf[(x, y)].symbol(), " ", "cell ({x},{y})");
             }
+        }
+    }
+}
+
+#[test]
+fn model_narrow_keeps_border() {
+    let theme = true_color();
+    let app = demo_app(DemoState::Generating);
+    for w in 3..=30u16 {
+        let ctx = make_ctx(&theme);
+        let mut buf = Buffer::empty(Rect::new(0, 0, w + 2, 8));
+        model::render(&app, &ctx, Rect::new(0, 0, w, 8), &mut buf);
+        for y in 1..7 {
+            assert_eq!(buf[(w - 1, y)].symbol(), "│", "width {w}, row {y}");
+            assert_eq!(buf[(w, y)].symbol(), " ", "width {w}, row {y}");
         }
     }
 }
