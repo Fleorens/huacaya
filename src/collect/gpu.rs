@@ -10,7 +10,7 @@ use serde::Serialize;
 use crate::collect::{read_parsed, read_trimmed};
 
 /// A snapshot of one AMD GPU.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct GpuSample {
     /// Directory name under `sys/class/drm`, e.g. `card1`.
     pub card: String,

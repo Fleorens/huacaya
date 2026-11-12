@@ -8,7 +8,7 @@ use anyhow::anyhow;
 use serde::Serialize;
 
 /// State of a model as returned by `/v1/models`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub enum ModelState {
     Unloaded,
     Loading,
@@ -18,7 +18,7 @@ pub enum ModelState {
 }
 
 /// One entry of `/v1/models`: its id, state, runtime settings and (when loaded) its size.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct ModelInfo {
     pub id: String,
     /// From `status.value`. An entry with **no** `status` object (single-model server) is `Loaded`.
@@ -103,7 +103,7 @@ fn parse_model(m: &serde_json::Value) -> ModelInfo {
 }
 
 /// The router flag and build id of `/props`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct ServerProps {
     /// `true` when `role` is `"router"`.
     pub router: bool,
@@ -123,7 +123,7 @@ pub fn parse_props(json: &str) -> anyhow::Result<ServerProps> {
 
 /// Counters and gauges of `/metrics`. A metric absent from the text is `0.0` (or `None` for the two
 /// speculative-decoding counters, absent when the model has no draft).
-#[derive(Debug, Clone, PartialEq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize, Default)]
 pub struct Metrics {
     pub prompt_tokens_total: f64,
     pub prompt_tokens_cached_total: f64,
@@ -210,7 +210,7 @@ fn div(num: f64, den: f64) -> Option<f64> {
 }
 
 /// One entry of `/slots`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct SlotInfo {
     pub id: u32,
     pub id_task: i64,

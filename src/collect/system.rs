@@ -11,14 +11,14 @@ use crate::collect::{read_parsed, read_trimmed};
 
 /// Jiffies of one `cpu` line. `idle` = idle + iowait (columns 4 and 5).
 /// `total` = the sum of the first 8 columns (user … steal); guest columns are already in user.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, serde::Deserialize)]
 pub struct CpuTimes {
     pub total: u64,
     pub idle: u64,
 }
 
 /// The `cpu ` aggregate and one entry per `cpu<N>` core, in file order.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct CpuStat {
     pub all: CpuTimes,
     pub cores: Vec<CpuTimes>,
@@ -84,7 +84,7 @@ fn core_usage_pct(prev: CpuTimes, cur: CpuTimes) -> f32 {
 }
 
 /// All fields in bytes. `used` = total − available.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct MemSample {
     pub total: u64,
     pub available: u64,
@@ -134,7 +134,7 @@ pub fn parse_meminfo(text: &str) -> Option<MemSample> {
 }
 
 /// Averages of the 1, 5 and 15 minute load.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct LoadAvg {
     pub one: f32,
     pub five: f32,
@@ -151,7 +151,7 @@ pub fn parse_loadavg(text: &str) -> Option<LoadAvg> {
 }
 
 /// Average and maximum CPU frequency, in MHz.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct CpuFreq {
     pub avg_mhz: f32,
     pub max_mhz: f32,
@@ -213,7 +213,7 @@ fn read_load(sysroot: &Path) -> Option<LoadAvg> {
 }
 
 /// One sample of the machine's CPU, memory, load and uptime.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct CpuSample {
     /// `None` on the first sample (no previous reading) and when `proc/stat` is unreadable.
     pub usage_pct: Option<f32>,

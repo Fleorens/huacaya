@@ -37,7 +37,7 @@ impl Fetch for Client {
 }
 
 /// Health of the server at the end of a round.
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Health {
     Ok,
     /// `/health` failed; the message is the error text (it never contains the key).
@@ -47,7 +47,7 @@ pub enum Health {
 }
 
 /// A model that is loaded, and therefore polled this round.
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ActiveModel {
     pub id: String,
     pub metrics: Option<Metrics>,
@@ -57,7 +57,7 @@ pub struct ActiveModel {
 }
 
 /// One immutable snapshot of the server, assembled by a single polling round.
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct LlamaSnapshot {
     pub health: Health,
     pub router: bool,

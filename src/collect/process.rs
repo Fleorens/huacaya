@@ -9,14 +9,14 @@ use serde::Serialize;
 use crate::collect::read_trimmed;
 
 /// Whether a `llama-server` is the router or one of the models it serves.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, serde::Deserialize)]
 pub enum ServerRole {
     Router,
     Instance,
 }
 
 /// One `llama-server` process: its role, the model it serves (if any), its port, RAM and threads.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct ProcSample {
     pub pid: u32,
     /// `Instance` when the command line has `--alias`, else `Router`.

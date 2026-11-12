@@ -10,7 +10,7 @@ use serde::Serialize;
 use crate::collect::{read_parsed, read_trimmed};
 
 /// One `temp<N>_input` of one `hwmon` chip.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct TempReading {
     /// Content of the chip's `name` file (`coretemp`, `nvme`, `amdgpu`, …).
     pub chip: String,

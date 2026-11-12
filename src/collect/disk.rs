@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 /// One mount point's usage. `used` = (blocks − bfree) × frsize; `available` = bavail × frsize.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct DiskSample {
     pub mount: String,
     pub total: u64,

@@ -13,7 +13,7 @@ use std::thread;
 use serde::Serialize;
 
 /// Severity of a log line.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, serde::Deserialize)]
 pub enum Level {
     Info,
     Warn,
@@ -21,7 +21,7 @@ pub enum Level {
 }
 
 /// A structured fact extracted from a line, so the UI can highlight a request without re-parsing.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub enum LogEvent {
     /// `prompt eval time = … / N tokens ( … , X tokens per second)`.
     PromptTiming { tokens: u64, tps: f64 },
@@ -42,7 +42,7 @@ pub enum LogEvent {
 }
 
 /// One classified line of the log.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct LogLine {
     /// `HH:MM:SS` cut out of the ISO timestamp; `None` when the line has no journal prefix.
     pub time: Option<String>,

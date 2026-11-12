@@ -13,7 +13,7 @@ use crate::collect::read_trimmed;
 use crate::util::Rate;
 
 /// Cumulative bytes on one interface, as read from `/proc/net/dev`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct NetCounters {
     pub iface: String,
     pub rx_bytes: u64,
@@ -37,7 +37,7 @@ pub fn parse_net_dev(text: &str) -> Vec<NetCounters> {
 }
 
 /// One interface's rate over the last sample plus its cumulative totals.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct NetSample {
     pub iface: String,
     /// Bytes per second; `None` on the first sample of an interface.

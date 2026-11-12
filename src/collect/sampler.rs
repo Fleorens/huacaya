@@ -16,7 +16,7 @@ use crate::collect::sensors::{TempReading, cpu_temp, nvme_temp, read_temps};
 use crate::collect::system::{CpuReader, CpuSample, MemSample, read_hostname, read_mem, read_uptime};
 
 /// One snapshot of the machine, assembled from every system collector (T02–T04).
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct SystemSnapshot {
     pub hostname: Option<String>,
     pub uptime_s: Option<u64>,
