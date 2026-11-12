@@ -66,6 +66,18 @@ pub struct Cli {
     #[arg(skip)]
     pub api_key_inline: Option<String>,
 
+    /// URL of a llamatop agent on the server: its machine panels and log replace this machine's.
+    #[arg(long, env = "LLAMATOP_AGENT")]
+    pub agent: Option<String>,
+
+    /// File holding the agent token (first line), like `--api-key-file`.
+    #[arg(long, env = "LLAMATOP_AGENT_TOKEN_FILE")]
+    pub agent_token_file: Option<PathBuf>,
+
+    /// The agent token from the configuration file.
+    #[arg(skip)]
+    pub agent_token_inline: Option<String>,
+
     /// Subcommand: the first-run setup dialogue.
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -110,6 +122,23 @@ impl Cli {
         self.api_key_inline.as_deref().map(str::trim).filter(|key| !key.is_empty()).map(str::to_string)
     }
 
+    /// The agent token: the first line of `--agent-token-file`, else `agent_token_inline`, else none. The
+    /// token is never printed, logged, or put in an error message.
+    pub fn agent_token(&self) -> Option<String> {
+        if let Some(path) = self.agent_token_file.as_ref()
+            && let Ok(text) = std::fs::read_to_string(path)
+            && let Some(token) = text.lines().next()
+            && !token.trim().is_empty()
+        {
+            return Some(token.trim().to_string());
+        }
+        self.agent_token_inline
+            .as_deref()
+            .map(str::trim)
+            .filter(|token| !token.is_empty())
+            .map(str::to_string)
+    }
+
     /// Fills, from `settings`, every value the user did not give by flag or environment variable: `url` and
     /// `log_cmd` when `matches.value_source(id)` is `Some(ValueSource::DefaultValue)`; `api_key_file` when it is
     /// `None`; `api_key_inline` always (it is only used last). Values given by flag or environment win.
@@ -132,6 +161,17 @@ impl Cli {
             self.api_key_file = Some(api_key_file);
         }
         self.api_key_inline = settings.llama.api_key.clone();
+        if matches.value_source("agent").is_none()
+            && let Some(url) = settings.agent.url.clone()
+        {
+            self.agent = Some(url);
+        }
+        if matches.value_source("agent_token_file").is_none()
+            && let Some(token_file) = settings.agent.token_file.clone()
+        {
+            self.agent_token_file = Some(token_file);
+        }
+        self.agent_token_inline = settings.agent.token.clone();
     }
 }
 

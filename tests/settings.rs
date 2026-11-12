@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use clap::{CommandFactory, FromArgMatches};
 
 use llamatop::config::Cli;
-use llamatop::settings::{self, LlamaSettings, Settings};
+use llamatop::settings::{self, AgentSettings, LlamaSettings, Settings};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -26,6 +26,11 @@ fn all_fields() -> Settings {
             api_key: Some("sk-TEST".to_string()),
             api_key_file: Some(PathBuf::from("/etc/llamatop/key")),
             log_cmd: Some("cat /tmp/log".to_string()),
+        },
+        agent: AgentSettings {
+            url: Some("http://10.0.0.2:9099".to_string()),
+            token: Some("tok-TEST".to_string()),
+            token_file: Some(PathBuf::from("/etc/llamatop/agent-token")),
         },
     }
 }
@@ -80,6 +85,7 @@ fn settings_fill_defaults() {
             api_key: Some("k".to_string()),
             ..Default::default()
         },
+        ..Default::default()
     };
     cli.apply_settings(&matches, &settings);
     assert_eq!(cli.url, "http://10.0.0.1:8080");
@@ -99,6 +105,7 @@ fn flags_win() {
             log_cmd: Some("cat x".to_string()),
             ..Default::default()
         },
+        ..Default::default()
     };
     cli.apply_settings(&matches, &settings);
     assert_eq!(cli.url, "http://127.0.0.1:8080");

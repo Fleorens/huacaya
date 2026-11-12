@@ -13,6 +13,7 @@ use std::time::Duration;
 use anyhow::{Context, Result, anyhow};
 
 use crate::collect::llama::{ModelInfo, ModelState, parse_models};
+use crate::collect::sampler::SystemSnapshot;
 use crate::http::{self, Client};
 use crate::settings::Settings;
 use crate::util::short_model_name;
@@ -23,6 +24,9 @@ pub trait Probe {
     fn health(&self, url: &str) -> Result<()>;
     /// `GET <url>/v1/models` with `key`, parsed by `collect::llama::parse_models`.
     fn models(&self, url: &str, key: Option<&str>) -> Result<Vec<ModelInfo>>;
+    /// `GET <url>/v1/system` with `key`: the agent's hostname (or an error carrying `HTTP 401` for a
+    /// refused token).
+    fn agent(&self, url: &str, token: Option<&str>) -> Result<String>;
 }
 
 /// `Probe` over `http::Client`, 3 s timeout.
@@ -38,6 +42,13 @@ impl Probe for HttpProbe {
         let client = Client::new(url, key.map(str::to_string), Duration::from_secs(3));
         let body = client.get("/v1/models", &[])?;
         parse_models(&body)
+    }
+
+    fn agent(&self, url: &str, token: Option<&str>) -> Result<String> {
+        let client = Client::new(url, token.map(str::to_string), Duration::from_secs(3));
+        let body = client.get("/v1/system", &[])?;
+        let snapshot: SystemSnapshot = serde_json::from_str(&body).context("parse /v1/system")?;
+        snapshot.hostname.ok_or_else(|| anyhow!("no hostname in /v1/system"))
     }
 }
 
@@ -156,12 +167,60 @@ fn dialogue(
     let entered = input.answer()?;
     let log_cmd = if entered.is_empty() { default_log } else { Some(entered) };
 
+    // 4. The agent: a URL on the server, whose machine panels and log replace this machine's. Empty is
+    // none (the log command above keeps its meaning); the token is checked against `/v1/system`.
+    let default_agent_url = current.agent.url.clone().unwrap_or_default();
+    write!(out, "llamatop agent URL (empty: none) [{}]: ", default_agent_url)?;
+    out.flush()?;
+    let entered_agent = input.answer()?;
+    let (agent_url, agent_token) = if entered_agent.is_empty() {
+        (None, None)
+    } else {
+        let url = normalize_url(&entered_agent);
+        let token_prompt = match &current.agent.token {
+            Some(_) => "agent token (empty: keep the current one): ".to_string(),
+            None => "agent token (empty: none): ".to_string(),
+        };
+        let mut refused = 0usize;
+        let agent_token = loop {
+            let entered_token = secret(&token_prompt)?;
+            let token =
+                if entered_token.is_empty() { current.agent.token.clone() } else { Some(entered_token) };
+            write!(out, "checking agent … ")?;
+            out.flush()?;
+            match probe.agent(&url, token.as_deref()) {
+                Ok(hostname) => {
+                    writeln!(out, "ok, {hostname}")?;
+                    break token;
+                }
+                Err(err) => {
+                    if format!("{err}").contains("HTTP 401") {
+                        writeln!(out, "the agent refused the token")?;
+                        refused += 1;
+                        if refused >= 3 {
+                            return Err(anyhow!("setup aborted"));
+                        }
+                        continue;
+                    }
+                    writeln!(out, "unreachable: {}", err)?;
+                    break token;
+                }
+            }
+        };
+        (Some(url), agent_token)
+    };
+
     Ok(Settings {
         llama: crate::settings::LlamaSettings {
             url: Some(url),
             api_key,
             api_key_file: current.llama.api_key_file.clone(),
             log_cmd,
+        },
+        agent: crate::settings::AgentSettings {
+            url: agent_url,
+            token: agent_token,
+            token_file: current.agent.token_file.clone(),
         },
     })
 }

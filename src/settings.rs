@@ -16,6 +16,7 @@ use anyhow::{Context, Result};
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
     pub llama: LlamaSettings,
+    pub agent: AgentSettings,
 }
 
 /// The `[llama]` table.
@@ -34,6 +35,21 @@ pub struct LlamaSettings {
     /// Like `--log-cmd`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub log_cmd: Option<String>,
+}
+
+/// The `[agent]` table: the server's agent a remote dashboard reads.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AgentSettings {
+    /// Base URL of the agent, like `--agent`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    /// The token itself (the file is created with mode 600).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+    /// A file holding the token, like `--agent-token-file`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_file: Option<PathBuf>,
 }
 
 /// `$XDG_CONFIG_HOME/llamatop/config.toml` when `XDG_CONFIG_HOME` is set and not empty, else

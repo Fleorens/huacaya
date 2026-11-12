@@ -138,6 +138,12 @@ of `--token-file` (`LLAMATOP_AGENT_TOKEN_FILE`). A token is required as soon as 
 loopback, unless `--no-auth` is given (trusted network only) or a token is set. A client sends it as
 `Authorization: Bearer <token>`; `/v1/system` and `/v1/log` answer `401` without it, `/v1/health` does not.
 
+Point a dashboard at such an agent to show the server's machine instead of its own: `llamatop setup` asks for
+it (an `agent URL`, then a token), or set it per run with `--agent http://192.168.1.203:9099` (+
+`--agent-token-file` or `[agent]` in the configuration file). With an agent, the system and log panels read
+the agent's machine over HTTP; the llama.cpp panels keep talking to the server as before, and `--dump` reports
+the agent's machine. Without an agent, nothing changes.
+
 ## The safety rule
 
 On a llama.cpp router with autoload, a request naming a model that is not loaded **loads it** (tens of GB,
