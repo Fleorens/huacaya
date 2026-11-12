@@ -131,6 +131,6 @@ pub fn level_bars(values: &[f32]) -> String;
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; every existing test passes (literals updated, no behaviour changed).
-- [ ] The 7 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The public API above exists; every existing test passes (literals updated, no behaviour changed).
+- [x] The 7 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
