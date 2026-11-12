@@ -129,8 +129,15 @@ fn decode_mount_point(raw: &str) -> PathBuf {
             && is_octal(bytes[i + 2])
             && is_octal(bytes[i + 3])
         {
-            let value = (bytes[i + 1] - b'0') * 64 + (bytes[i + 2] - b'0') * 8 + (bytes[i + 3] - b'0');
-            out.push(value);
+            // Computed wide: `\777` is 511 and must not overflow a u8. The kernel never writes more than
+            // `\377`; anything above is kept as written.
+            let value = u16::from(bytes[i + 1] - b'0') * 64
+                + u16::from(bytes[i + 2] - b'0') * 8
+                + u16::from(bytes[i + 3] - b'0');
+            match u8::try_from(value) {
+                Ok(byte) => out.push(byte),
+                Err(_) => out.extend_from_slice(&bytes[i..i + 4]),
+            }
             i += 4;
         } else {
             out.push(bytes[i]);
