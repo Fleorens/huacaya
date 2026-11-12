@@ -7,6 +7,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
 
 use crate::app::App;
+use crate::collect::gpu::GpuSample;
 use crate::ui::frame::panel;
 use crate::ui::graph::BrailleGraph;
 use crate::ui::panels::{Ctx, gauge_row};
@@ -101,110 +102,80 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                 }
             }
             // Row 3: temperature. NVIDIA reports only the edge temperature, shown plainly as `temp`; AMD
-            // reports junction (marked when hot) and edge, as before.
+            // reports junction (marked when hot), edge and DRAM temperature.
             let y = y0 + 2;
             if y < inner.bottom() {
-                if g.temp_junction_c.is_none() && g.temp_edge_c.is_some() {
-                    let edge = g.temp_edge_c;
-                    let sev = edge
-                        .map(|e| severity(e, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
-                        .unwrap_or(Severity::Normal);
-                    let style = match sev {
-                        Severity::Normal => theme.fg(Role::Text),
-                        Severity::Warning => theme.fg(Role::Warning),
-                        Severity::Critical => theme.fg(Role::Critical),
-                    };
-                    let line = Line::from(vec![
-                        Span::styled("temp  ", theme.fg(Role::Dim)),
-                        Span::styled(format!("{}{}", temp(edge), hot_mark(sev)), style),
-                    ]);
-                    buf.set_line(inner.x, y, &line, inner.width);
-                } else {
-                    let junction = g.temp_junction_c;
-                    let edge = g.temp_edge_c;
-                    let sev = junction
-                        .map(|j| severity(j, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
-                        .unwrap_or(Severity::Normal);
-                    let style = match sev {
-                        Severity::Normal => theme.fg(Role::Text),
-                        Severity::Warning => theme.fg(Role::Warning),
-                        Severity::Critical => theme.fg(Role::Critical),
-                    };
-                    let line = Line::from(vec![
-                        Span::styled("temp  ", theme.fg(Role::Dim)),
-                        Span::styled(format!("{}{}", temp(junction), hot_mark(sev)), style),
-                        Span::styled(" junction   ", theme.fg(Role::Text)),
-                        Span::styled(temp(edge), theme.fg(Role::Text)),
-                        Span::styled(" edge", theme.fg(Role::Text)),
-                    ]);
-                    buf.set_line(inner.x, y, &line, inner.width);
-                }
+                let line = Line::from(Span::styled(temp_line(g), theme.fg(Role::Text)));
+                buf.set_line(inner.x, y, &line, inner.width);
             }
-            // Row 4: power and fan.
+            // Row 4: power, fan and core clock.
             let y = y0 + 3;
             if y < inner.bottom() {
                 let watts = |w: Option<f32>| match w {
                     Some(v) => format!("{:.0} W", v),
                     None => "n/a W".to_string(),
                 };
-                let fan = match g.fan_rpm {
-                    Some(r) => r.to_string(),
-                    None => "n/a".to_string(),
+                let fan = match (g.fan_pct, g.fan_rpm) {
+                    (Some(p), _) => pct(Some(p as f64)),
+                    (None, Some(r)) => format!("{r} rpm"),
+                    (None, None) => "n/a rpm".to_string(),
                 };
-                let line = format!("power {} / {}   fan {} rpm", watts(g.power_w), watts(g.power_cap_w), fan);
+                let sclk = g.sclk_mhz
+                    .map(|v| format!("{:.0} MHz", v))
+                    .unwrap_or_else(|| "n/a MHz".to_string());
+                let line = format!("power {} / {}   fan {}   clk {sclk}", watts(g.power_w), watts(g.power_cap_w), fan);
                 buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
             }
-            // Rows 5–7: extra detail, shown only when the panel is tall enough (inner height >= 10).
+            // Rows 5–6: extra detail, shown only when the panel is tall enough (inner height >= 10).
             if inner.height >= 10 {
-                // Row 5: core clock, voltage, fan.
+                // Row 5: voltage and GTT usage.
                 let y = y0 + 4;
                 if y < inner.bottom() {
-                    let sclk =
-                        g.sclk_mhz.map(|v| format!("{:.0} MHz", v)).unwrap_or_else(|| "n/a MHz".to_string());
-                    let mv = g.vddgfx_mv.map(|v| format!("{} mV", v)).unwrap_or_else(|| "n/a mV".to_string());
-                    let line = Line::from(vec![
-                        Span::styled("clock ", theme.fg(Role::Dim)),
-                        Span::styled(sclk, theme.fg(Role::Text)),
-                        Span::styled("   ", theme.fg(Role::Text)),
-                        Span::styled(mv, theme.fg(Role::Text)),
-                        Span::styled("   ", theme.fg(Role::Text)),
-                        Span::styled("fan ", theme.fg(Role::Dim)),
-                        Span::styled(pct(g.fan_pct.map(|v| v as f64)), theme.fg(Role::Text)),
-                    ]);
-                    buf.set_line(inner.x, y, &line, inner.width);
+                    let mv = g.vddgfx_mv.map(|v| format!("{v} mV")).unwrap_or_else(|| "n/a mV".to_string());
+                    let gtt = g.gtt_used.map(bytes).unwrap_or_else(|| "n/a".to_string());
+                    let line = format!("volt  {mv}   GTT {gtt}");
+                    buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
                 }
-                // Row 6: DRAM temperature and GTT usage.
+                // Row 6: PCIe link.
                 let y = y0 + 5;
                 if y < inner.bottom() {
-                    let temp_mem = temp(g.temp_mem_c);
-                    let gtt = g.gtt_used.map(bytes).unwrap_or_else(|| "n/a".to_string());
-                    let line = Line::from(vec![
-                        Span::styled("mem   ", theme.fg(Role::Dim)),
-                        Span::styled(temp_mem, theme.fg(Role::Text)),
-                        Span::styled("   ", theme.fg(Role::Text)),
-                        Span::styled("GTT ", theme.fg(Role::Dim)),
-                        Span::styled(gtt, theme.fg(Role::Text)),
-                    ]);
-                    buf.set_line(inner.x, y, &line, inner.width);
-                }
-                // Row 7: PCIe link.
-                let y = y0 + 6;
-                if y < inner.bottom() {
                     let link = g.link.as_deref().unwrap_or("n/a");
-                    let line = Line::from(vec![
-                        Span::styled("link  ", theme.fg(Role::Dim)),
-                        Span::styled(link, theme.fg(Role::Text)),
-                    ]);
-                    buf.set_line(inner.x, y, &line, inner.width);
+                    let line = format!("link  {link}");
+                    buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
                 }
             }
-            // Row 8: load graph on all the rows left.
+            // Load graph on all the rows left.
             if ctx.graphs && inner.height > 4 {
-                let rows_before = if inner.height >= 10 { 7 } else { 4 };
+                let rows_before = if inner.height >= 10 { 6 } else { 4 };
                 let grect = Rect::new(inner.x, y0 + rows_before, inner.width, inner.height - rows_before);
                 BrailleGraph { values: &app.gpu_load.tail(usize::MAX), max: 100.0, accent: Role::Gpu, theme }
                     .render(grect, buf);
             }
         }
     }
+}
+
+/// The temperature line for `g`: NVIDIA reports only the edge, shown plainly as `temp  <edge>` marked
+/// when hot; AMD reports junction (marked when hot), edge and DRAM temperature, each part only when
+/// known, as `temp  <j> junction  <e> edge  <m> mem`.
+fn temp_line(g: &GpuSample) -> String {
+    if g.temp_junction_c.is_none() {
+        let edge = g.temp_edge_c;
+        let sev = edge
+            .map(|e| severity(e, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
+            .unwrap_or(Severity::Normal);
+        return format!("temp  {}{}", temp(edge), hot_mark(sev));
+    }
+    let junction = g.temp_junction_c;
+    let sev = junction
+        .map(|j| severity(j, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
+        .unwrap_or(Severity::Normal);
+    let mut parts: Vec<String> = vec![format!("{}{} junction", temp(junction), hot_mark(sev))];
+    if let Some(e) = g.temp_edge_c {
+        parts.push(format!("{} edge", temp(Some(e))));
+    }
+    if let Some(m) = g.temp_mem_c {
+        parts.push(format!("{} mem", temp(Some(m))));
+    }
+    format!("temp  {}", parts.join("  "))
 }

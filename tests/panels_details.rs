@@ -35,11 +35,10 @@ fn gpu_details_when_tall() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    // Inner height 14 (>= 10): the three detail rows render, the graph keeps the rows left of them.
+    // Inner height 14 (>= 10): the two detail rows render, the graph keeps the rows left of them.
     let rows = draw(|area, buf| gpu::render(&app, &ctx, area, buf), 70, 16);
     let all: String = rows.join("\n");
-    assert!(all.contains("clock 2204 MHz   917 mV   fan 34 %"), "{:?}", rows);
-    assert!(all.contains("mem   76 °C   GTT 175 M"), "{:?}", rows);
+    assert!(all.contains("volt  917 mV   GTT 175 M"), "{:?}", rows);
     assert!(all.contains("link  16.0 GT/s PCIe x16"), "{:?}", rows);
     // The last inner row still holds the braille load graph.
     let last_inner = rows.len() - 2;

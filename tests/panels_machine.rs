@@ -88,8 +88,8 @@ fn gpu_generating() {
     assert!(all.contains("GPU  RX 7800 XT"), "{:?}", rows[0]);
     assert!(all.contains("95 %"), "{:?}", rows);
     assert!(all.contains("15.9/16.0 G"), "{:?}", rows);
-    assert!(all.contains("temp  73 °C junction   62 °C edge"), "{:?}", rows);
-    assert!(all.contains("power 117 W / 212 W   fan 1233 rpm"), "{:?}", rows);
+    assert!(all.contains("temp  73 °C junction  62 °C edge  76 °C mem"), "{:?}", rows);
+    assert!(all.contains("power 117 W / 212 W   fan 34 %   clk 2204 MHz"), "{:?}", rows);
     // The last inner row holds the braille load graph.
     let last_inner = rows.len() - 2;
     assert!(
