@@ -1,4 +1,5 @@
-//! The model band: name, quantization, speed, context and key settings (T33).
+//! The model band: name and quantization, state badge, generation speed, context fill and key
+//! settings, in three responsive layouts. See `docs/02-ui.md` § 2.2.
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -17,7 +18,7 @@ use crate::ui::text::{fit, pct, tps};
 use crate::ui::theme::{PCT_THRESHOLDS, Role, Theme};
 use crate::util::{count, duration, short_model_name};
 
-/// Height needed, borders included (6 rows inside).
+/// Height needed, borders included (4 rows inside).
 pub const MIN_HEIGHT: u16 = 6;
 
 /// The state badge's text and role (first match wins): no llama snapshot → `WAITING`; `Health::Down`
@@ -77,23 +78,32 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
             match inner.width {
                 w if w >= 110 => render_wide(app, m, info, ctx.graphs, theme, inner, buf),
                 w if w >= 60 => render_medium(app, m, info, ctx.graphs, theme, inner, buf),
-                _ => render_small(app, m, info, theme, inner, buf),
+                _ => render_small(app, m, theme, inner, buf),
             }
         }
         None => render_without_active(app, theme, inner, buf),
     }
 }
 
-/// The speed to show: live while generating, else the average; its label is `t/s now` / `t/s avg`.
-fn speed(_app: &App, m: &ActiveModel) -> String {
-    let generating = m.slots.first().map(|s| s.is_processing && s.n_decoded > 0).unwrap_or(false);
-    let value = if generating { m.live_gen_tps } else { m.metrics.as_ref().and_then(|m| m.avg_gen_tps()) };
+/// Slot 0 is decoding: the live speed is meaningful.
+fn generating(m: &ActiveModel) -> bool {
+    m.slots.first().is_some_and(|s| s.is_processing && s.n_decoded > 0)
+}
+
+/// The speed to show: live while generating, else the average.
+fn speed(m: &ActiveModel) -> String {
+    let value = if generating(m) { m.live_gen_tps } else { m.metrics.as_ref().and_then(|m| m.avg_gen_tps()) };
     tps(value)
 }
 
+/// The speed's label: `t/s now` while generating, else `t/s avg`.
 fn label(m: &ActiveModel) -> &'static str {
-    let generating = m.slots.first().map(|s| s.is_processing && s.n_decoded > 0).unwrap_or(false);
-    if generating { "t/s now" } else { "t/s avg" }
+    if generating(m) { "t/s now" } else { "t/s avg" }
+}
+
+/// The absolute row `k` of `inner`, when it fits inside the frame.
+fn row(inner: Rect, k: u16) -> Option<u16> {
+    (k < inner.height).then_some(inner.y + k)
 }
 
 /// The wide layout: three columns (name, speed, context).
@@ -115,35 +125,53 @@ fn render_wide(
     let y0 = inner.y;
 
     // Left column: name, badge + task, settings.
-    name_row(app, m, theme, inner.x, y0, left_w, buf);
-    badge_task_row(app, m, theme, inner.x, y0 + 1, left_w, buf);
-    settings_row(info, theme, inner.x, y0 + 2, left_w, buf);
+    name_row(m, theme, inner.x, y0, left_w, buf);
+    if let Some(y) = row(inner, 1) {
+        badge_task_row(app, m, theme, inner.x, y, left_w, buf);
+    }
+    if let Some(y) = row(inner, 2) {
+        settings_row(info, theme, inner.x, y, left_w, buf);
+    }
 
     // Centre: the big speed, the label + graph + average to its right, the prompt line below.
-    let speed = speed(app, m);
+    let speed = speed(m);
     let bd = big_digits(&speed);
     let bd_w = bd[0].chars().count() as u16;
-    for (i, row) in bd.iter().enumerate() {
-        set_text(buf, centre_x, y0 + i as u16, centre_w, row, Role::Server, theme);
+    for (i, row_text) in bd.iter().enumerate() {
+        if let Some(y) = row(inner, i as u16) {
+            let style = theme.fg(Role::Server).add_modifier(Modifier::BOLD);
+            buf.set_line(centre_x, y, &Line::from(Span::styled(row_text, style)), centre_w);
+        }
     }
     let side_x = centre_x + bd_w + 2;
     let side_w = centre_w.saturating_sub(bd_w + 2);
     set_text(buf, side_x, y0, side_w, label(m), Role::Text, theme);
-    if graphs && side_w >= 8 {
+    if graphs
+        && side_w >= 8
+        && let Some(y) = row(inner, 1)
+    {
         let values = app.gen_tps.tail(usize::MAX);
         let max = app.gen_tps.max().unwrap_or(0.0).max(1.0);
         BrailleGraph { values: &values, max, accent: Role::Server, theme }
-            .render(Rect::new(side_x, y0 + 1, side_w, 1), buf);
+            .render(Rect::new(side_x, y, side_w, 1), buf);
     }
     let avg = tps(m.metrics.as_ref().and_then(|m| m.avg_gen_tps()));
-    set_text(buf, side_x, y0 + 2, side_w, &format!("avg {avg} · 5 min"), Role::Dim, theme);
-    prompt_row(m.metrics.as_ref(), theme, centre_x, y0 + 3, centre_w, buf);
+    if let Some(y) = row(inner, 2) {
+        set_text(buf, side_x, y, side_w, &format!("avg {avg} · 5 min"), Role::Dim, theme);
+    }
+    if let Some(y) = row(inner, 3) {
+        prompt_row(m.metrics.as_ref(), theme, centre_x, y, centre_w, buf);
+    }
 
     // Right column: the ctx gauge, its value and the request count.
     let slot = m.slots.first();
     gauge_row(buf, right_x, y0, right_w, "ctx  ", ctx_ratio(slot), Role::Server, PCT_THRESHOLDS, "", theme);
-    ctx_value_row(slot, theme, right_x, y0 + 1, right_w, buf);
-    req_row(m.metrics.as_ref(), theme, right_x, y0 + 2, right_w, buf);
+    if let Some(y) = row(inner, 1) {
+        ctx_value_row(slot, theme, right_x, y, right_w, buf);
+    }
+    if let Some(y) = row(inner, 2) {
+        req_row(m.metrics.as_ref(), theme, right_x, y, right_w, buf);
+    }
 }
 
 /// The medium layout: the name on the left, the rest below.
@@ -162,12 +190,16 @@ fn render_medium(
     let rest_w = inner.width.saturating_sub(left_w + gap);
     let y0 = inner.y;
 
-    name_row(app, m, theme, inner.x, y0, left_w, buf);
-    badge_task_row(app, m, theme, inner.x, y0 + 1, left_w, buf);
-    settings_row(info, theme, inner.x, y0 + 2, left_w, buf);
+    name_row(m, theme, inner.x, y0, left_w, buf);
+    if let Some(y) = row(inner, 1) {
+        badge_task_row(app, m, theme, inner.x, y, left_w, buf);
+    }
+    if let Some(y) = row(inner, 2) {
+        settings_row(info, theme, inner.x, y, left_w, buf);
+    }
 
     // Row 0: the speed and label, then a one-row graph.
-    let speed = speed(app, m);
+    let speed = speed(m);
     set_text(buf, rx, y0, rest_w, &format!("{} {}", speed, label(m)), Role::Text, theme);
     if graphs {
         let text_w = speed.chars().count() as u16 + 1 + label(m).chars().count() as u16;
@@ -179,50 +211,35 @@ fn render_medium(
                 .render(Rect::new(rx + text_w + 2, y0, graph_w, 1), buf);
         }
     }
-    prompt_row(m.metrics.as_ref(), theme, rx, y0 + 1, rest_w, buf);
+    if let Some(y) = row(inner, 1) {
+        prompt_row(m.metrics.as_ref(), theme, rx, y, rest_w, buf);
+    }
     let slot = m.slots.first();
-    gauge_row(
-        buf,
-        rx,
-        y0 + 2,
-        rest_w,
-        "ctx  ",
-        ctx_ratio(slot),
-        Role::Server,
-        PCT_THRESHOLDS,
-        &ctx_value_text(slot),
-        theme,
-    );
-    req_row(m.metrics.as_ref(), theme, rx, y0 + 3, rest_w, buf);
+    if let Some(y) = row(inner, 2) {
+        let value = ctx_value_text(slot);
+        gauge_row(buf, rx, y, rest_w, "ctx  ", ctx_ratio(slot), Role::Server, PCT_THRESHOLDS, &value, theme);
+    }
+    if let Some(y) = row(inner, 3) {
+        req_row(m.metrics.as_ref(), theme, rx, y, rest_w, buf);
+    }
 }
 
 /// The small layout: one column, the essentials.
-fn render_small(
-    app: &App,
-    m: &ActiveModel,
-    _info: Option<&ModelInfo>,
-    theme: &Theme,
-    inner: Rect,
-    buf: &mut Buffer,
-) {
+fn render_small(app: &App, m: &ActiveModel, theme: &Theme, inner: Rect, buf: &mut Buffer) {
     let w = inner.width;
     let y0 = inner.y;
-    name_row(app, m, theme, inner.x, y0, w, buf);
-    badge_task_row(app, m, theme, inner.x, y0 + 1, w, buf);
-    set_text(buf, inner.x, y0 + 2, w, &format!("{} {}", speed(app, m), label(m)), Role::Text, theme);
+    name_row(m, theme, inner.x, y0, w, buf);
+    if let Some(y) = row(inner, 1) {
+        badge_task_row(app, m, theme, inner.x, y, w, buf);
+    }
+    if let Some(y) = row(inner, 2) {
+        set_text(buf, inner.x, y, w, &format!("{} {}", speed(m), label(m)), Role::Text, theme);
+    }
     let slot = m.slots.first();
-    gauge_row(
-        buf,
-        inner.x,
-        y0 + 3,
-        w,
-        "ctx  ",
-        ctx_ratio(slot),
-        Role::Server,
-        PCT_THRESHOLDS,
-        &ctx_value_text(slot),
-        theme,
-    );
+    if let Some(y) = row(inner, 3) {
+        let value = ctx_value_text(slot);
+        gauge_row(buf, inner.x, y, w, "ctx  ", ctx_ratio(slot), Role::Server, PCT_THRESHOLDS, &value, theme);
+    }
 }
 
 /// Render the band with no active model: the Loading name (if any), the badge and a message.
@@ -266,7 +283,7 @@ fn render_without_active(app: &App, theme: &Theme, inner: Rect, buf: &mut Buffer
 // --------------------------------------------------------------------------- Shared rows
 
 /// Row 0: the short name (bold) and the quantization (`Dim`), two spaces apart.
-fn name_row(_app: &App, m: &ActiveModel, theme: &Theme, x: u16, y: u16, width: u16, buf: &mut Buffer) {
+fn name_row(m: &ActiveModel, theme: &Theme, x: u16, y: u16, width: u16, buf: &mut Buffer) {
     let (name, quant) = short_model_name(&m.id);
     let mut spans = vec![Span::styled(name, theme.fg(Role::Text).add_modifier(Modifier::BOLD))];
     if let Some(q) = quant {
@@ -338,24 +355,22 @@ fn ctx_ratio(slot: Option<&SlotInfo>) -> f64 {
     if n_ctx == 0 { 0.0 } else { used as f64 / n_ctx as f64 }
 }
 
+/// `<used> / <n_ctx>`, or `n/a` without a slot or a context size.
 fn ctx_value_text(slot: Option<&SlotInfo>) -> String {
     let (used, n_ctx) = ctx_used(slot);
-    format!("{} / {}", count(used), count(n_ctx))
+    if n_ctx == 0 { "n/a".to_string() } else { format!("{} / {}", count(used), count(n_ctx)) }
 }
 
 /// The ctx value under the gauge: `     <used> / <n_ctx>  <pct>`.
 fn ctx_value_row(slot: Option<&SlotInfo>, theme: &Theme, x: u16, y: u16, width: u16, buf: &mut Buffer) {
     let (used, n_ctx) = ctx_used(slot);
-    let pct_str = pct(Some(used as f64 / n_ctx as f64 * 100.0));
-    set_text(
-        buf,
-        x,
-        y,
-        width,
-        &format!("     {0} / {1}  {2}", count(used), count(n_ctx), pct_str),
-        Role::Text,
-        theme,
-    );
+    let text = if n_ctx == 0 {
+        "     n/a".to_string()
+    } else {
+        let pct_str = pct(Some(used as f64 / n_ctx as f64 * 100.0));
+        format!("     {} / {}  {}", count(used), count(n_ctx), pct_str)
+    };
+    set_text(buf, x, y, width, &text, Role::Text, theme);
 }
 
 /// A single styled line, clipped to `width`.

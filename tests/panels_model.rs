@@ -293,3 +293,21 @@ fn model_narrow_keeps_border() {
         }
     }
 }
+
+#[test]
+fn model_ctx_without_slot() {
+    let theme = true_color();
+    let ctx = make_ctx(&theme);
+    let mut app = demo_app(DemoState::Idle);
+    if let Some(llama) = app.llama.as_mut() {
+        for m in &mut llama.active {
+            m.slots.clear();
+        }
+    }
+    for w in [140, 90, 50] {
+        let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), w, 6);
+        let all: String = rows.join("\n");
+        assert!(!all.contains("NaN") && !all.contains("inf") && !all.contains("0 / 0"), "{w}: {:?}", rows);
+        assert!(all.contains("n/a"), "{w}: {:?}", rows);
+    }
+}
