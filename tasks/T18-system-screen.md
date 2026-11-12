@@ -95,8 +95,8 @@ renderer alone into a `w × h` buffer.
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; `draw.rs` routes the System screen.
-- [ ] Nothing outside the deliverable changed (except `tasks/`).
-- [ ] The 8 tests above exist under these names and pass; earlier golden files are unchanged.
-- [ ] `bash .devbox/check` is green.
+- [x] The files exist with the exact public API above; `draw.rs` routes the System screen.
+- [x] Nothing outside the deliverable changed (except `tasks/`).
+- [x] The 8 tests above exist under these names and pass; earlier golden files are unchanged.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) `--demo` then `4` shows the whole machine; on the aibox, the real one.

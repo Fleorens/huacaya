@@ -149,6 +149,14 @@ fn system_without_data() {
     let all: String = rows.join("\n");
     assert!(all.contains("router"), "{:?}", rows);
     assert!(!all.contains("instance"), "{:?}", rows);
+
+    // First sample: no per-core values yet.
+    let mut app = demo_app(DemoState::Generating);
+    if let Some(sys) = &mut app.system {
+        sys.cpu.per_core_pct.clear();
+    }
+    let rows = draw(|area, buf| system::render(&app, &ctx, area, buf), 140, 37);
+    assert!(rows.join("\n").contains("waiting for a second sample"), "{:?}", rows);
 }
 
 // --------------------------------------------------------------------------- Bounds
