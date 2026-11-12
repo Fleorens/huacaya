@@ -39,6 +39,17 @@ pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                 screens::models::render(app, &ctx, body, buf);
                 return;
             }
+            // The System screen shows the same header, then its own panels on the body.
+            if app.screen == Screen::System {
+                let layout = layout::overview(area);
+                let h = layout.header.height;
+                let body =
+                    Rect::new(area.x, area.y.saturating_add(h), area.width, area.height.saturating_sub(h));
+                let ctx = Ctx { theme: ctx.theme, graphs: layout.graphs, clock: ctx.clock };
+                header::render(app, &ctx, layout.header, buf);
+                screens::system::render(app, &ctx, body, buf);
+                return;
+            }
             let layout = layout::overview(area);
             let ctx = Ctx { theme: ctx.theme, graphs: layout.graphs, clock: ctx.clock };
             header::render(app, &ctx, layout.header, buf);
