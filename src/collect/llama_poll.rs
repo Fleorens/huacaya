@@ -6,22 +6,33 @@
 //! request never loads the model in use.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use crate::collect::llama::{Metrics, ModelInfo, ModelState, SlotInfo};
+use crate::collect::llama::{Metrics, ModelInfo, ModelState, SlotInfo, parse_metrics, parse_slots};
+use crate::collect::process::{ProcSample, ServerRole, read_server_procs};
 use crate::http::Client;
 
 /// What the poller needs from an HTTP client; lets the tests run without a network.
 pub trait Fetch {
     fn get(&self, path: &str, query: &[(&str, &str)]) -> anyhow::Result<String>;
+    /// GET `path` on the local instance listening on `port`. The default refuses, so fetchers that cannot
+    /// reach instances (and the existing test doubles) keep working unchanged.
+    fn get_local(&self, port: u16, path: &str) -> anyhow::Result<String> {
+        anyhow::bail!("GET :{port}{path}: no direct access")
+    }
 }
 
 impl Fetch for Client {
     fn get(&self, path: &str, query: &[(&str, &str)]) -> anyhow::Result<String> {
         Client::get(self, path, query)
+    }
+
+    fn get_local(&self, port: u16, path: &str) -> anyhow::Result<String> {
+        Client::get_local(self, port, path)
     }
 }
 
@@ -72,12 +83,30 @@ pub struct Poller<F: Fetch> {
     build_info: Option<String>,
     props_cached: bool,
     live: HashMap<String, LiveRef>,
+    /// When set, each round reads the loaded instances under `sysroot` and asks them directly.
+    local_instances: bool,
+    sysroot: PathBuf,
 }
 
 impl<F: Fetch> Poller<F> {
     /// Creates a poller over `fetch`, with no props cached yet.
     pub fn new(fetch: F) -> Self {
-        Self { fetch, router: false, build_info: None, props_cached: false, live: HashMap::new() }
+        Self {
+            fetch,
+            router: false,
+            build_info: None,
+            props_cached: false,
+            live: HashMap::new(),
+            local_instances: false,
+            sysroot: PathBuf::new(),
+        }
+    }
+
+    /// Enables direct polling: each round reads the `llama-server` processes under `sysroot` and, for a
+    /// `Loaded` model whose instance has a `port`, asks `/metrics` and `/slots` on that port directly.
+    /// See `docs/01-architecture.md` § 2.2.
+    pub fn with_local_instances(self, sysroot: PathBuf) -> Self {
+        Self { local_instances: true, sysroot, ..self }
     }
 
     /// One round. Never panics, never returns an error: failures end up in `health` or as `None`s.
@@ -128,24 +157,28 @@ impl<F: Fetch> Poller<F> {
             }
         };
 
-        // 4. + 5. Poll only the loaded models, and derive live speed per model.
+        // 4. Read the `llama-server` processes once, so a loaded model may be reached directly.
+        let instances = if self.local_instances { read_server_procs(&self.sysroot) } else { Vec::new() };
+
+        // 5. Poll only the loaded models, and derive live speed per model.
         let mut active = Vec::new();
         for model in &models {
             if model.state != ModelState::Loaded {
                 continue; // safety rule: never query a model that is not loaded.
             }
-            let query: &[(&str, &str)] = if self.router { &[("model", model.id.as_str())] } else { &[] };
-            let metrics = self
-                .fetch
-                .get("/metrics", query)
-                .ok()
-                .map(|body| crate::collect::llama::parse_metrics(&body));
-            let slots = self
-                .fetch
-                .get("/slots", query)
-                .ok()
-                .and_then(|body| crate::collect::llama::parse_slots(&body).ok())
-                .unwrap_or_default();
+            let (metrics, slots) = match Self::instance_for(&instances, &model.id) {
+                Some(port) => {
+                    match (self.fetch.get_local(port, "/metrics"), self.fetch.get_local(port, "/slots")) {
+                        (Ok(m_body), Ok(s_body)) => {
+                            (Some(parse_metrics(&m_body)), parse_slots(&s_body).ok().unwrap_or_default())
+                        }
+                        // Either direct call failed: fall back to the router path for both, this round.
+                        _ => self.router_metrics_slots(&model.id),
+                    }
+                }
+                // No instance for this model: the router path, exactly as today.
+                None => self.router_metrics_slots(&model.id),
+            };
 
             let live = self.live_gen_tps(model.id.as_str(), &slots, now);
             active.push(ActiveModel { id: model.id.clone(), metrics, slots, live_gen_tps: live });
@@ -171,6 +204,26 @@ impl<F: Fetch> Poller<F> {
             models: Vec::new(),
             active: Vec::new(),
         }
+    }
+
+    /// The port of the `llama-server` instance serving `model_id` (its `--alias` equals the model id and it
+    /// has a `--port`), or `None` when no instance does.
+    fn instance_for(instances: &[ProcSample], model_id: &str) -> Option<u16> {
+        instances
+            .iter()
+            .find(|p| {
+                p.role == ServerRole::Instance && p.port.is_some() && p.model.as_deref() == Some(model_id)
+            })
+            .and_then(|p| p.port)
+    }
+
+    /// `/metrics` then `/slots` through the router: with `model=` when this is a router, without otherwise.
+    fn router_metrics_slots(&self, model_id: &str) -> (Option<Metrics>, Vec<SlotInfo>) {
+        let query: &[(&str, &str)] = if self.router { &[("model", model_id)] } else { &[] };
+        let metrics = self.fetch.get("/metrics", query).ok().map(|b| parse_metrics(&b));
+        let slots =
+            self.fetch.get("/slots", query).ok().and_then(|b| parse_slots(&b).ok()).unwrap_or_default();
+        (metrics, slots)
     }
 
     /// `live_gen_tps` for one model: the growth of `n_decoded` of its first processing slot since the

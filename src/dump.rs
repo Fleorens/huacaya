@@ -10,7 +10,7 @@ use crate::collect::llama_poll::{LlamaSnapshot, Poller};
 use crate::collect::logs::{self, LogLine};
 use crate::collect::sampler::SystemSnapshot;
 use crate::config::Cli;
-use crate::http::Client;
+use crate::http::{Client, is_loopback_url};
 
 /// The `--dump` report: one object with exactly these keys — `system`, `llama`, `log_tail`, `log_error`.
 #[derive(Serialize)]
@@ -32,9 +32,15 @@ pub fn run(cli: &Cli) -> Result<String> {
     std::thread::sleep(Duration::from_millis(300));
     let system = sampler.sample(Instant::now());
 
-    // 2. One polling round against the server.
+    // 2. One polling round against the server. On a loopback URL, ask the loaded instance directly
+    // (prints nothing in the journal); from another machine, only the router path with `model=`.
     let client = Client::new(&cli.url, cli.api_key(), Duration::from_secs(3));
-    let llama = Poller::new(client).poll(Instant::now());
+    let mut poller = if is_loopback_url(&cli.url) {
+        Poller::new(client).with_local_instances(cli.sysroot.clone())
+    } else {
+        Poller::new(client)
+    };
+    let llama = poller.poll(Instant::now());
 
     // 3. Follow the log for 700 ms (or until it ends), keeping the last 20 lines. The deadline is
     // enforced here, not in the sink: a live but silent stream (`journalctl -f` on an idle server)

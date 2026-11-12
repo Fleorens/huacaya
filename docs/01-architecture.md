@@ -53,6 +53,18 @@ progress on the single GPU killed. `/metrics` and `/slots` are therefore polled 
 `status.value` is exactly `"loaded"` in the `/v1/models` answer of the **same** polling round. This rule has a
 test in T06 and must survive every refactoring.
 
+On the server's own machine, when `--url` is a loopback address (`127.0.0.1`, `localhost` or `[::1]`),
+llamatop silences the journal as well. Each round, after `/v1/models`, it reads the `llama-server` processes
+under `--sysroot` (`collect::process::read_server_procs`); the instance that serves a loaded model listens on
+`127.0.0.1:<port>` (the port read from its `--port`, its `--alias` being the model id), and answering
+`/metrics` and `/slots` directly on that port — with the same API key — prints **nothing** in the journal,
+whereas the router prints `proxying request to model … on port …` for each of the two calls. When a direct
+answer fails, the round falls back to the router path (with `model=`) for both; when no instance is found, or
+when `--url` is a remote address, the router path is the only one. The safety rule above holds for both paths:
+direct or not, only models `loaded` in this round are polled. Known limit: the instance is matched by name and
+`--alias` only, not by owner, so on a multi-user machine another account's `llama-server` with the same alias
+would receive the API key; the aibox has a single user.
+
 ## 3. Derived values
 
 | Value | Formula |
