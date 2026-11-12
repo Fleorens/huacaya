@@ -215,7 +215,7 @@ impl App {
                 !self.paused
             }
             Event::Log(l) => {
-                let visible = self.line_visible(&l);
+                let visible = self.line_visible(&l, &self.log_view.filter.to_ascii_lowercase());
                 self.update_last_request(&l);
                 self.logs.push_back(l);
                 if self.logs.len() > LOG_CAPACITY {
@@ -239,16 +239,15 @@ impl App {
     }
 
     /// Whether a single line passes the current log view (level, hidden `Proxy`, text filter).
-    fn line_visible(&self, line: &LogLine) -> bool {
+    /// `filter_lower` is `log_view.filter` already lower-cased, so a whole list costs one allocation.
+    fn line_visible(&self, line: &LogLine, filter_lower: &str) -> bool {
         if !self.log_view.level.accepts(line.level) {
             return false;
         }
         if matches!(line.event, Some(LogEvent::Proxy { .. })) && !self.log_view.show_proxy {
             return false;
         }
-        if !self.log_view.filter.is_empty()
-            && !line.text.to_ascii_lowercase().contains(&self.log_view.filter.to_ascii_lowercase())
-        {
+        if !filter_lower.is_empty() && !line.text.to_ascii_lowercase().contains(filter_lower) {
             return false;
         }
         true
@@ -257,7 +256,8 @@ impl App {
     /// The log lines the log view shows, oldest first: level accepted, not a hidden `Proxy` line, and
     /// containing `log_view.filter` (ASCII case-insensitive) when it is not empty.
     pub fn visible_logs(&self) -> Vec<&LogLine> {
-        self.logs.iter().filter(|l| self.line_visible(l)).collect()
+        let filter_lower = self.log_view.filter.to_ascii_lowercase();
+        self.logs.iter().filter(|l| self.line_visible(l, &filter_lower)).collect()
     }
 
     /// `true` when something on screen moves by itself: a slot of an active model `is_processing`, or a

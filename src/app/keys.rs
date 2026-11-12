@@ -1,7 +1,7 @@
 //! Applying one key press to [`App`].
 //!
 //! The rules are a priority list: the first matching block wins. Key releases (`KeyEventKind::Release`)
-//! are ignored everywhere, so a held key never fires twice.
+//! are ignored everywhere, so a press and its release count once (held keys still repeat).
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
@@ -37,6 +37,8 @@ pub fn handle(app: &mut App, key: KeyEvent) {
             KeyCode::Esc => {
                 app.log_view.editing_filter = false;
                 app.log_view.filter.clear();
+                app.log_view.scroll = 0;
+                app.log_view.follow = true;
             }
             _ => {}
         }
@@ -171,7 +173,6 @@ pub fn handle(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Home => app.model_selected = 0,
             KeyCode::End if n > 0 => app.model_selected = n - 1,
-            KeyCode::End => {}
             _ => {}
         }
     }
