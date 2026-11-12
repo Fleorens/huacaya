@@ -63,3 +63,14 @@ judgement on screen (the unticked "on screen" criteria of each sheet).
 | [T17](T17-logs-help.md) | Logs screen (status bar, filter typing) and help overlay | T16 | validée |
 | [T18](T18-system-screen.md) | System screen (per-core bars, sensors, disks, network, processes) | T17 | validée |
 | T19 | Release build, install script for the aibox, README — done by the orchestrator, no sheet | T15–T18 | validée |
+
+## Batch 3 — after the first look at the real screen (2026-11-12)
+
+Florian's screenshot of the real dashboard: borders invisible on a dark background, VRAM red whenever a model
+is loaded, dead-looking idle graphs, a log panel full of the same prefix, a mostly empty GPU panel. The
+first three are fixed by the orchestrator (commit "first on-screen review"); the rest are these sheets.
+
+| Sheet | Subject | Depends on | Status |
+|---|---|---|---|
+| [T20](T20-compact-log.md) | Compact log lines (`r` toggles raw) | T18 | prête |
+| [T21](T21-gpu-memory-details.md) | More GPU and memory details when there is room | T20 | prête |
