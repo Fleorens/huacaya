@@ -323,10 +323,9 @@ pub fn short_cpu_name(raw: &str) -> String {
     if let Some(idx) = s.find(" with ") {
         s.truncate(idx);
     }
-    if let Some(idx) = s.rfind("-Core Processor")
-        && s[..idx].chars().last().is_some_and(|c| c.is_ascii_digit())
+    if let Some(before) = s.strip_suffix("-Core Processor")
+        && before.chars().last().is_some_and(|c| c.is_ascii_digit())
     {
-        let before = &s[..idx];
         s = before[..before.len() - trailing_len(before, |c| c.is_ascii_digit())].to_string();
     } else if let Some(n) = suffix_len(&s, "Processor") {
         s.truncate(s.len() - n);
@@ -363,6 +362,9 @@ fn leading_gen_prefix(s: &str) -> Option<usize> {
     let mut i = 0;
     while i < bytes.len() && bytes[i].is_ascii_digit() {
         i += 1;
+    }
+    if i == 0 {
+        return None;
     }
     for ord in ["th", "st", "nd", "rd"] {
         let prefix = format!("{} Gen ", ord);

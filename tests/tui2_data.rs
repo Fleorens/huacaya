@@ -8,7 +8,7 @@ use llamatop::app::demo::{self, DemoState};
 use llamatop::app::{App, Event};
 use llamatop::collect::logs::parse_line;
 use llamatop::collect::sampler::{Sampler, SystemSnapshot};
-use llamatop::collect::system::{parse_cpuinfo, read_cpuinfo, short_cpu_name};
+use llamatop::collect::system::{CpuInfo, parse_cpuinfo, read_cpuinfo, short_cpu_name};
 use llamatop::ui::big::{big_digits, level_bars};
 
 const SYSROOT: &str = "tests/fixtures/sysroot";
@@ -30,7 +30,7 @@ fn cpuinfo_fixture() {
     assert_eq!(cpu.model.as_deref(), Some("Intel Core i7-11700K"));
     assert_eq!(cpu.cores, Some(8));
     assert_eq!(cpu.threads, Some(16));
-    assert_eq!(parse_cpuinfo(""), parse_cpuinfo(""));
+    assert_eq!(parse_cpuinfo(""), CpuInfo::default());
     assert!(
         parse_cpuinfo("").model.is_none()
             && parse_cpuinfo("").cores.is_none()
@@ -58,6 +58,8 @@ fn snapshot_has_cpu_info() {
 fn big_digits_glyphs() {
     assert_eq!(big_digits("52.4"), ["█▀▀ ▀▀█   █ █", "▀▀█ █▀▀   ▀▀█", "▀▀▀ ▀▀▀ ▀   ▀"]);
     assert_eq!(big_digits(""), ["", "", ""]);
+    assert_eq!(big_digits("1"), ["▀█ ", " █ ", "▀▀▀"]);
+    assert_eq!(big_digits("68"), ["█▀▀ █▀█", "█▀█ █▀█", "▀▀▀ ▀▀▀"]);
 }
 
 /// The level bars for the values the sheet gives.
@@ -101,6 +103,12 @@ fn task_timer() {
     }
     app.apply(Event::Llama(demo::llama(20.0, DemoState::Generating)));
     assert_eq!(app.task_elapsed_s(), Some(2));
+
+    // A new task on slot 0 with no idle snapshot in between restarts the timer.
+    let mut next = demo::llama(20.0, DemoState::Generating);
+    next.active[0].slots[0].id_task += 1;
+    app.apply(Event::Llama(next));
+    assert_eq!(app.task_elapsed_s(), Some(0));
 
     let mut app = App::new(1000);
     app.apply(Event::Llama(demo::llama(0.0, DemoState::Idle)));
