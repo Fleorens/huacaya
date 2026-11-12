@@ -79,6 +79,23 @@ The user running llamatop needs to read the journal (group `systemd-journal`) fo
 | `e` | level filter: all → warnings + errors → errors |
 | `x` | show the router's `proxying request` lines (hidden: llamatop's own polling prints two per second) |
 
+## Configuration
+
+llamatop reads one optional configuration file, at `$XDG_CONFIG_HOME/llamatop/config.toml` (or
+`~/.config/llamatop/config.toml` when `XDG_CONFIG_HOME` is not set), overridable with `--config` or the
+`LLAMATOP_CONFIG` environment variable. The file is created with mode 600; it may hold the API key:
+
+```toml
+[llama]
+url = "http://127.0.0.1:8080"
+api_key = "sk-..."
+api_key_file = "/etc/llamatop/key"
+log_cmd = "journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise"
+```
+
+Every field is optional. Each value is taken from the flag, then the environment variable, then the file, then
+the built-in default — the first that is set wins (`flag > environment > file > default`).
+
 ## The safety rule
 
 On a llama.cpp router with autoload, a request naming a model that is not loaded **loads it** (tens of GB,

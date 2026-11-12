@@ -83,6 +83,6 @@ llama.cpp address and key (and later OpenCode's). The remote machine panels need
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T23](T23-config-file.md) | Configuration file `~/.config/llamatop/config.toml` | T22 | prête |
+| [T23](T23-config-file.md) | Configuration file `~/.config/llamatop/config.toml` | T22 | livrée |
 | [T24](T24-setup-wizard.md) | First-run setup, `llamatop setup` | T23 | prête |
 | T25 | `.deb` package (`scripts/build-deb.sh`) — by the orchestrator | T24 | outlined |

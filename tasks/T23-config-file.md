@@ -127,7 +127,7 @@ optional configuration file (`~/.config/llamatop/config.toml`, mode 600); flags 
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; `main.rs` loads the file; a missing file changes nothing.
-- [ ] The 7 tests above exist under these names and pass; every earlier test passes.
-- [ ] README and architecture § 6 updated.
-- [ ] `bash .devbox/check` is green.
+- [x] The public API above exists; `main.rs` loads the file; a missing file changes nothing.
+- [x] The 7 tests above exist under these names and pass; every earlier test passes.
+- [x] README and architecture § 6 updated.
+- [x] `bash .devbox/check` is green.

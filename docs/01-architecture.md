@@ -116,6 +116,7 @@ src/app/  src/ui/        state, screens                     — batch 2
 ## 6. What is deliberately out
 
 - No control of the server (load / unload / restart): the dashboard cannot break a running job.
-- No TLS, no remote agent, no daemon, no configuration file: flags and environment only.
+- No TLS, no remote agent, no daemon; one optional configuration file (`~/.config/llamatop/config.toml`, mode
+  600) — flags and environment win over it.
 - No NVIDIA / Intel GPU support: the GPU panel is written for amdgpu sysfs and shows "n/a" elsewhere.
 - No history on disk: the graphs cover the last minutes, kept in memory.

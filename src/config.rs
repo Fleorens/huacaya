@@ -4,6 +4,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+use crate::settings::Settings;
+
 /// Terminal dashboard for a llama.cpp server and the machine that runs it.
 #[derive(Debug, Clone, Parser)]
 #[command(version, about)]
@@ -15,6 +17,10 @@ pub struct Cli {
     /// File holding the API key (first line). `LLAMA_API_KEY` wins when both are set.
     #[arg(long, env = "LLAMATOP_API_KEY_FILE")]
     pub api_key_file: Option<PathBuf>,
+
+    /// Configuration file; default `~/.config/llamatop/config.toml`.
+    #[arg(long, env = "LLAMATOP_CONFIG")]
+    pub config: Option<PathBuf>,
 
     /// Root under which `proc/` and `sys/` are read. Tests point it at `tests/fixtures/sysroot`.
     #[arg(long, default_value = "/")]
@@ -55,22 +61,52 @@ pub struct Cli {
     /// With `--snapshot`: the screen to render, 1–4 (Overview, Models, Logs, System).
     #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u8).range(1..=4))]
     pub screen: u8,
+    /// The key from the configuration file.
+    #[arg(skip)]
+    pub api_key_inline: Option<String>,
 }
 
 impl Cli {
-    /// The API key: `LLAMA_API_KEY`, else the first line of `--api-key-file`, else none.
-    /// The key is never printed, logged, or put in an error message.
+    /// The API key: `LLAMA_API_KEY`, else the first line of `--api-key-file`, else `api_key_inline`, else
+    /// none. The key is never printed, logged, or put in an error message.
     pub fn api_key(&self) -> Option<String> {
-        if let Ok(key) = std::env::var("LLAMA_API_KEY") {
-            let key = key.trim().to_string();
-            if !key.is_empty() {
-                return Some(key);
-            }
+        if let Ok(key) = std::env::var("LLAMA_API_KEY")
+            && !key.trim().is_empty()
+        {
+            return Some(key.trim().to_string());
         }
-        let path = self.api_key_file.as_ref()?;
-        let text = std::fs::read_to_string(path).ok()?;
-        let key = text.lines().next()?.trim().to_string();
-        if key.is_empty() { None } else { Some(key) }
+        if let Some(path) = self.api_key_file.as_ref()
+            && let Ok(text) = std::fs::read_to_string(path)
+            && let Some(key) = text.lines().next()
+            && !key.trim().is_empty()
+        {
+            return Some(key.trim().to_string());
+        }
+        self.api_key_inline.clone()
+    }
+
+    /// Fills, from `settings`, every value the user did not give by flag or environment variable: `url` and
+    /// `log_cmd` when `matches.value_source(id)` is `Some(ValueSource::DefaultValue)`; `api_key_file` when it is
+    /// `None`; `api_key_inline` always (it is only used last). Values given by flag or environment win.
+    pub fn apply_settings(&mut self, matches: &clap::ArgMatches, settings: &Settings) {
+        let is_default = |id: &str| matches.value_source(id) == Some(clap::parser::ValueSource::DefaultValue);
+
+        if is_default("url")
+            && let Some(url) = settings.llama.url.clone()
+        {
+            self.url = url;
+        }
+        if is_default("log_cmd")
+            && let Some(log_cmd) = settings.llama.log_cmd.clone()
+        {
+            self.log_cmd = log_cmd;
+        }
+        if matches.value_source("api_key_file").is_none()
+            && let Some(api_key_file) = settings.llama.api_key_file.clone()
+        {
+            self.api_key_file = Some(api_key_file);
+        }
+        self.api_key_inline = settings.llama.api_key.clone();
     }
 }
 
