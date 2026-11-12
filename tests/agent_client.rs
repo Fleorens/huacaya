@@ -174,3 +174,21 @@ fn setup_asks_for_the_agent() {
     assert!(out.contains("ok, aibox-flo"));
     assert!(!out.contains("SECRET"), "the token must not reach the output: {out:?}");
 }
+
+#[test]
+fn setup_enter_keeps_the_agent_dash_removes_it() {
+    let mut current = Settings::default();
+    current.agent.url = Some("http://a:9099".to_string());
+    current.agent.token = Some("tok".to_string());
+    // Enter at the agent question keeps it (then Enter keeps the token).
+    let mut secret = |_: &str| -> Result<String> { Ok(String::new()) };
+    let mut input = Cursor::new("\n\n\n".to_string());
+    let kept = setup::wizard(&mut input, &mut Vec::new(), &mut secret, &FakeProbe, &current).unwrap();
+    assert_eq!(kept.agent.url.as_deref(), Some("http://a:9099"));
+    assert_eq!(kept.agent.token.as_deref(), Some("tok"));
+    // `-` removes it.
+    let mut input = Cursor::new("\n\n-\n".to_string());
+    let removed = setup::wizard(&mut input, &mut Vec::new(), &mut secret, &FakeProbe, &current).unwrap();
+    assert_eq!(removed.agent.url, None);
+    assert_eq!(removed.agent.token, None);
+}

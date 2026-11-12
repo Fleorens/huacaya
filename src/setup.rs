@@ -169,11 +169,13 @@ fn dialogue(
 
     // 4. The agent: a URL on the server, whose machine panels and log replace this machine's. Empty is
     // none (the log command above keeps its meaning); the token is checked against `/v1/system`.
+    // As everywhere in the dialogue, Enter keeps what is in brackets; `-` removes the agent.
     let default_agent_url = current.agent.url.clone().unwrap_or_default();
-    write!(out, "llamatop agent URL (empty: none) [{}]: ", default_agent_url)?;
+    write!(out, "llamatop agent URL (empty: keep, -: none) [{}]: ", default_agent_url)?;
     out.flush()?;
-    let entered_agent = input.answer()?;
-    let (agent_url, agent_token) = if entered_agent.is_empty() {
+    let answered = input.answer()?;
+    let entered_agent = if answered.is_empty() { default_agent_url } else { answered };
+    let (agent_url, agent_token) = if entered_agent.is_empty() || entered_agent == "-" {
         (None, None)
     } else {
         let url = normalize_url(&entered_agent);

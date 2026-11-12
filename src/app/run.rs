@@ -325,6 +325,11 @@ fn agent_loop(
             Err(e) => error = Some(format!("{e:#}")),
         }
         match client.log(since) {
+            Ok(page) if page.next < since => {
+                // The agent restarted: its numbering began again at 1, below our cursor. Start over from its
+                // whole ring next round rather than waiting forever for numbers it will not reach soon.
+                since = 0;
+            }
             Ok(page) => {
                 events.extend(page.lines.into_iter().map(Event::Log));
                 since = page.next;

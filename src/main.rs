@@ -27,6 +27,9 @@ fn main() -> Result<()> {
         },
         None => None,
     };
+    // `--agent 192.168.1.203:9099` without a scheme would never connect: same normalisation as setup's.
+    cli.agent = cli.agent.as_deref().map(setup::normalize_url);
+    cli.url = setup::normalize_url(&cli.url);
 
     // `llamatop setup`: run the dialogue and save, then exit.
     if let Some(Command::Setup) = cli.command {
