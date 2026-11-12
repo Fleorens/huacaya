@@ -32,6 +32,8 @@ pub fn run(cli: &Cli) -> Result<()> {
     let (tx, rx) = channel::<Event>();
     let stop = Arc::new(AtomicBool::new(false));
     let interval = Arc::new(AtomicU64::new(cli.interval_ms));
+    // Lives until `run` returns: dropping it kills the log command.
+    let mut _follower = None;
 
     // Data threads.
     if cli.demo {
@@ -85,7 +87,7 @@ pub fn run(cli: &Cli) -> Result<()> {
         // The log follower: keep it alive until `run` returns, so dropping it at the end kills the
         // command. When the command cannot start, report once and keep going.
         let log_tx = tx.clone();
-        let follower = match logs::follow(&log_cmd, move |line| log_tx.send(Event::Log(line)).is_ok()) {
+        _follower = match logs::follow(&log_cmd, move |line| log_tx.send(Event::Log(line)).is_ok()) {
             Ok(follower) => Some(follower),
             Err(e) => {
                 let _ = tx.send(Event::Log(LogLine {
@@ -100,8 +102,6 @@ pub fn run(cli: &Cli) -> Result<()> {
                 None
             }
         };
-        // `follower` (Some or None) lives until here; dropping it stops the follower's command.
-        let _ = follower;
     }
 
     // Input and tick threads end on the stop flag.
@@ -113,7 +113,13 @@ pub fn run(cli: &Cli) -> Result<()> {
     let tick_tx = tx.clone();
     thread::spawn(move || tick_loop(tick_stop, tick_tx));
 
-    let mut terminal = ratatui::try_init()?;
+    let mut terminal = match ratatui::try_init() {
+        Ok(terminal) => terminal,
+        Err(e) => {
+            stop.store(true, Ordering::Relaxed);
+            return Err(e.into());
+        }
+    };
     let loop_result = dashboard_loop(&mut terminal, &mut app, &theme, offset, &interval, &rx);
 
     // Whatever happened in the loop: stop the threads, restore the terminal, then return its result.
@@ -212,7 +218,15 @@ fn demo_loop(tx: Sender<Event>, stop: Arc<AtomicBool>, interval: Arc<AtomicU64>)
 /// `Event::Resize`, everything else ignored. Ends on the stop flag.
 fn input_loop(stop: Arc<AtomicBool>, tx: Sender<Event>) {
     while !stop.load(Ordering::Relaxed) {
-        if crossterm::event::poll(Duration::from_millis(100)).unwrap_or(false) {
+        let ready = match crossterm::event::poll(Duration::from_millis(100)) {
+            Ok(ready) => ready,
+            Err(_) => {
+                // No usable tty: back off instead of spinning.
+                thread::sleep(Duration::from_millis(100));
+                continue;
+            }
+        };
+        if ready {
             match crossterm::event::read() {
                 Ok(crossterm::event::Event::Key(key)) => {
                     let _ = tx.send(Event::Key(key));
