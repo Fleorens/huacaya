@@ -145,9 +145,9 @@ at the top. Each row: `<time> ` in `Dim` (nothing for a line without time), then
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; `src/ui/panels/mod.rs` declares the four modules and
+- [x] The files exist with the exact public API above; `src/ui/panels/mod.rs` declares the four modules and
       `gauge_row`.
-- [ ] Nothing outside the deliverable changed (except `tasks/`, and the Model panel reusing `gauge_row`).
-- [ ] The 10 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] Nothing outside the deliverable changed (except `tasks/`, and the Model panel reusing `gauge_row`).
+- [x] The 10 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) the four panels read well in a real terminal.
