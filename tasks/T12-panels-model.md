@@ -178,9 +178,9 @@ rendering into `Buffer::empty(Rect::new(0, 0, w, h))` and returning each row's s
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; `src/ui/mod.rs` declares `pub mod panels;` and
+- [x] The files exist with the exact public API above; `src/ui/mod.rs` declares `pub mod panels;` and
       `pub mod text;`.
-- [ ] Nothing outside the deliverable changed (except `tasks/`).
-- [ ] The 11 tests above exist under these names and pass.
-- [ ] `bash .devbox/check` is green.
+- [x] Nothing outside the deliverable changed (except `tasks/`).
+- [x] The 11 tests above exist under these names and pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) the header and the Model panel read well in a real terminal.
