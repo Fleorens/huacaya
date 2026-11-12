@@ -94,3 +94,12 @@ llama.cpp address and key (and later OpenCode's). The remote machine panels need
 | [T26](T26-agent-protocol.md) | Agent protocol: request parsing, routing, log ring, token (pure) | T24 | validée |
 | [T27](T27-agent-server.md) | `llamatop agent`: the server | T26 | validée |
 | [T28](T28-agent-client.md) | Dashboard side: `--agent`, `[agent]`, setup question | T27 | validée |
+
+## Batch 6 — any machine (2026-11-12)
+
+The repository goes public: llamatop must suit any llama.cpp machine, not only the aibox.
+
+| Sheet | Subject | Depends on | Status |
+|---|---|---|---|
+| [T29](T29-auto-mounts.md) | Show the machine's real disks by default | T28 | prête |
+| [T30](T30-nvidia.md) | NVIDIA GPUs through `nvidia-smi` | T29 | prête |
