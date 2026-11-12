@@ -5,6 +5,7 @@ pub mod draw;
 pub mod frame;
 pub mod gauge;
 pub mod graph;
+pub mod help;
 pub mod layout;
 pub mod panels;
 pub mod screens;

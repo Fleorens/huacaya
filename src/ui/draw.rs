@@ -6,6 +6,7 @@ use ratatui::text::{Line, Span};
 
 use crate::app::{App, Screen};
 use crate::ui::compact;
+use crate::ui::help;
 use crate::ui::layout::{self, Tier};
 use crate::ui::panels::Ctx;
 use crate::ui::panels::{cpu, gpu, header, log, memory, model, request};
@@ -18,10 +19,12 @@ use crate::ui::theme::Role;
 /// next row, when it fits, `<w>×<h>, need 30×8`; `Compact` → `compact::render`; otherwise the header on
 /// `layout.header`, then each present panel on its rectangle, with `Ctx { graphs: layout.graphs, ..*ctx }`.
 /// The Models screen draws `screens::models::render` on the body under the header instead of the panels;
-/// the Logs and System screens show the Overview body too (the header says which tab is selected).
-/// Never panics, whatever the size (0 × 0 included).
+/// the Logs screen shows the log full screen on the body (the header says which tab is selected); the
+/// System screen shows the Overview body too. On every tier except `TooSmall`, when `app.help`, the help
+/// overlay is drawn over the whole frame, last. Never panics, whatever the size (0 × 0 included).
 pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
-    match layout::tier(area.width, area.height) {
+    let tier = layout::tier(area.width, area.height);
+    match tier {
         Tier::TooSmall => draw_too_small(ctx, area, buf),
         Tier::Compact => compact::render(app, ctx, area, buf),
         _ => {
@@ -39,13 +42,29 @@ pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
             let layout = layout::overview(area);
             let ctx = Ctx { theme: ctx.theme, graphs: layout.graphs, clock: ctx.clock };
             header::render(app, &ctx, layout.header, buf);
-            draw_panel(app, &ctx, layout.model, buf, model::render);
-            draw_panel(app, &ctx, layout.request, buf, request::render);
-            draw_panel(app, &ctx, layout.gpu, buf, gpu::render);
-            draw_panel(app, &ctx, layout.cpu, buf, cpu::render);
-            draw_panel(app, &ctx, layout.memory, buf, memory::render);
-            draw_panel(app, &ctx, layout.log, buf, log::render);
+            // The Logs screen shows the log full screen on the body; every other screen shows the
+            // Overview panels.
+            if app.screen == Screen::Logs {
+                let body = Rect::new(
+                    area.x,
+                    area.y.saturating_add(layout.header.height),
+                    area.width,
+                    area.height.saturating_sub(layout.header.height),
+                );
+                screens::logs::render(app, &ctx, body, buf);
+            } else {
+                draw_panel(app, &ctx, layout.model, buf, model::render);
+                draw_panel(app, &ctx, layout.request, buf, request::render);
+                draw_panel(app, &ctx, layout.gpu, buf, gpu::render);
+                draw_panel(app, &ctx, layout.cpu, buf, cpu::render);
+                draw_panel(app, &ctx, layout.memory, buf, memory::render);
+                draw_panel(app, &ctx, layout.log, buf, log::render);
+            }
         }
+    }
+    // The help overlay, over the whole frame, last (not on the TooSmall tier).
+    if tier != Tier::TooSmall && app.help {
+        help::render(app, ctx.theme, area, buf);
     }
 }
 

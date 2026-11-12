@@ -104,9 +104,9 @@ renderer alone into a `w × h` buffer; `frame` = `draw::draw` of the whole frame
 
 ## Acceptance criteria
 
-- [ ] The files exist with the exact public API above; `draw.rs` routes the Logs screen and draws the help
+- [x] The files exist with the exact public API above; `draw.rs` routes the Logs screen and draws the help
       overlay last; `docs/02-ui.md` has the `x` key.
-- [ ] Nothing outside the deliverable changed (except `tasks/`).
-- [ ] The 8 tests above exist under these names and pass; earlier golden files are unchanged.
-- [ ] `bash .devbox/check` is green.
+- [x] Nothing outside the deliverable changed (except `tasks/`).
+- [x] The 8 tests above exist under these names and pass; earlier golden files are unchanged.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) in `--demo`: `3`, `/`, typing, `Enter`, `e`, `x`, `?` behave as described.
