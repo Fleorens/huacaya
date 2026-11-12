@@ -96,7 +96,7 @@ fn router_setup(fetch: &FakeFetch) {
     fetch.give("/slots", llama("slots-idle.json"));
 }
 
-/// One call to `get` for `path` with a query carrying `model = TIEL`, if any.
+/// `true` when at least one recorded `get` call carries the query pair `model = TIEL`.
 fn calls_with_model(calls: &CallLog) -> bool {
     calls.iter().any(|(_p, q)| q.iter().any(|(k, v)| k == "model" && v == TIEL))
 }

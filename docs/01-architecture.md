@@ -61,7 +61,9 @@ under `--sysroot` (`collect::process::read_server_procs`); the instance that ser
 whereas the router prints `proxying request to model … on port …` for each of the two calls. When a direct
 answer fails, the round falls back to the router path (with `model=`) for both; when no instance is found, or
 when `--url` is a remote address, the router path is the only one. The safety rule above holds for both paths:
-direct or not, only models `loaded` in this round are polled.
+direct or not, only models `loaded` in this round are polled. Known limit: the instance is matched by name and
+`--alias` only, not by owner, so on a multi-user machine another account's `llama-server` with the same alias
+would receive the API key; the aibox has a single user.
 
 ## 3. Derived values
 
