@@ -120,14 +120,15 @@ pub(crate) fn render_line(
         Level::Error => Role::Critical,
     };
     let time_w = line.time.as_ref().map(|t| t.chars().count() + 1).unwrap_or(0) as u16;
-    let task_w = (!raw && line.task.is_some_and(|t| t >= 0)) as u16;
+    let task = line.task.filter(|t| !raw && *t >= 0).map(|t| format!("#{t} "));
+    let task_w = task.as_ref().map(|t| t.chars().count()).unwrap_or(0) as u16;
     let text_w = width.saturating_sub(time_w).saturating_sub(task_w);
     let mut spans = Vec::new();
     if let Some(t) = &line.time {
         spans.push(Span::styled(format!("{t} "), theme.fg(Role::Dim)));
     }
-    if task_w > 0 {
-        spans.push(Span::styled(format!("#{} ", line.task.unwrap()), theme.fg(Role::Dim)));
+    if let Some(t) = task {
+        spans.push(Span::styled(t, theme.fg(Role::Dim)));
     }
     let text = if raw { line.text.clone() } else { crate::ui::logtext::compact(line) };
     spans.push(Span::styled(fit(&text, text_w as usize), theme.fg(role)));

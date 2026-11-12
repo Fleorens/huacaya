@@ -13,22 +13,27 @@ use crate::util::{count, short_model_name};
 /// trimmed.
 ///
 /// Split on whitespace: when the first token is `slot` or `srv` and the next ends with `:` (the
-/// function name), drop both, then drop `id <n> |` and `task <t> |` when they follow. Everything
-/// else is kept whole.
+/// function name), drop both; after `slot`, also drop `id <n> |` and `task <t> |` when they follow.
+/// Everything else is kept whole. A text that would come out empty (a truncated line such as
+/// `slot foo:`) is returned with its whitespace collapsed instead, so the row never goes blank.
 pub fn strip_prefix(text: &str) -> String {
     let tokens: Vec<&str> = text.split_whitespace().collect();
     let mut i = 0usize;
     if tokens.len() >= 2 && (tokens[0] == "slot" || tokens[0] == "srv") && tokens[1].ends_with(':') {
         i = 2;
-        i = drop_kw(&tokens, i, "id");
-        i = drop_kw(&tokens, i, "task");
+        if tokens[0] == "slot" {
+            i = drop_kw(&tokens, i, "id");
+            i = drop_kw(&tokens, i, "task");
+        }
     }
-    tokens[i..].join(" ")
+    let rest = tokens.get(i..).unwrap_or_default();
+    if rest.is_empty() { tokens.join(" ") } else { rest.join(" ") }
 }
 
-/// After the prefix, skip `kw <value> |` (three tokens) when `tokens[i]` is `kw`.
+/// Skip `kw <value> |` (three tokens) at `tokens[i]`; only when all three are there, so a
+/// truncated line never moves `i` past the end.
 fn drop_kw(tokens: &[&str], i: usize, kw: &str) -> usize {
-    if tokens.get(i) == Some(&kw) { i + 3 } else { i }
+    if tokens.get(i) == Some(&kw) && tokens.get(i + 2) == Some(&"|") { i + 3 } else { i }
 }
 
 /// The message of `line` in compact form (rules below). Never empty for a non-empty `line.text`.

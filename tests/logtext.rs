@@ -70,6 +70,12 @@ fn strip_prefix_examples() {
         strip_prefix("this line has no journald prefix at all"),
         "this line has no journald prefix at all"
     );
+    // Truncated lines must neither panic nor come out empty.
+    assert_eq!(strip_prefix("slot release: id 0"), "id 0");
+    assert_eq!(strip_prefix("slot release: id 0 | task"), "task");
+    assert_eq!(strip_prefix("slot foo:"), "slot foo:");
+    // `id … |` is only a slot prefix.
+    assert_eq!(strip_prefix("srv  foo: id 1 | bar"), "id 1 | bar");
 }
 
 // --------------------------------------------------------------------------- compact events
