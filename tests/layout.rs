@@ -250,7 +250,7 @@ fn golden_files() {
     for (w, h) in [(140u16, 40u16), (100, 30), (80, 24), (50, 15), (20, 6)] {
         let path = format!("tests/snapshots/overview-{w}x{h}.txt");
         let fresh = snapshot(&app, &theme, w, h, false);
-        if std::env::var("UPDATE_GOLDEN").is_ok() {
+        if std::env::var("UPDATE_GOLDEN").as_deref() == Ok("1") {
             std::fs::write(&path, &fresh).unwrap();
             continue;
         }
