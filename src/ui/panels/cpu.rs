@@ -52,7 +52,18 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         match usage {
             Some(u) => {
                 let value = pct(Some(u as f64));
-                gauge_row(buf, inner.x, y, inner.width, "usage ", u as f64 / 100.0, Role::Cpu, PCT_THRESHOLDS, &value, theme);
+                gauge_row(
+                    buf,
+                    inner.x,
+                    y,
+                    inner.width,
+                    "usage ",
+                    u as f64 / 100.0,
+                    Role::Cpu,
+                    PCT_THRESHOLDS,
+                    &value,
+                    theme,
+                );
             }
             None => row(theme, buf, inner.x, y, inner.width, "usage ", "n/a"),
         }
@@ -107,7 +118,8 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     // Row 5: usage graph on all the rows left.
     if ctx.graphs && inner.height > 4 {
         let grect = Rect::new(inner.x, y0 + 4, inner.width, inner.height - 4);
-        BrailleGraph { values: &app.cpu_usage.tail(usize::MAX), max: 100.0, accent: Role::Cpu, theme }.render(grect, buf);
+        BrailleGraph { values: &app.cpu_usage.tail(usize::MAX), max: 100.0, accent: Role::Cpu, theme }
+            .render(grect, buf);
     }
 }
 

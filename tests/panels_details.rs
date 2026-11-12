@@ -67,17 +67,17 @@ fn memory_details_when_tall() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    // Inner height 6: the two detail rows render.
+    // Inner height 6: the avail and disk rows render.
     let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 40, 8);
     let all: String = rows.join("\n");
     assert!(all.contains("avail 9.5 G   cached 18.2 G"), "{:?}", rows);
     assert!(all.contains("router 287 M"), "{:?}", rows);
 
-    // Inner height 3: neither detail row.
+    // Inner height 3: only the three first rows; no avail, no disks.
     let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 40, 5);
     let all: String = rows.join("\n");
     assert!(!all.contains("avail"), "{:?}", rows);
-    assert!(!all.contains("router"), "{:?}", rows);
+    assert!(!all.contains("disk"), "{:?}", rows);
 }
 
 #[test]

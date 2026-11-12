@@ -163,17 +163,19 @@ fn memory_generating() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 40, 5);
+    let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 60, 9);
     let all: String = rows.join("\n");
     assert!(all.contains("RAM   "), "{:?}", rows);
     assert!(all.contains("21.6/31.1 G"), "{:?}", rows);
     assert!(all.contains("swap  "), "{:?}", rows);
     assert!(all.contains("0.0/8.0 G"), "{:?}", rows);
-    assert!(all.contains("model 19.2 G"), "{:?}", rows);
+    assert!(all.contains("model 19.2 G rss   router 287 M"), "{:?}", rows);
+    assert!(all.contains("avail 9.5 G   cached 18.2 G"), "{:?}", rows);
+    assert!(all.contains("disk  / 61 %   /srv/models 61 %   /srv/data 11 %"), "{:?}", rows);
 
     // Down: router only.
     let app = demo_app(DemoState::Down);
-    let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 40, 5);
+    let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 60, 9);
     let all: String = rows.join("\n");
     assert!(all.contains("server 287 M"), "{:?}", rows);
 }

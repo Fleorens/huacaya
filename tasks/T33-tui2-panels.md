@@ -99,6 +99,6 @@ idle: `56.7`, `t/s avg`, `9.2K / 196.6K  5 %`.
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented; the Overview looks like the validated mockup at 140 × 40.
-- [ ] The updated and new tests pass; golden files regenerated and read.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented; the Overview looks like the validated mockup at 140 × 40.
+- [x] The updated and new tests pass; golden files regenerated and read.
+- [x] `bash .devbox/check` is green.

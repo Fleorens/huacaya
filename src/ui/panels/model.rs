@@ -87,21 +87,13 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 /// The speed to show: live while generating, else the average; its label is `t/s now` / `t/s avg`.
 fn speed(_app: &App, m: &ActiveModel) -> String {
     let generating = m.slots.first().map(|s| s.is_processing && s.n_decoded > 0).unwrap_or(false);
-    let value = if generating {
-        m.live_gen_tps
-    } else {
-        m.metrics.as_ref().and_then(|m| m.avg_gen_tps())
-    };
+    let value = if generating { m.live_gen_tps } else { m.metrics.as_ref().and_then(|m| m.avg_gen_tps()) };
     tps(value)
 }
 
 fn label(m: &ActiveModel) -> &'static str {
     let generating = m.slots.first().map(|s| s.is_processing && s.n_decoded > 0).unwrap_or(false);
-    if generating {
-        "t/s now"
-    } else {
-        "t/s avg"
-    }
+    if generating { "t/s now" } else { "t/s avg" }
 }
 
 /// The wide layout: three columns (name, speed, context).
@@ -136,11 +128,12 @@ fn render_wide(
     }
     let side_x = centre_x + bd_w + 2;
     let side_w = centre_w.saturating_sub(bd_w + 2);
-    set_text(buf, side_x, y0, side_w, &label(m), Role::Text, theme);
+    set_text(buf, side_x, y0, side_w, label(m), Role::Text, theme);
     if graphs && side_w >= 8 {
         let values = app.gen_tps.tail(usize::MAX);
         let max = app.gen_tps.max().unwrap_or(0.0).max(1.0);
-        BrailleGraph { values: &values, max, accent: Role::Server, theme }.render(Rect::new(side_x, y0 + 1, side_w, 1), buf);
+        BrailleGraph { values: &values, max, accent: Role::Server, theme }
+            .render(Rect::new(side_x, y0 + 1, side_w, 1), buf);
     }
     let avg = tps(m.metrics.as_ref().and_then(|m| m.avg_gen_tps()));
     set_text(buf, side_x, y0 + 2, side_w, &format!("avg {avg} · 5 min"), Role::Dim, theme);
@@ -182,24 +175,54 @@ fn render_medium(
         if graph_w >= 8 {
             let values = app.gen_tps.tail(usize::MAX);
             let max = app.gen_tps.max().unwrap_or(0.0).max(1.0);
-            BrailleGraph { values: &values, max, accent: Role::Server, theme }.render(Rect::new(rx + text_w + 2, y0, graph_w, 1), buf);
+            BrailleGraph { values: &values, max, accent: Role::Server, theme }
+                .render(Rect::new(rx + text_w + 2, y0, graph_w, 1), buf);
         }
     }
     prompt_row(m.metrics.as_ref(), theme, rx, y0 + 1, rest_w, buf);
     let slot = m.slots.first();
-    gauge_row(buf, rx, y0 + 2, rest_w, "ctx  ", ctx_ratio(slot), Role::Server, PCT_THRESHOLDS, &ctx_value_text(slot), theme);
+    gauge_row(
+        buf,
+        rx,
+        y0 + 2,
+        rest_w,
+        "ctx  ",
+        ctx_ratio(slot),
+        Role::Server,
+        PCT_THRESHOLDS,
+        &ctx_value_text(slot),
+        theme,
+    );
     req_row(m.metrics.as_ref(), theme, rx, y0 + 3, rest_w, buf);
 }
 
 /// The small layout: one column, the essentials.
-fn render_small(app: &App, m: &ActiveModel, _info: Option<&ModelInfo>, theme: &Theme, inner: Rect, buf: &mut Buffer) {
+fn render_small(
+    app: &App,
+    m: &ActiveModel,
+    _info: Option<&ModelInfo>,
+    theme: &Theme,
+    inner: Rect,
+    buf: &mut Buffer,
+) {
     let w = inner.width;
     let y0 = inner.y;
     name_row(app, m, theme, inner.x, y0, w, buf);
     badge_task_row(app, m, theme, inner.x, y0 + 1, w, buf);
     set_text(buf, inner.x, y0 + 2, w, &format!("{} {}", speed(app, m), label(m)), Role::Text, theme);
     let slot = m.slots.first();
-    gauge_row(buf, inner.x, y0 + 3, w, "ctx  ", ctx_ratio(slot), Role::Server, PCT_THRESHOLDS, &ctx_value_text(slot), theme);
+    gauge_row(
+        buf,
+        inner.x,
+        y0 + 3,
+        w,
+        "ctx  ",
+        ctx_ratio(slot),
+        Role::Server,
+        PCT_THRESHOLDS,
+        &ctx_value_text(slot),
+        theme,
+    );
 }
 
 /// Render the band with no active model: the Loading name (if any), the badge and a message.
@@ -312,11 +335,7 @@ fn ctx_used(slot: Option<&SlotInfo>) -> (u64, u64) {
 
 fn ctx_ratio(slot: Option<&SlotInfo>) -> f64 {
     let (used, n_ctx) = ctx_used(slot);
-    if n_ctx == 0 {
-        0.0
-    } else {
-        used as f64 / n_ctx as f64
-    }
+    if n_ctx == 0 { 0.0 } else { used as f64 / n_ctx as f64 }
 }
 
 fn ctx_value_text(slot: Option<&SlotInfo>) -> String {
@@ -328,7 +347,15 @@ fn ctx_value_text(slot: Option<&SlotInfo>) -> String {
 fn ctx_value_row(slot: Option<&SlotInfo>, theme: &Theme, x: u16, y: u16, width: u16, buf: &mut Buffer) {
     let (used, n_ctx) = ctx_used(slot);
     let pct_str = pct(Some(used as f64 / n_ctx as f64 * 100.0));
-    set_text(buf, x, y, width, &format!("     {0} / {1}  {2}", count(used), count(n_ctx), pct_str), Role::Text, theme);
+    set_text(
+        buf,
+        x,
+        y,
+        width,
+        &format!("     {0} / {1}  {2}", count(used), count(n_ctx), pct_str),
+        Role::Text,
+        theme,
+    );
 }
 
 /// A single styled line, clipped to `width`.
