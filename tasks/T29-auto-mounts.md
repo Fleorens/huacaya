@@ -86,7 +86,7 @@ The `--mount` row: default `every real disk`.
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; without `--mount`, the sampler shows the machine's real disks.
-- [ ] The 6 tests above exist under these names and pass; every earlier test passes (the `defaults` test with
+- [x] The public API above exists; without `--mount`, the sampler shows the machine's real disks.
+- [x] The 6 tests above exist under these names and pass; every earlier test passes (the `defaults` test with
       an empty `mounts`).
-- [ ] `bash .devbox/check` is green.
+- [x] `bash .devbox/check` is green.

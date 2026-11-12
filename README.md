@@ -79,7 +79,7 @@ systemd unit named `llama-server` (the user needs the `systemd-journal` group). 
 | `--api-key-file` | — | file holding the key (`LLAMATOP_API_KEY_FILE`); `LLAMA_API_KEY` also works |
 | `--log-cmd` | `journalctl -u llama-server -f …` | the command whose output is the log (`LLAMATOP_LOG_CMD`) |
 | `--interval-ms` | `1000` | refresh period, 200–10000 (`+` / `-` change it live) |
-| `--mount` | `/` | a mount point to show, repeatable |
+| `--mount` | every real disk | a mount point to show, repeatable |
 | `--agent` | — | URL of a llamatop agent on the server (`LLAMATOP_AGENT`), see below |
 | `--config` | `~/.config/llamatop/config.toml` | the configuration file (`LLAMATOP_CONFIG`) |
 | `--demo` | | generated data, no server needed |
