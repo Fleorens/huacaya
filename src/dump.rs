@@ -35,7 +35,8 @@ pub fn run(cli: &Cli) -> Result<String> {
     // 2. One polling round against the server. On a loopback URL, ask the loaded instance directly
     // (prints nothing in the journal); from another machine, only the router path with `model=`.
     let client = Client::new(&cli.url, cli.api_key(), Duration::from_secs(3));
-    let mut poller = if is_loopback_url(&cli.url) {
+    // Only on the real machine: a test sysroot's ports belong to nothing, and the key must not go there.
+    let mut poller = if is_loopback_url(&cli.url) && cli.sysroot == std::path::Path::new("/") {
         Poller::new(client).with_local_instances(cli.sysroot.clone())
     } else {
         Poller::new(client)
