@@ -46,15 +46,32 @@ fn get(agent: &ureq::Agent, port: u16, path: &str, bearer: Option<&str>) -> (u16
 }
 
 /// GET `/v1/system` until it is `200` (the first sample arrives after at most one interval) or 3 s pass.
-fn system_ready(agent: &ureq::Agent, port: u16) -> String {
+fn system_ready(agent: &ureq::Agent, port: u16) {
     let start = Instant::now();
     loop {
-        let (status, body) = get(agent, port, "/v1/system", Some("t"));
+        let (status, _body) = get(agent, port, "/v1/system", Some("t"));
         if status == 200 {
-            return body;
+            return;
         }
         if start.elapsed() > Duration::from_secs(3) {
-            return body;
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+/// GET `/v1/log?since=0` until the ring holds the whole fixture (`next == 37`) or 3 s pass: the log
+/// command may still be starting when the first sample arrives.
+fn log_ready(agent: &ureq::Agent, port: u16) -> LogPage {
+    let start = Instant::now();
+    loop {
+        let (_status, body) = get(agent, port, "/v1/log?since=0", Some("t"));
+        let page: LogPage = serde_json::from_str(&body).expect("a valid log page");
+        if page.next == 37 {
+            return page;
+        }
+        if start.elapsed() > Duration::from_secs(3) {
+            return page;
         }
         std::thread::sleep(Duration::from_millis(50));
     }
@@ -73,9 +90,7 @@ fn serves_system_and_log() {
     let snapshot: SystemSnapshot = serde_json::from_str(&body).expect("a valid snapshot");
     assert_eq!(snapshot.hostname.as_deref(), Some("aibox-flo"));
 
-    let (status, body) = get(&agent, port, "/v1/log?since=0", Some("t"));
-    assert_eq!(status, 200);
-    let page: LogPage = serde_json::from_str(&body).expect("a valid log page");
+    let page = log_ready(&agent, port);
     assert_eq!(page.next, 37);
     assert_eq!(page.lines.len(), 36, "35 fixture lines plus the source-ended line");
     assert_eq!(page.lines.last().unwrap().text.as_str(), "log source ended: cat");
