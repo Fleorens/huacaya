@@ -19,7 +19,7 @@ use crate::ui::theme::{PCT_THRESHOLDS, Role, Theme};
 use crate::util::{count, short_model_name};
 
 /// Height needed, borders included (6 rows inside).
-pub const MIN_HEIGHT: u16 = 8;
+pub const MIN_HEIGHT: u16 = 6;
 
 /// The state badge's text and role (first match wins): no llama snapshot → `WAITING`; `Health::Down`
 /// → `SERVER DOWN`; `Health::Unauthorized` → `UNAUTHORIZED`; a model `Loading` → `LOADING`; no active

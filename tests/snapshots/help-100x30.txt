@@ -1,26 +1,25 @@
-╭ llamatop ─ gpu-box ─ up 4d 3h ─────────────────────────────────── ● server ok  b12151 ─ 10:21:03 ╮
-│ 1 Overview   2 Models   3 Logs   4 System                                              ? help  q │
+ llamatop  gpu-box  up 4d 3h  ● server ok  b12151    1 Overview   2 Models   3 Logs   4 System
+╭ Model ───────────────────────────────────────────────────────────────────────────────────────────╮
+│Cyber-Tiel-Coder-35B-A3B   Q4_K_M                                                                 │
+│◉ GENERATING   task 9000                                                                          │
+│gen    49.3 t/s                       ⣿⣿⣾⣿⣶⣿⣷⣾⣿⣾⣿⣷⣿⣷⣶⣿⣶⣿⣿⣿⣿⣶⣿⣶⣾⣿⣾⣿⣷⣿⣷⣾⣿⣶⣿⣷⣿⣿⣶⣿⣶⣾⣷⣾⣿⣷⣿⣷⣾⣿⣶⣿⣷⣿⣿⣾⣿⣶⣾⣷│
+│prompt 591 t/s   cache 98 %                                                                       │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭ Model ─────────────────────────────────────────╮╭ GPU  RX 7800 XT ───────────────────────────────╮
-│Cyber-Tiel-Coder-35B-A3B   Q4_K_M               ││load  ██████████████████████████████████▏░  95 %│
-│◉ GENERATING   task 9000                        ││VRAM  ████████████████████████████▉  15.9/16.0 G│
-│gen    49.3 t/s  ⣿⣷⣾⣿⣶⣿⣷⣿⣿⣶⣿⣶⣾⣷⣾⣿⣷⣿⣷⣾⣿⣶⣿⣷⣿⣿⣾⣿⣶⣾⣷││temp  73 °C junction   62 °C edge               │
-│prompt 591 t/s   cache 98 %                     ││power 117 W / 212 W   fan 1233 rpm              │
-│ctx    ████████▏░░░░░╭ Help ────────────────────────────────────────────────╮⣿⣷⣿⣿⣿⣿⣿⣿⣿⣾⣿⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿│
-│draft  64 %   ctx-siz│1-4 Tab S-Tab  switch screen                          │⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿│
-╰─────────────────────│q Ctrl-C       quit                                   │─────────────────────╯
-╭ CPU ────────────────│? Esc          close this help                        │─────────────────────╮
-│usage ███████████████│p              pause / resume the display             │░░░░░░░░  21.6/31.1 G│
-│temp  60 °C   3.5 GHz│+ -            faster / slower refresh (now 1.0 s)    │░░░░░░░░░░  0.0/8.0 G│
-│load  8.33 7.14 5.56 │↑ ↓ PgUp PgDn  scroll (Logs, Models)                  │                     │
-│⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤│Home End       top / bottom                           │                     │
-╰─────────────────────│f              follow the log                         │─────────────────────╯
-╭ Log ────────────────│/              filter the log, Esc clears             │─────────── follow ● ╮
-│10:00:18 #9000 n_gen │e              level filter: all, warnings, errors    │                     │
-│10:00:21 #9000 n_gen │x              show / hide the router's proxy lines   │                     │
-│10:00:24 #9000 n_gen │r              raw / compact log lines                │                     │
-│10:00:27 #9000 n_gen ╰──────────────────────────────────────────────────────╯                     │
-│10:00:30 #9000 n_gen 936  tg 52.1 t/s  3s 53.0 t/s                                                │
+╭ GPU  RX 7800 XT ──────────────╮╭ CPU ──────────────────────────╮╭ Memory ────────────────────────╮
+│load  ███████████████╭ Help ────────────────────────────────────────────────╮████░░░░  21.6/31.1 G│
+│VRAM  ███████████▉  1│1-4 Tab S-Tab  switch screen                          │░░░░░░░░░░  0.0/8.0 G│
+│temp  73 °C junction │q Ctrl-C       quit                                   │G                    │
+│power 117 W / 212 W  │? Esc          close this help                        │   cached 18.2 G     │
+│⣿⣿⣾⣿⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣾⣿│p              pause / resume the display             │M                    │
+│⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿│+ -            faster / slower refresh (now 1.0 s)    │                     │
+╰─────────────────────│↑ ↓ PgUp PgDn  scroll (Logs, Models)                  │─────────────────────╯
+╭ Activity ───────────│Home End       top / bottom                           │─────────── follow ● ╮
+│10:00:15 #9000 n_gen │f              follow the log                         │                     │
+│10:00:18 #9000 n_gen │/              filter the log, Esc clears             │                     │
+│10:00:21 #9000 n_gen │e              level filter: all, warnings, errors    │                     │
+│10:00:24 #9000 n_gen │x              show / hide the router's proxy lines   │                     │
+│10:00:27 #9000 n_gen │r              raw / compact log lines                │                     │
+│10:00:30 #9000 n_gen ╰──────────────────────────────────────────────────────╯                     │
 │10:00:32 #9000 gen 1040 tok  52.0 t/s                                                             │
 │10:00:32 #9000 total time = 29195.00 ms / 9232 tokens                                             │
 │10:00:32 #9000 draft 728/1040 accepted  70 %                                                      │
@@ -28,3 +27,4 @@
 │10:00:32 POST /v1/chat/completions 200                                                            │
 │10:00:32 all slots are idle                                                                       │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+q quit · ? help · p pause · +/- refresh 1.0 s · / filter · e level · r raw · x proxy

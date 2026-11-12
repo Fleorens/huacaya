@@ -7,6 +7,7 @@ use ratatui::text::{Line, Span};
 use crate::app::{App, Screen};
 use crate::ui::compact;
 use crate::ui::help;
+use crate::ui::keybar;
 use crate::ui::layout::{self, Tier};
 use crate::ui::panels::Ctx;
 use crate::ui::panels::{cpu, gpu, header, log, memory, model, request};
@@ -50,6 +51,9 @@ pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                     draw_panel(app, &ctx, layout.cpu, buf, cpu::render);
                     draw_panel(app, &ctx, layout.memory, buf, memory::render);
                     draw_panel(app, &ctx, layout.log, buf, log::render);
+                    if let Some(keybar) = layout.keybar {
+                        keybar::render(app, &ctx, keybar, buf);
+                    }
                 }
             }
         }

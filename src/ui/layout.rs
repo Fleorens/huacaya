@@ -1,18 +1,19 @@
 //! The responsive layout: which tier a terminal size falls into and where each Overview panel goes.
 //!
 //! Built by hand with integer rules (`docs/02-ui.md` § 3), never with `Layout` constraints, whose
-//! solver may round differently. Every height uses `saturating_sub` so a 0 × 0 size never underflows.
+//! solver may round differently. The header is row 0 (height 1), the key bar the last row, and the panels
+//! fill the space between; every height uses `saturating_sub` so a 0 × 0 size never underflows.
 
 use ratatui::layout::Rect;
 
-/// The layout family chosen from the terminal size.
+/// The tiers, from the smallest terminal to the widest, as defined by `tier` (`docs/02-ui.md` § 3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tier {
-    Wide,
-    Medium,
-    Narrow,
-    Compact,
     TooSmall,
+    Compact,
+    Narrow,
+    Medium,
+    Wide,
 }
 
 /// First match: `w < 30 || h < 8` → `TooSmall`; `w < 60 || h < 20` → `Compact`; `w < 100` → `Narrow`;
@@ -41,6 +42,8 @@ pub struct OverviewLayout {
     pub gpu: Option<Rect>,
     pub cpu: Option<Rect>,
     pub memory: Option<Rect>,
+    /// The key bar, the last row; `None` when the body has fewer than 9 rows.
+    pub keybar: Option<Rect>,
     /// Passed to the panels as `Ctx::graphs`.
     pub graphs: bool,
 }
@@ -48,109 +51,134 @@ pub struct OverviewLayout {
 /// The Overview layout of `area` for the `Wide`, `Medium` and `Narrow` tiers (rules below). Any other
 /// tier returns the `Narrow` layout; callers check `tier` first.
 pub fn overview(area: Rect) -> OverviewLayout {
-    // `header` is always the top 3 rows; `body` is the rest. `saturating_sub` keeps it empty, never
-    // negative, on the smallest sizes.
-    let header = Rect::new(area.x, area.y, area.width, 3.min(area.height));
-    let body = Rect::new(area.x, area.y.saturating_add(3), area.width, area.height.saturating_sub(3));
-    match tier(area.width, area.height) {
-        Tier::Wide => wide(area, header, body),
-        Tier::Medium => medium(header, body),
-        _ => narrow(header, body),
-    }
-}
-
-/// Wide: two columns, graphs on. Left `model` / `request` / `log`; right `gpu` then `cpu` | `memory`.
-fn wide(area: Rect, header: Rect, body: Rect) -> OverviewLayout {
-    let left_w = body.width / 2;
-    let right_x = area.x + left_w;
-    let right_w = body.width - left_w;
-
-    let model = Rect::new(area.x, body.y, left_w, 8);
-    let request = Rect::new(area.x, body.y + 8, left_w, 5);
-
-    let gpu_h = body.height * 45 / 100;
-    let rest_h = body.height.saturating_sub(gpu_h);
-    let cpu_w = right_w / 2;
-    let gpu = Rect::new(right_x, body.y, right_w, gpu_h);
-    let cpu = Rect::new(right_x, body.y + gpu_h, cpu_w, rest_h);
-    let memory = Rect::new(right_x + cpu_w, body.y + gpu_h, right_w - cpu_w, rest_h);
-
-    // `log` sits under `model` + `request`; drop `request` first, then `log` itself, to keep >= 3 rows.
-    let keep_request = body.height.saturating_sub(13) >= 3;
-    let log = if keep_request {
-        Some(Rect::new(area.x, body.y + 13, left_w, body.height.saturating_sub(13)))
-    } else if body.height.saturating_sub(8) >= 3 {
-        Some(Rect::new(area.x, body.y + 8, left_w, body.height.saturating_sub(8)))
+    // `header` is always the top row; `keybar` the last, when the body below the header has >= 9 rows;
+    // `body` is the space between, where the panels go. `saturating_sub` keeps it empty, never negative.
+    let header = Rect::new(area.x, area.y, area.width, 1.min(area.height));
+    let below = Rect::new(area.x, area.y.saturating_add(1), area.width, area.height.saturating_sub(1));
+    let keybar = if below.height >= 9 {
+        Some(Rect::new(area.x, area.height.saturating_sub(1).max(area.y), area.width, 1))
     } else {
         None
     };
+    let body = Rect::new(
+        area.x,
+        area.y.saturating_add(1),
+        area.width,
+        below.height.saturating_sub(keybar.map(|k| k.height).unwrap_or(0)),
+    );
+    let mut layout = match tier(area.width, area.height) {
+        Tier::Wide => wide(body, keybar),
+        Tier::Medium => medium(body, keybar),
+        _ => narrow(body, keybar),
+    };
+    layout.header = header;
+    layout
+}
+
+/// Wide: `model` (6 rows, full width), then `gpu` | `cpu` | `memory` (9 rows), then `log` (`w * 63 / 100`)
+/// and `request` (the rest) side by side on the remaining rows.
+fn wide(body: Rect, keybar: Option<Rect>) -> OverviewLayout {
+    let w = body.width;
+    let model = Rect::new(body.x, body.y, w, 6);
+    let machine_y = body.y + 6;
+    let (a, b, c) = column_widths(w);
+    let gpu = Rect::new(body.x, machine_y, a, 9);
+    let cpu = Rect::new(body.x + a, machine_y, b, 9);
+    let memory = Rect::new(body.x + a + b, machine_y, c, 9);
+
+    // `log` and `request` share the remaining rows; both go when there are >= 3, else both drop.
+    let region_h = body.height.saturating_sub(6).saturating_sub(9);
+    let (log, request) = if region_h >= 3 {
+        let log_w = w * 63 / 100;
+        (
+            Some(Rect::new(body.x, machine_y + 9, log_w, region_h)),
+            Some(Rect::new(body.x + log_w, machine_y + 9, w - log_w, region_h)),
+        )
+    } else {
+        (None, None)
+    };
 
     OverviewLayout {
-        header,
+        header: Rect::default(),
         model: Some(model.intersection(body)),
-        request: keep_request.then_some(request.intersection(body)),
-        log,
+        request: request.map(|r| r.intersection(body)),
+        log: log.map(|r| r.intersection(body)),
         gpu: Some(gpu.intersection(body)),
-        cpu: Some(cpu),
-        memory: Some(memory),
+        cpu: Some(cpu.intersection(body)),
+        memory: Some(memory.intersection(body)),
+        keybar,
         graphs: true,
     }
 }
 
-/// Medium: two bands (`model` | `gpu` on 8 rows, then `cpu` | `memory` on 6), `log` full width below.
-fn medium(header: Rect, body: Rect) -> OverviewLayout {
-    let half = body.width / 2;
-    let model = Rect::new(body.x, body.y, half, 8);
-    let gpu = Rect::new(body.x + half, body.y, body.width - half, 8);
-    let cpu = Rect::new(body.x, body.y + 8, half, 6);
-    let memory = Rect::new(body.x + half, body.y + 8, body.width - half, 6);
+/// Medium: `model` (6 rows) then `gpu` | `cpu` | `memory` (8 rows), `log` full width on the rest.
+fn medium(body: Rect, keybar: Option<Rect>) -> OverviewLayout {
+    let w = body.width;
+    let model = Rect::new(body.x, body.y, w, 6);
+    let machine_y = body.y + 6;
+    let (a, b, c) = column_widths(w);
+    let gpu = Rect::new(body.x, machine_y, a, 8);
+    let cpu = Rect::new(body.x + a, machine_y, b, 8);
+    let memory = Rect::new(body.x + a + b, machine_y, c, 8);
 
-    let cpu_memory = body.height.saturating_sub(14) >= 3;
-    let log = if body.height.saturating_sub(14) >= 3 {
-        Some(Rect::new(body.x, body.y + 14, body.width, body.height.saturating_sub(14)))
-    } else if body.height.saturating_sub(8) >= 3 {
-        Some(Rect::new(body.x, body.y + 8, body.width, body.height.saturating_sub(8)))
+    let region_h = body.height.saturating_sub(6).saturating_sub(8);
+    let log = if region_h >= 3 {
+        Some(Rect::new(body.x, machine_y + 8, w, region_h).intersection(body))
     } else {
         None
     };
 
     OverviewLayout {
-        header,
+        header: Rect::default(),
         model: Some(model.intersection(body)),
         request: None,
         log,
         gpu: Some(gpu.intersection(body)),
-        cpu: if cpu_memory { Some(cpu) } else { None },
-        memory: if cpu_memory { Some(memory) } else { None },
+        cpu: Some(cpu.intersection(body)),
+        memory: Some(memory.intersection(body)),
+        keybar,
         graphs: true,
     }
 }
 
-/// Narrow: one column, graphs off. `model`, `gpu`, then `cpu` | `memory`, `log` the rest below.
-fn narrow(header: Rect, body: Rect) -> OverviewLayout {
-    let model = Rect::new(body.x, body.y, body.width, 8);
-    let gpu = Rect::new(body.x, body.y + 8, body.width, 6);
-    let cpu_w = body.width / 2;
-    let cpu = Rect::new(body.x, body.y + 14, cpu_w, 5);
-    let memory = Rect::new(body.x + cpu_w, body.y + 14, body.width - cpu_w, 5);
+/// Narrow: `model` (6 rows), `gpu` (6 rows, full width), then `cpu` | `memory` (5 rows) and `log` the rest.
+/// When `log` would get fewer than 3 rows, drop the `cpu` | `memory` row, then `log`.
+fn narrow(body: Rect, keybar: Option<Rect>) -> OverviewLayout {
+    let w = body.width;
+    let model = Rect::new(body.x, body.y, w, 6);
+    let gpu_y = body.y + 6;
+    let gpu = Rect::new(body.x, gpu_y, w, 6);
+    let cpu_w = w / 2;
 
-    let cpu_memory = body.height.saturating_sub(19) >= 3;
-    let log = if body.height.saturating_sub(19) >= 3 {
-        Some(Rect::new(body.x, body.y + 19, body.width, body.height.saturating_sub(19)))
-    } else if body.height.saturating_sub(14) >= 3 {
-        Some(Rect::new(body.x, body.y + 14, body.width, body.height.saturating_sub(14)))
+    let with_cpu = body.height.saturating_sub(6).saturating_sub(6).saturating_sub(5);
+    let (cpu, memory, log) = if with_cpu >= 3 {
+        let cpu_y = gpu_y + 6;
+        (
+            Some(Rect::new(body.x, cpu_y, cpu_w, 5)),
+            Some(Rect::new(body.x + cpu_w, cpu_y, w - cpu_w, 5)),
+            Some(Rect::new(body.x, cpu_y + 5, w, with_cpu)),
+        )
     } else {
-        None
+        let no_cpu = body.height.saturating_sub(6).saturating_sub(6);
+        (None, None, if no_cpu >= 3 { Some(Rect::new(body.x, gpu_y + 6, w, no_cpu)) } else { None })
     };
 
     OverviewLayout {
-        header,
+        header: Rect::default(),
         model: Some(model.intersection(body)),
         request: None,
-        log,
+        log: log.map(|r| r.intersection(body)),
         gpu: Some(gpu.intersection(body)),
-        cpu: if cpu_memory { Some(cpu) } else { None },
-        memory: if cpu_memory { Some(memory) } else { None },
+        cpu: cpu.map(|r| r.intersection(body)),
+        memory: memory.map(|r| r.intersection(body)),
+        keybar,
         graphs: false,
     }
+}
+
+/// The three machine-column widths: `a = w / 3`, `b = (w - a) / 2`, `c = w - a - b`.
+fn column_widths(w: u16) -> (u16, u16, u16) {
+    let a = w / 3;
+    let b = (w - a) / 2;
+    (a, b, w - a - b)
 }

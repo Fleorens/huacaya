@@ -16,7 +16,7 @@ use crate::ui::theme::{Role, Theme};
 /// Height needed, borders included (1 row inside).
 pub const MIN_HEIGHT: u16 = 3;
 
-/// The log panel: `frame::panel("Log", Role::Server, false, theme)` with the filter and follow/scroll
+/// The log panel: `frame::panel("Activity", Role::Server, false, theme)` with the filter and follow/scroll
 /// indicators right-aligned on the top border, then the last `h` visible lines (oldest at the top),
 /// each `<time> ` in `Role::Dim` then the text coloured by level and cut to the panel width. No line:
 /// one `Dim` row `no log line yet`; lines that are all hidden: `<n> lines hidden — x proxy  e level  / filter`.
@@ -25,12 +25,12 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         return;
     }
     let theme = ctx.theme;
-    let block = panel("Log", Role::Server, false, theme);
+    let block = panel("Activity", Role::Server, false, theme);
     let inner = block.inner(area);
     block.render(area, buf);
 
     // The filter and follow/scroll indicators, right-aligned on the top border.
-    render_indicators(app, area, theme, buf);
+    render_indicators(app, area, theme, buf, "Activity");
 
     let v = app.visible_logs();
     if v.is_empty() {
@@ -61,15 +61,16 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 }
 
 /// The top-border indicators: ` /<filter> ` (Warning) when the filter is not empty, then ` follow ● `
-/// (Good) when following, else ` scroll −<scroll> ` (Warning).
-fn render_indicators(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer) {
+/// (Good) when following, else ` scroll −<scroll> ` (Warning). Placed right-aligned, leaving the title
+/// readable (`╭ <title> ` = `title.len() + 3` columns).
+fn render_indicators(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer, title: &str) {
     let state = if app.log_view.follow {
         (" follow ● ".to_string(), Role::Good)
     } else {
         (format!(" scroll −{} ", app.log_view.scroll), Role::Warning)
     };
-    // Between the two corners, leaving the title "Log" readable (`╭ Log ` = 6 columns).
-    let left = area.x.saturating_add(6).min(area.x + area.width.saturating_sub(1));
+    // Between the two corners, leaving the title readable (`╭ Log ` = 6 columns, `╭ Activity ` = 11).
+    let left = area.x.saturating_add(title.len() as u16 + 3).min(area.x + area.width.saturating_sub(1));
     let right = area.x + area.width.saturating_sub(1);
     let avail = right.saturating_sub(left) as usize;
     let state_w = state.0.chars().count();
