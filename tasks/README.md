@@ -46,19 +46,20 @@ orchestrator after review).
 
 ## Batch 2 — the dashboard (from `docs/02-ui.md`)
 
-Re-split on 2026-11-12 into smaller sheets, one per session. Sheets are written one or two ahead of the queue,
-each against the code its dependencies actually delivered.
+Re-split on 2026-11-12 into smaller sheets, one per session. All delivered and reviewed on 2026-11-12, then
+run on the aibox against the real server (every screen, 140×40, 80×24, 50×15): what remains is Florian's
+judgement on screen (the unticked "on screen" criteria of each sheet).
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T09](T09-app-state.md) | App state, events, keys (pure, no terminal) | T08 | livrée |
+| [T09](T09-app-state.md) | App state, events, keys (pure, no terminal) | T08 | validée |
 | [T10](T10-theme-widgets.md) | Theme (true colour / 16 colours / `NO_COLOR`), gauge, braille graph, badge, panel frame | — | validée |
-| [T11](T11-demo.md) | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | livrée |
-| [T12](T12-panels-model.md) | Text helpers, header + tabs, Model and Last request panels | T10, T11 | livrée |
-| [T13](T13-panels-machine.md) | GPU, CPU, Memory and Log panels | T12 | livrée |
-| [T14](T14-layout-overview.md) | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | livrée |
-| [T15](T15-run-loop.md) | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | livrée |
-| [T16](T16-models-screen.md) | Models screen (table + details) | T14 | livrée |
-| [T17](T17-logs-help.md) | Logs screen (status bar, filter typing) and help overlay | T16 | livrée |
-| [T18](T18-system-screen.md) | System screen (per-core bars, sensors, disks, network, processes) | T17 | livrée |
-| T19 | Release build, install script for the aibox, README | T15–T18 | outlined |
+| [T11](T11-demo.md) | `--demo` data: deterministic states (idle, prompt, generating, loading, down) and a live generator | T09 | validée |
+| [T12](T12-panels-model.md) | Text helpers, header + tabs, Model and Last request panels | T10, T11 | validée |
+| [T13](T13-panels-machine.md) | GPU, CPU, Memory and Log panels | T12 | validée |
+| [T14](T14-layout-overview.md) | Responsive layout, Overview screen, `ui::draw`, "terminal too small", `--snapshot WxH`, golden files | T13 | validée |
+| [T15](T15-run-loop.md) | Run loop: terminal init / restore, collector threads, input and tick threads, `--demo` live | T14 | validée |
+| [T16](T16-models-screen.md) | Models screen (table + details) | T14 | validée |
+| [T17](T17-logs-help.md) | Logs screen (status bar, filter typing) and help overlay | T16 | validée |
+| [T18](T18-system-screen.md) | System screen (per-core bars, sensors, disks, network, processes) | T17 | validée |
+| T19 | Release build, install script for the aibox, README — done by the orchestrator, no sheet | T15–T18 | validée |

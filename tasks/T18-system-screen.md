@@ -53,8 +53,8 @@ bytes_pair(used, total))`.
 `rate(Some(x))` is `util::bytes(x as u64)` followed by `/s` and `rate(None)` is `n/a`.
 
 **Processes** — `frame::panel("Processes", Role::Server, false, theme)`; a header row (`Dim`, bold)
-`pid      role      port   rss       threads  model`, then per process: pid (9), `router` / `instance` (10),
-port or `-` (7), `util::bytes(rss)` (10), threads (9), then `short_model_name(model).0` or `-`, cut at the width.
+`pid      role      port   rss      threads  model`, then per process: pid (9), `router` / `instance` (10),
+port or `-` (7), `util::bytes(rss)` (9 — 10 in the first version of this sheet, which cut the model name), threads (9), then `short_model_name(model).0` or `-`, cut at the width.
 
 ### `src/ui/draw.rs`
 
