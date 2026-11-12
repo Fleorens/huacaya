@@ -11,7 +11,7 @@ use serde::Serialize;
 use crate::collect::disk::{DiskSample, auto_mounts, read_disks};
 use crate::collect::gpu::{GpuSample, read_gpus};
 use crate::collect::net::{NetReader, NetSample};
-use crate::collect::nvidia::read_nvidia;
+use crate::collect::nvidia::{parse_smi, run_smi};
 use crate::collect::process::{ProcSample, read_server_procs};
 use crate::collect::sensors::{TempReading, cpu_temp, nvme_temp, read_temps};
 use crate::collect::system::{CpuReader, CpuSample, MemSample, read_hostname, read_mem, read_uptime};
@@ -55,12 +55,14 @@ impl Sampler {
         let sysroot = &self.sysroot;
 
         // AMD cards first, then the NVIDIA ones (only on a real machine, `sysroot == /`, never for a
-        // test sysroot): `nvidia-smi` is spawned once and, when it is missing, never tried again.
+        // test sysroot). Only a spawn that fails with `NotFound` stops the tries: a timeout or a
+        // transient driver error is retried on the next sample.
         let mut gpus = read_gpus(sysroot);
         if !self.nvidia_missing && sysroot.as_path() == Path::new("/") {
-            let nv = read_nvidia();
-            self.nvidia_missing = nv.is_empty();
-            gpus.extend(nv);
+            match run_smi() {
+                Ok(text) => gpus.extend(parse_smi(&text)),
+                Err(kind) => self.nvidia_missing = kind == std::io::ErrorKind::NotFound,
+            }
         }
 
         let temps = read_temps(sysroot);

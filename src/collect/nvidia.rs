@@ -1,7 +1,7 @@
 //! The NVIDIA GPUs, read from `nvidia-smi` (shipped with the driver). Parsing is pure and unit-tested;
 //! the `read_nvidia` layer only does I/O. A missing program, a failure, or a timeout yields no card.
 
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
@@ -72,41 +72,50 @@ fn num<T: FromStr>(field: &str) -> Option<T> {
 
 /// A `memory.used` / `memory.total` value (MiB) in bytes.
 fn mib(field: &str) -> Option<u64> {
-    num::<u64>(field).map(|m| m * MIB)
+    num::<u64>(field).and_then(|m| m.checked_mul(MIB))
 }
 
 /// Runs `nvidia-smi` with [QUERY], waits at most `TIMEOUT` (then kills it), and parses its output. Empty
 /// when the program is missing, fails, or times out.
 pub fn read_nvidia() -> Vec<GpuSample> {
-    let mut child = match Command::new("nvidia-smi")
+    run_smi().map(|text| parse_smi(&text)).unwrap_or_default()
+}
+
+/// Spawns `nvidia-smi` and returns its stdout. The error kind lets the sampler tell a missing program
+/// (`NotFound`, stop trying) from a transient failure or a timeout (`TimedOut`, `Other`: try again).
+pub(crate) fn run_smi() -> Result<String, ErrorKind> {
+    let mut child = Command::new("nvidia-smi")
         .arg("--query-gpu")
         .arg(QUERY)
         .arg("--format=csv,noheader,nounits")
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
-    {
-        Ok(child) => child,
-        Err(_) => return Vec::new(),
-    };
+        .map_err(|e| e.kind())?;
 
     let start = Instant::now();
-    loop {
-        if child.try_wait().ok().is_some() {
-            break;
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if start.elapsed() < TIMEOUT => std::thread::sleep(Duration::from_millis(20)),
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(ErrorKind::TimedOut);
+            }
+            Err(e) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(e.kind());
+            }
         }
-        if start.elapsed() >= TIMEOUT {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Vec::new();
-        }
-        std::thread::sleep(Duration::from_millis(20));
+    };
+    if !status.success() {
+        return Err(ErrorKind::Other);
     }
 
-    let Some(mut stdout) = child.stdout.take() else {
-        return Vec::new();
-    };
+    let mut stdout = child.stdout.take().ok_or(ErrorKind::Other)?;
     let mut text = String::new();
-    let _ = stdout.read_to_string(&mut text);
-    parse_smi(&text)
+    stdout.read_to_string(&mut text).map_err(|e| e.kind())?;
+    Ok(text)
 }
