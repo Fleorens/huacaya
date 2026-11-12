@@ -3,4 +3,6 @@
 pub mod frame;
 pub mod gauge;
 pub mod graph;
+pub mod panels;
+pub mod text;
 pub mod theme;
