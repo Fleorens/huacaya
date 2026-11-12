@@ -59,14 +59,15 @@ fn level_names() {
 #[test]
 fn logs_status_row() {
     let app = demo_app(DemoState::Generating);
-    let rows = body(&app, 120, 20);
+    let rows = body(&app, 140, 20);
     let last = rows.last().unwrap();
     assert!(last.contains("follow ●"), "{:?}", last);
     assert!(last.contains("level all"), "{:?}", last);
     assert!(last.contains("filter none"), "{:?}", last);
     assert!(last.contains("proxy hidden"), "{:?}", last);
+    assert!(last.contains("lines compact"), "{:?}", last);
     assert!(last.contains("17 of 18 lines"), "{:?}", last);
-    assert!(last.contains("x proxy"), "{:?}", last);
+    assert!(last.contains("r raw"), "{:?}", last);
     // The Log panel title is on row 0.
     assert!(rows[0].contains("Log"), "{:?}", rows[0]);
 }

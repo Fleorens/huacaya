@@ -102,8 +102,8 @@ numbers 1-based) through `collect::logs::parse_line`.
 
 ## Acceptance criteria
 
-- [ ] `src/ui/logtext.rs` exists with the exact public API above; the wiring is done as listed.
-- [ ] One row renderer is shared by the Log panel and compact mode.
-- [ ] The 6 tests above exist under these names and pass; the golden files are regenerated and read.
-- [ ] `bash .devbox/check` is green.
+- [x] `src/ui/logtext.rs` exists with the exact public API above; the wiring is done as listed.
+- [x] One row renderer is shared by the Log panel and compact mode.
+- [x] The 6 tests above exist under these names and pass; the golden files are regenerated and read.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) the Overview log reads at a glance on the aibox.

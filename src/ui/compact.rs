@@ -6,9 +6,7 @@ use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
 
 use crate::app::App;
-use crate::collect::logs::{Level, LogLine};
-use crate::ui::panels::{self, Ctx};
-use crate::ui::text::fit;
+use crate::ui::panels::{self, Ctx, log};
 use crate::ui::theme::{Role, Theme};
 
 /// The compact tier: no frames, one line per subsystem, then the log.
@@ -111,7 +109,7 @@ fn render_logs(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
         if y >= area.y + area.height {
             break;
         }
-        render_line(line, theme, area.x, y, area.width, buf);
+        log::render_line(line, app.log_view.raw, theme, area.x, y, area.width, buf);
     }
 }
 
@@ -120,22 +118,4 @@ fn live_or_avg_speed(app: &App) -> Option<f64> {
     let m = app.llama.as_ref()?.active.first()?;
     let generating = m.slots.first().map(|s| s.is_processing && s.n_decoded > 0).unwrap_or(false);
     if generating { m.live_gen_tps } else { m.metrics.as_ref().and_then(|m| m.avg_gen_tps()) }
-}
-
-/// One log row: `<time> ` in `Role::Dim` (nothing without a time), then the text coloured by level,
-/// cut to `width` columns.
-fn render_line(line: &LogLine, theme: &Theme, x: u16, y: u16, width: u16, buf: &mut Buffer) {
-    let role = match line.level {
-        Level::Info => Role::Text,
-        Level::Warn => Role::Warning,
-        Level::Error => Role::Critical,
-    };
-    let time_w = line.time.as_ref().map(|t| t.chars().count() + 1).unwrap_or(0) as u16;
-    let text_w = width.saturating_sub(time_w);
-    let mut spans = Vec::new();
-    if let Some(t) = &line.time {
-        spans.push(Span::styled(format!("{t} "), theme.fg(Role::Dim)));
-    }
-    spans.push(Span::styled(fit(&line.text, text_w as usize), theme.fg(role)));
-    buf.set_line(x, y, &Line::from(spans), width);
 }

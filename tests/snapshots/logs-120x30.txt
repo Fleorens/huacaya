@@ -2,23 +2,23 @@
 │ 1 Overview   2 Models   3 Logs   4 System                                                                  ? help  q │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭ Log ─────────────────────────────────────────────────────────────────────────────────────────────────────── follow ● ╮
-│10:00:08 slot launch_slot_: id  0 | task 9000 | processing task, is_child = 0                                         │
-│10:00:09 slot update_slots: id  0 | task 9000 | prompt processing, n_tokens = 2048, progress = 0.25, t = 1.00 s / 890…│
-│10:00:10 slot update_slots: id  0 | task 9000 | prompt processing, n_tokens = 4096, progress = 0.50, t = 2.00 s / 890…│
-│10:00:11 slot update_slots: id  0 | task 9000 | prompt processing, n_tokens = 6144, progress = 0.75, t = 3.00 s / 890…│
-│10:00:12 slot print_timing: id  0 | task 9000 | prompt eval time =    9195.00 ms /  8192 tokens (    1.12 ms per toke…│
-│10:00:15 slot print_timing: id  0 | task 9000 | n_gen = 156, tg =  52.10 t/s, tg_3s =  53.00 t/s                      │
-│10:00:18 slot print_timing: id  0 | task 9000 | n_gen = 312, tg =  52.10 t/s, tg_3s =  53.00 t/s                      │
-│10:00:21 slot print_timing: id  0 | task 9000 | n_gen = 468, tg =  52.10 t/s, tg_3s =  53.00 t/s                      │
-│10:00:24 slot print_timing: id  0 | task 9000 | n_gen = 624, tg =  52.10 t/s, tg_3s =  53.00 t/s                      │
-│10:00:27 slot print_timing: id  0 | task 9000 | n_gen = 780, tg =  52.10 t/s, tg_3s =  53.00 t/s                      │
-│10:00:30 slot print_timing: id  0 | task 9000 | n_gen = 936, tg =  52.10 t/s, tg_3s =  53.00 t/s                      │
-│10:00:32 slot print_timing: id  0 | task 9000 |        eval time =   20000.00 ms /  1040 tokens (   19.23 ms per toke…│
-│10:00:32 slot print_timing: id  0 | task 9000 |       total time =   29195.00 ms /  9232 tokens                       │
-│10:00:32 slot print_timing: id  0 | task 9000 | draft acceptance = 0.70000 (  728 accepted /  1040 generated), mean l…│
-│10:00:32 slot      release: id  0 | task 9000 | stop processing: n_tokens = 9232, truncated = 0                       │
-│10:00:32 srv  log_server_r: request: POST /v1/chat/completions 192.168.1.42 200                                       │
-│10:00:32 srv  update_slots: all slots are idle                                                                        │
+│10:00:08 #9000 processing task, is_child = 0                                                                          │
+│10:00:09 #9000 prompt 2048 tok  25 %  890 t/s                                                                         │
+│10:00:10 #9000 prompt 4096 tok  50 %  890 t/s                                                                         │
+│10:00:11 #9000 prompt 6144 tok  75 %  890 t/s                                                                         │
+│10:00:12 #9000 prompt 8192 tok  891 t/s                                                                               │
+│10:00:15 #9000 n_gen 156  tg 52.1 t/s  3s 53.0 t/s                                                                    │
+│10:00:18 #9000 n_gen 312  tg 52.1 t/s  3s 53.0 t/s                                                                    │
+│10:00:21 #9000 n_gen 468  tg 52.1 t/s  3s 53.0 t/s                                                                    │
+│10:00:24 #9000 n_gen 624  tg 52.1 t/s  3s 53.0 t/s                                                                    │
+│10:00:27 #9000 n_gen 780  tg 52.1 t/s  3s 53.0 t/s                                                                    │
+│10:00:30 #9000 n_gen 936  tg 52.1 t/s  3s 53.0 t/s                                                                    │
+│10:00:32 #9000 gen 1040 tok  52.0 t/s                                                                                 │
+│10:00:32 #9000 total time = 29195.00 ms / 9232 tokens                                                                 │
+│10:00:32 #9000 draft 728/1040 accepted  70 %                                                                          │
+│10:00:32 #9000 released  ctx 9.2K                                                                                     │
+│10:00:32 POST /v1/chat/completions 200                                                                                │
+│10:00:32 all slots are idle                                                                                           │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
@@ -27,4 +27,4 @@
 │                                                                                                                      │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-follow ●   level all   filter none   proxy hidden   17 of 18 lines       f follow  / filter  e level  x proxy  ↑↓ scroll
+follow ●   level all   filter none   proxy hidden   lines compact   17 of 18 lines
