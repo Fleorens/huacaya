@@ -20,7 +20,7 @@ use crate::ui::theme::Role;
 /// `layout.header`, then each present panel on its rectangle, with `Ctx { graphs: layout.graphs, ..*ctx }`.
 /// The Models screen draws `screens::models::render` on the body under the header instead of the panels;
 /// the Logs screen shows the log full screen on the body (the header says which tab is selected); the
-/// System screen shows the Overview body too. On every tier except `TooSmall`, when `app.help`, the help
+/// System screen draws `screens::system::render` on the body. On every tier except `TooSmall`, when `app.help`, the help
 /// overlay is drawn over the whole frame, last. Never panics, whatever the size (0 × 0 included).
 pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let tier = layout::tier(area.width, area.height);
@@ -28,37 +28,29 @@ pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         Tier::TooSmall => draw_too_small(ctx, area, buf),
         Tier::Compact => compact::render(app, ctx, area, buf),
         _ => {
-            // The Models screen shows the same header, then its own table + details on the body.
-            if app.screen == Screen::Models {
-                let layout = layout::overview(area);
-                let h = layout.header.height;
-                let body =
-                    Rect::new(area.x, area.y.saturating_add(h), area.width, area.height.saturating_sub(h));
-                let ctx = Ctx { theme: ctx.theme, graphs: layout.graphs, clock: ctx.clock };
-                header::render(app, &ctx, layout.header, buf);
-                screens::models::render(app, &ctx, body, buf);
-                return;
-            }
             let layout = layout::overview(area);
             let ctx = Ctx { theme: ctx.theme, graphs: layout.graphs, clock: ctx.clock };
             header::render(app, &ctx, layout.header, buf);
-            // The Logs screen shows the log full screen on the body; every other screen shows the
-            // Overview panels.
-            if app.screen == Screen::Logs {
-                let body = Rect::new(
-                    area.x,
-                    area.y.saturating_add(layout.header.height),
-                    area.width,
-                    area.height.saturating_sub(layout.header.height),
-                );
-                screens::logs::render(app, &ctx, body, buf);
-            } else {
-                draw_panel(app, &ctx, layout.model, buf, model::render);
-                draw_panel(app, &ctx, layout.request, buf, request::render);
-                draw_panel(app, &ctx, layout.gpu, buf, gpu::render);
-                draw_panel(app, &ctx, layout.cpu, buf, cpu::render);
-                draw_panel(app, &ctx, layout.memory, buf, memory::render);
-                draw_panel(app, &ctx, layout.log, buf, log::render);
+            // Models, Logs and System draw their own screen on the body under the header; Overview
+            // draws its panels.
+            let body = Rect::new(
+                area.x,
+                area.y.saturating_add(layout.header.height),
+                area.width,
+                area.height.saturating_sub(layout.header.height),
+            );
+            match app.screen {
+                Screen::Models => screens::models::render(app, &ctx, body, buf),
+                Screen::Logs => screens::logs::render(app, &ctx, body, buf),
+                Screen::System => screens::system::render(app, &ctx, body, buf),
+                _ => {
+                    draw_panel(app, &ctx, layout.model, buf, model::render);
+                    draw_panel(app, &ctx, layout.request, buf, request::render);
+                    draw_panel(app, &ctx, layout.gpu, buf, gpu::render);
+                    draw_panel(app, &ctx, layout.cpu, buf, cpu::render);
+                    draw_panel(app, &ctx, layout.memory, buf, memory::render);
+                    draw_panel(app, &ctx, layout.log, buf, log::render);
+                }
             }
         }
     }
