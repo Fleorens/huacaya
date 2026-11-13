@@ -44,6 +44,12 @@ pub struct LogView {
     pub editing_filter: bool,
     /// `true`: log lines are shown as printed; `false`: in compact form.
     pub raw: bool,
+    /// Only the lines of this task are visible; `None`: every task.
+    pub task: Option<i64>,
+    /// `true`: the Tasks list has the keys (`Up`/`Down`/`Enter`); the global keys still come first.
+    pub tasks_focus: bool,
+    /// Index into `log_tasks(&app.logs, 50)` while the Tasks list is focused.
+    pub task_selected: usize,
     pub level: LevelFilter,
     /// `false`: lines whose event is `LogEvent::Proxy` are hidden. The router prints two of them for
     /// every polling round of llamatop itself, so they are noise by default.

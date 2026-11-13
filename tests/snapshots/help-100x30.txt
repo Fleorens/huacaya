@@ -19,8 +19,8 @@
 │10:00:21 #9000 n_gen │e              level filter: all, warnings, errors    │                     │
 │10:00:24 #9000 n_gen │x              show / hide the router's proxy lines   │                     │
 │10:00:27 #9000 n_gen │r              raw / compact log lines                │                     │
-│10:00:30 #9000 n_gen ╰──────────────────────────────────────────────────────╯                     │
-│10:00:32 #9000 gen 1040 tok  52.0 t/s                                                             │
+│10:00:30 #9000 n_gen │t              Logs: tasks list, Enter shows one task │                     │
+│10:00:32 #9000 gen 10╰──────────────────────────────────────────────────────╯                     │
 │10:00:32 #9000 total time = 29195.00 ms / 9232 tokens                                             │
 │10:00:32 #9000 draft 728/1040 accepted  70 %                                                      │
 │10:00:32 #9000 released  ctx 9.2K                                                                 │

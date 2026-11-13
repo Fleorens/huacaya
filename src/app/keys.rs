@@ -115,8 +115,61 @@ pub fn handle(app: &mut App, key: KeyEvent) {
         return;
     }
 
-    // 5. The Logs screen: scroll, follow, filters.
+    // 5. The Logs screen: scroll, follow, filters, tasks.
     if app.screen == Screen::Logs {
+        // `t` toggles the tasks focus, from anywhere on the screen.
+        if key.code == KeyCode::Char('t') {
+            app.log_view.tasks_focus = !app.log_view.tasks_focus;
+            return;
+        }
+
+        // While focused on the tasks list, the navigation keys and Enter move the selection or filter on
+        // the task; every other key (Esc included) falls through to the log handling below.
+        if app.log_view.tasks_focus {
+            let tasks = crate::app::log_tasks::log_tasks(app.logs.iter(), 50);
+            // The list changes as lines arrive or leave the buffer: keep the index inside it.
+            app.log_view.task_selected = app.log_view.task_selected.min(tasks.len().saturating_sub(1));
+            let handled = match key.code {
+                KeyCode::Up => {
+                    if !tasks.is_empty() {
+                        app.log_view.task_selected = app.log_view.task_selected.saturating_sub(1);
+                    }
+                    true
+                }
+                KeyCode::Home => {
+                    if !tasks.is_empty() {
+                        app.log_view.task_selected = 0;
+                    }
+                    true
+                }
+                KeyCode::Down => {
+                    if !tasks.is_empty() {
+                        app.log_view.task_selected = (app.log_view.task_selected + 1).min(tasks.len() - 1);
+                    }
+                    true
+                }
+                KeyCode::End => {
+                    if !tasks.is_empty() {
+                        app.log_view.task_selected = tasks.len() - 1;
+                    }
+                    true
+                }
+                KeyCode::Enter => {
+                    if let Some(summary) = tasks.get(app.log_view.task_selected) {
+                        let task = summary.task;
+                        app.log_view.task = if app.log_view.task == Some(task) { None } else { Some(task) };
+                        app.log_view.scroll = 0;
+                        app.log_view.follow = true;
+                    }
+                    true
+                }
+                _ => false,
+            };
+            if handled {
+                return;
+            }
+        }
+
         // Compute the cap before mutating `log_view`, so the borrow checker is happy.
         let max = app.visible_logs().len().saturating_sub(1);
         match key.code {
@@ -156,6 +209,8 @@ pub fn handle(app: &mut App, key: KeyEvent) {
                 app.log_view.follow = true;
             }
             KeyCode::Esc => {
+                // Esc (focused or not) clears the task filter too.
+                app.log_view.task = None;
                 app.log_view.filter.clear();
                 app.log_view.scroll = 0;
                 app.log_view.follow = true;

@@ -3,6 +3,7 @@
 
 pub mod agents;
 pub mod logs;
+pub mod logs_side;
 pub mod models;
 pub mod models_details;
 pub mod models_details_panels;

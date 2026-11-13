@@ -12,13 +12,13 @@ use crate::ui::theme::{Role, Theme};
 
 /// The help overlay, centred in `area`, drawn over whatever is there.
 ///
-/// A box `min(area.width, 56)` × `min(area.height, 15)`, centred; `Clear` first so it is not
+/// A box `min(area.width, 56)` × `min(area.height, 16)`, centred; `Clear` first so it is not
 /// see-through, then `frame::panel("Help", Role::BorderFocused, true, theme)` and the key list: each
 /// key (`Role::Server`, padded to 15) then its action (`Role::Text`). Rows that do not fit are dropped
 /// from the bottom. Never panics.
 pub fn render(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
     let w = area.width.min(56);
-    let h = area.height.min(15);
+    let h = area.height.min(16);
     let box_area = Rect::new(area.x + (area.width - w) / 2, area.y + (area.height - h) / 2, w, h);
     Clear.render(box_area, buf);
     let panel = panel("Help", Role::BorderFocused, true, theme);
@@ -42,7 +42,7 @@ pub fn render(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
     }
 }
 
-/// The 13 help rows: the keys then the action. The refresh row carries the current interval, in seconds
+/// The 14 help rows: the keys then the action. The refresh row carries the current interval, in seconds
 /// with one decimal (`interval_ms / 1000`).
 fn help_rows(app: &App) -> Vec<(&'static str, String)> {
     let refresh = format!("faster / slower refresh (now {:.1} s)", app.interval_ms as f64 / 1000.0);
@@ -60,5 +60,6 @@ fn help_rows(app: &App) -> Vec<(&'static str, String)> {
         ("e", "level filter: all, warnings, errors".into()),
         ("x", "show / hide the router's proxy lines".into()),
         ("r", "raw / compact log lines".into()),
+        ("t", "Logs: tasks list, Enter shows one task".into()),
     ]
 }

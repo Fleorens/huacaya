@@ -59,6 +59,8 @@ today. Otherwise:
 
 - A left column of 32 columns, from the top: **Levels** (6 rows), **Filter** (7 rows), **Tasks** (the rest).
   The right part is the **Log** panel. The last row of the area is the hint row.
+  A body too short for all three (12 to 16 rows) draws only the sections that fit whole: Levels always,
+  Filter from 13 rows, Tasks from 16; the keys work as usual (decided by Florian on 2026-11-13).
 - **Levels** — `frame::panel("Levels", Role::Server, false, …)`; counts over **all** of `app.logs`:
   `● info   <n>` (`Text`), `▲ warn   <n>` (`Warning`), `✖ error  <n>` (`Critical`), each `n` written with
   `text::group_thousands` right-aligned to 7 columns; then `  proxy  <n>  hidden` (or `shown`, by
@@ -116,7 +118,7 @@ today. Otherwise:
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented.
-- [ ] The new and updated tests pass; golden files regenerated and read.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented.
+- [x] The new and updated tests pass; golden files regenerated and read.
+- [x] `bash .devbox/check` is green.
 - [ ] On screen (Florian): the Logs screen looks like the validated mockup at 140 × 40.
