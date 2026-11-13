@@ -135,7 +135,7 @@ demo.
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented; screens 1–4 and every existing golden are unchanged.
-- [ ] Every earlier test passes; the tests above pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented; screens 1–4 and every existing golden are unchanged.
+- [x] Every earlier test passes; the tests above pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) `llamatop --demo`, key `5`: the map moves on its own, cycle after cycle.
