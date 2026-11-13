@@ -160,7 +160,7 @@ Some(0.617) }`. Render at `now_ms = 1794586722300` into an 86 × 23 buffer, `Tru
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented.
-- [ ] Every earlier test passes; the tests above pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented.
+- [x] Every earlier test passes; the tests above pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) the map looks like the validated mockup.

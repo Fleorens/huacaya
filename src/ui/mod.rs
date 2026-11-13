@@ -3,6 +3,7 @@
 pub mod big;
 pub mod compact;
 pub mod dense;
+pub mod dots;
 pub mod draw;
 pub mod frame;
 pub mod gauge;
@@ -11,6 +12,7 @@ pub mod help;
 pub mod keybar;
 pub mod layout;
 pub mod logtext;
+pub mod map;
 pub mod panels;
 pub mod screens;
 pub mod snapshot;
