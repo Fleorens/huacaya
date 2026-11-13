@@ -51,6 +51,6 @@ No new test: the existing ones are the proof, in particular `tests/dense.rs` and
 
 ## Acceptance criteria
 
-- [ ] `src/ui/dense.rs` has no copy of `ctx_used`, `ctx_ratio`, `speed` or `generating`.
-- [ ] Every test passes unchanged; no golden file changes.
-- [ ] `bash .devbox/check` is green.
+- [x] `src/ui/dense.rs` has no copy of `ctx_used`, `ctx_ratio`, `speed` or `generating`.
+- [x] Every test passes unchanged; no golden file changes.
+- [x] `bash .devbox/check` is green.

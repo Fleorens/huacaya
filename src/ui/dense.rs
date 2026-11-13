@@ -9,16 +9,15 @@ use ratatui::widgets::Widget;
 use crate::app::App;
 use crate::app::clock;
 use crate::collect::gpu::GpuSample;
-use crate::collect::llama::SlotInfo;
 use crate::collect::llama_poll::ActiveModel;
 use crate::collect::opencode::{Step, StepKind};
 use crate::ui::gauge::Gauge;
 use crate::ui::graph::BrailleGraph;
 use crate::ui::panels::Ctx;
 use crate::ui::panels::log::render_line;
-use crate::ui::panels::model::{badge_state, no_model_message};
+use crate::ui::panels::model::{badge_state, ctx_ratio, ctx_used, no_model_message, speed};
 use crate::ui::screens::agents::step_glyph;
-use crate::ui::text::{bytes_pair, fit, fit_groups, pct, temp, tps};
+use crate::ui::text::{bytes_pair, fit, fit_groups, pct, temp};
 use crate::ui::theme::{GPU_JUNCTION_THRESHOLDS, PCT_THRESHOLDS, Role, Severity, Theme, severity};
 use crate::util::{count, short_model_name};
 
@@ -372,27 +371,6 @@ fn sev_style(theme: &Theme, sev: Severity) -> Style {
 
 fn active_model(app: &App) -> Option<&ActiveModel> {
     app.llama.as_ref().and_then(|l| l.active.first())
-}
-
-fn ctx_used(slot: Option<&SlotInfo>) -> (u64, u64) {
-    match slot {
-        Some(s) => (s.n_prompt_tokens.saturating_add(s.n_decoded), s.n_ctx),
-        None => (0, 0),
-    }
-}
-
-fn ctx_ratio(slot: Option<&SlotInfo>) -> f64 {
-    let (used, n_ctx) = ctx_used(slot);
-    if n_ctx == 0 { 0.0 } else { used as f64 / n_ctx as f64 }
-}
-
-fn speed(m: &ActiveModel) -> String {
-    let value = if generating(m) { m.live_gen_tps } else { m.metrics.as_ref().and_then(|m| m.avg_gen_tps()) };
-    tps(value)
-}
-
-fn generating(m: &ActiveModel) -> bool {
-    m.slots.first().is_some_and(|s| s.is_processing && s.n_decoded > 0)
 }
 
 fn graph_width(ctx: &Ctx, remaining: u16) -> Option<u16> {
