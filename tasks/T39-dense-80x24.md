@@ -97,7 +97,7 @@ the golden files (`UPDATE_GOLDEN=1`), read every one.
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented.
-- [ ] The new and updated tests pass; golden files regenerated and read.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented.
+- [x] The new and updated tests pass; golden files regenerated and read.
+- [x] `bash .devbox/check` is green.
 - [ ] On screen (Florian): the Overview at 80 × 24 looks like the validated mockup.

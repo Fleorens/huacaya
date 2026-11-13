@@ -6,6 +6,7 @@ use ratatui::text::{Line, Span};
 
 use crate::app::{App, Screen};
 use crate::ui::compact;
+use crate::ui::dense;
 use crate::ui::help;
 use crate::ui::keybar;
 use crate::ui::layout::{self, Tier};
@@ -45,6 +46,7 @@ pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                 Screen::Logs => screens::logs::render(app, &ctx, body, buf),
                 Screen::System => screens::system::render(app, &ctx, body, buf),
                 Screen::Agents => screens::agents::render(app, &ctx, body, buf),
+                _ if tier == Tier::Narrow => dense::render(app, &ctx, body, buf),
                 _ => {
                     draw_panel(app, &ctx, layout.model, buf, model::render);
                     draw_panel(app, &ctx, layout.request, buf, request::render);

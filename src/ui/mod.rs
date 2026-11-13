@@ -2,6 +2,7 @@
 
 pub mod big;
 pub mod compact;
+pub mod dense;
 pub mod draw;
 pub mod frame;
 pub mod gauge;

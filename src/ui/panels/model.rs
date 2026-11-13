@@ -243,6 +243,21 @@ fn render_small(app: &App, m: &ActiveModel, theme: &Theme, inner: Rect, buf: &mu
 }
 
 /// Render the band with no active model: the Loading name (if any), the badge and a message.
+/// Message shown on the model panel without an active model.
+pub(crate) fn no_model_message(app: &App) -> String {
+    match app.llama.as_ref() {
+        None => "waiting for the first poll…".to_string(),
+        Some(llama) => match &llama.health {
+            Health::Down(msg) => msg.clone(),
+            Health::Unauthorized => "set LLAMA_API_KEY or --api-key-file".to_string(),
+            Health::Ok => match llama.models.iter().find(|m| m.state == ModelState::Loading) {
+                Some(m) => format!("loading {}…", short_model_name(&m.id).0),
+                None => format!("no model loaded — {} available", llama.models.len()),
+            },
+        },
+    }
+}
+
 fn render_without_active(app: &App, theme: &Theme, inner: Rect, buf: &mut Buffer) {
     let llama = &app.llama;
 
@@ -263,17 +278,7 @@ fn render_without_active(app: &App, theme: &Theme, inner: Rect, buf: &mut Buffer
     }
 
     // Row 2: the message.
-    let msg: String = match llama.as_ref() {
-        None => "waiting for the first poll…".to_string(),
-        Some(llama) => match &llama.health {
-            Health::Down(msg) => msg.clone(),
-            Health::Unauthorized => "set LLAMA_API_KEY or --api-key-file".to_string(),
-            Health::Ok => match llama.models.iter().find(|m| m.state == ModelState::Loading) {
-                Some(m) => format!("loading {}…", short_model_name(&m.id).0),
-                None => format!("no model loaded — {} available", llama.models.len()),
-            },
-        },
-    };
+    let msg = no_model_message(app);
     let y = inner.y + 2;
     if y < inner.y + inner.height {
         buf.set_line(inner.x, y, &Line::from(Span::styled(msg, theme.fg(Role::Dim))), inner.width);
