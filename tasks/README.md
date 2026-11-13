@@ -140,10 +140,16 @@ page); the model prefixes every command with `cd <worktree> && `.
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
 | T40 | Real OpenCode capture, `compress` fix, `messages-real.json` — by the orchestrator, no sheet | T34 | validée |
-| [T41](T41-activity-model.md) | Activity model: stations, command classification, ids and end times of steps (pure) | T40 | livrée |
-| [T42](T42-live-poller.md) | Poller: whole history once, then a 12-message round every second | T41 | livrée |
-| [T43](T43-map-widget.md) | The map widget: braille dots, stations, spokes, pulses, context ring | T42 | livrée |
-| [T44](T44-agents-map-screen.md) | Agents screen: the map view (`m`), its feed and "now" line | T43 | livrée |
+| [T41](T41-activity-model.md) | Activity model: stations, command classification, ids and end times of steps (pure) | T40 | validée |
+| [T42](T42-live-poller.md) | Poller: whole history once, then a 12-message round every second | T41 | validée |
+| [T43](T43-map-widget.md) | The map widget: braille dots, stations, spokes, pulses, context ring | T42 | validée |
+| [T44](T44-agents-map-screen.md) | Agents screen: the map view (`m`), its feed and "now" line | T43 | validée |
+
+T41–T44 reviewed by the orchestrator on 2026-11-13, with the poller and the map view run end to end against
+the live OpenCode server (`opencode api` as the fetcher): history over every page (424 steps for job #150),
+one light round a second, each under 90 ms. Fixed in the review: real user prompts sit in a top-level `text`
+(the You station stayed at 0); a real model name spilled out of the ring. Not checked yet: the pulses moving
+in a real terminal during a running job (Florian, on screen).
 
 Later cleanup, no sheet yet: `src/ui/dense.rs` (T39) keeps private copies of `speed`, `ctx_used` and
 `ctx_ratio` from `src/ui/panels/model.rs`; once T44 makes the model helpers public, use them there.
