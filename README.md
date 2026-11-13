@@ -86,7 +86,7 @@ systemd unit named `llama-server` (the user needs the `systemd-journal` group). 
 | `--opencode-user` | `opencode` | OpenCode user (`LLAMATOP_OPENCODE_USER`) |
 | `--opencode-password-file` | — | file holding the OpenCode password (`LLAMATOP_OPENCODE_PASSWORD_FILE`) |
 | `--config` | `~/.config/llamatop/config.toml` | the configuration file (`LLAMATOP_CONFIG`) |
-| `--demo` | | generated data, no server needed |
+| `--demo` | | generated data, no server needed; the Agents screen (5) shows a simulated OpenCode session |
 | `--dump` | | one JSON report of every data source, then exit |
 | `--snapshot WxH` | | one frame of the demo on stdout (`--demo-state`, `--screen`, `--ansi`) |
 

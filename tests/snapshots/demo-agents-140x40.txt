@@ -1,0 +1,40 @@
+ llamatop  gpu-box  up 4d 3h  ● server ok  b12151          1 Overview   2 Models   3 Logs   4 System   5 Agents ●           10:21:03  ? help
+╭ Queue ───────────────────────────────── opencode ╮╭ #42 · T12-demo-feature ─────────────────────────────────────────── m list · follow ● ╮
+│  #     state        age    task                  ││                                                                                      │
+│▶ 42    ◉ running    10m 24s T12-demo-feature     ││                                         You 1                                        │
+│  41    ✓ done       1h 24s T11-demo-data         ││                                           ●                                          │
+│  -     ✖ failed     1d 24s Refactor the parser   ││                                           ⡆                                          │
+│                                                  ││                                           ⡇                                          │
+│                                                  ││                Tools 1 ●⢀                 ⡇                ⢀ ● Model 3               │
+│                                                  ││                          ⠉⠢⣀            ⣀⣀⣀⣀⡀           ⢀⡠⠊⠁                         │
+│                                                  ││                             ⠉⠢⢄⡀    ⣠⠴⠚⠉⠁   ⠉⠙⠲⢤⡀    ⣀⠤⠊⠁                            │
+│                                                  ││                                ⠈⠒ ⢠⠞⠁           ⠙⢦ ⠐⠊                                │
+│                                                  ││                                  ⢠⠏              ⠈⢧                                  │
+│                                                  ││                                  ⡞  Coder-35B-A3B ⠘⡆                                 │
+│                                                  ││       Agents 0 ○ ⠐ ⠂⠐ ⠂⠐ ⠂⠐ ⠂⠐ ⠂ ⡇    49.3 t/s     ⡇ ⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒ ● Files 5 ✕1   │
+│                                                  ││                                  ⢳     ctx 32%    ⢰⠃                                 │
+│                                                  ││                                  ⠈⢧              ⢠⠏                                  │
+│                                                  ││                               ⢀⡠⠒ ⠈⠳⣄          ⢀⡴⠋ ⠐⠢⣀                               │
+│                                                  ││                            ⣀⠤⠊⠁     ⠈⠙⠲⠤⣄⣀⣀⣀⡤⠴⠚⠉      ⠉⠢⢄⡀                           │
+│                                                  ││                         ⢀⠤⠊               ⡆              ⠈⠢⢄                         │
+│                                                  ││                  Web 1 ●                  ⣧                  ● Shell 1               │
+│                                                  ││                                           ⠃                                          │
+│                                                  ││                                           ◉                                          │
+│                                                  ││                                    Checks 1 ◷ 0:00                                   │
+│                                                  ││                                                                                      │
+│                                                  ││──────────────────────────────────────────────────────────────────────────────────────│
+│                                                  ││20:00:00 ❯ you    Execute tasks/T12-demo-feature.md                                 0s│
+│                                                  ││20:00:01 ◉ think  Read the sheet first, then the cited sections.                    4s│
+│                                                  ││20:00:05 ▸ read   tasks/T12-demo-feature.md                                         0s│
+│                                                  ││20:00:06 ◉ think  The renderer lives in src/ui; find its entry point.               3s│
+│                                                  ││20:00:09 ⌕ grep   pub fn render in src/ui                                           0s│
+│                                                  ││20:00:10 ▸ read   src/missing.rs  File not found                                    0s│
+│                                                  ││20:00:11 • webfetch webfetch  docs.rs/ratatui                                       2s│
+│                                                  ││20:00:14 ◉ think  Plan: one widget, one test, then the check.                       4s│
+│                                                  ││20:00:18 • todowrite todowrite  3 todos                                             0s│
+│                                                  ││20:00:19 ✎ edit   src/ui/demo.rs  +12 −3                                            0s│
+│                                                  ││20:00:20 ✚ write  tests/demo.rs  24 lines                                           0s│
+│                                                  ││20:00:21 $ shell  cargo fmt                                                         2s│
+│                                                  ││20:00:24 $ shell  cargo test --test demo  test result: FAILED. 7 passed; 1 failed   0s│
+│3 sessions · 1 running                            ││◉ Checks  cargo test --test demo  0:00   in 61.9K  out 18.1K · 10m 24s   step 13      │
+╰──────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────────────╯

@@ -2,6 +2,7 @@
 
 pub mod clock;
 pub mod demo;
+pub mod demo_agents;
 mod demo_log;
 pub mod keys;
 pub mod log_tasks;
