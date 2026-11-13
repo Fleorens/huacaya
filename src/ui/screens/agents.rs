@@ -129,7 +129,7 @@ fn render_queue(app: &App, snapshot: &OpenCodeSnapshot, theme: &Theme, area: Rec
 }
 
 /// The queue header of the sheet; each data cell below is followed by one space so columns never touch.
-const QUEUE_HEADER: &str = "  #     state        age   task";
+const QUEUE_HEADER: &str = "  #     state        age    task";
 
 /// One queue row: the marker (reversed only on the `▶` of the selected row), the job, state, age and
 /// title, each cut and padded to its column, the whole row cut to the panel body.
@@ -217,7 +217,7 @@ fn render_session(
     let rows: Vec<Line> = vec![
         Line::from(vec![
             Span::styled("model   ".to_string(), theme.fg(Role::Dim)),
-            Span::styled(format!("{model}  · {agent}"), theme.fg(Role::Text)),
+            Span::styled(format!("{model} · {agent}"), theme.fg(Role::Text)),
         ]),
         Line::from(vec![
             Span::styled("tokens  ".to_string(), theme.fg(Role::Dim)),

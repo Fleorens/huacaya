@@ -12,7 +12,7 @@ use crate::collect::gpu::GpuSample;
 use crate::ui::frame::panel;
 use crate::ui::graph::BrailleGraph;
 use crate::ui::panels::{Ctx, gauge_row};
-use crate::ui::text::{bytes_pair, pct, temp};
+use crate::ui::text::{bytes_pair, fit_groups, pct, temp};
 use crate::ui::theme::{
     GPU_JUNCTION_THRESHOLDS, PCT_THRESHOLDS, Role, Severity, Theme, VRAM_THRESHOLDS, hot_mark, severity,
 };
@@ -106,7 +106,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
             // reports junction (marked when hot), edge and DRAM temperature.
             let y = y0 + 2;
             if y < inner.bottom() {
-                let line = temp_line(g, theme);
+                let line = fit_groups(temp_groups(g, theme), inner.width as usize);
                 buf.set_line(inner.x, y, &line, inner.width);
             }
             // Row 4: power, fan and core clock.
@@ -123,13 +123,14 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                 };
                 let sclk =
                     g.sclk_mhz.map(|v| format!("{:.0} MHz", v)).unwrap_or_else(|| "n/a MHz".to_string());
-                let line = format!(
-                    "power {} / {}   fan {}   clk {sclk}",
-                    watts(g.power_w),
-                    watts(g.power_cap_w),
-                    fan
-                );
-                buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
+                let text = |t: String| Span::styled(t, theme.fg(Role::Text));
+                // Clock first, then fan, are dropped whole when the column is narrow.
+                let groups = vec![
+                    vec![text(format!("power {} / {}", watts(g.power_w), watts(g.power_cap_w)))],
+                    vec![text(format!("   fan {fan}"))],
+                    vec![text(format!("   clk {sclk}"))],
+                ];
+                buf.set_line(inner.x, y, &fit_groups(groups, inner.width as usize), inner.width);
             }
             // Rows 5–6: extra detail, shown only when the panel is tall enough (inner height >= 10).
             if inner.height >= 10 {
@@ -170,39 +171,31 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     }
 }
 
-/// The temperature line for `g`: NVIDIA reports only the edge, shown plainly as `temp  <edge>` marked
-/// when hot; AMD reports junction (marked when hot, coloured by severity), edge and DRAM temperature,
-/// each part only when known, as `temp  <j> junction  <e> edge  <m> mem`.
-fn temp_line(g: &GpuSample, theme: &Theme) -> Line<'static> {
-    // NVIDIA reports only the edge temperature, shown plainly as `temp  <edge>` marked when hot.
-    if g.temp_junction_c.is_none() {
-        let edge = g.temp_edge_c;
-        let sev = edge
-            .map(|e| severity(e, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
-            .unwrap_or(Severity::Normal);
-        return Line::from(vec![
-            Span::styled("temp  ", theme.fg(Role::Dim)),
-            Span::styled(format!("{}{}", temp(edge), hot_mark(sev)), sev_style(theme, sev)),
-        ]);
-    }
-    let junction = g.temp_junction_c;
-    let sev = junction
-        .map(|j| severity(j, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
+/// The temperature row for `g`, as groups for `fit_groups` (mem, then edge, dropped when narrow):
+/// NVIDIA reports only the edge, shown plainly as `temp  <edge>` marked when hot; AMD reports junction
+/// (marked when hot, coloured by severity), edge and DRAM temperature, each part only when known, as
+/// `temp  <j> junction  <e> edge  <m> mem`.
+fn temp_groups(g: &GpuSample, theme: &Theme) -> Vec<Vec<Span<'static>>> {
+    let main = g.temp_junction_c.or(g.temp_edge_c);
+    let sev = main
+        .map(|t| severity(t, GPU_JUNCTION_THRESHOLDS.0, GPU_JUNCTION_THRESHOLDS.1))
         .unwrap_or(Severity::Normal);
-    let mut spans: Vec<Span<'static>> = vec![
+    let mut first = vec![
         Span::styled("temp  ", theme.fg(Role::Dim)),
-        Span::styled(format!("{}{}", temp(junction), hot_mark(sev)), sev_style(theme, sev)),
-        Span::styled(" junction  ", theme.fg(Role::Text)),
+        Span::styled(format!("{}{}", temp(main), hot_mark(sev)), sev_style(theme, sev)),
     ];
+    if g.temp_junction_c.is_none() {
+        return vec![first];
+    }
+    first.push(Span::styled(" junction", theme.fg(Role::Text)));
+    let mut groups = vec![first];
     if let Some(e) = g.temp_edge_c {
-        spans.push(Span::styled(temp(Some(e)), theme.fg(Role::Text)));
-        spans.push(Span::styled(" edge  ", theme.fg(Role::Text)));
+        groups.push(vec![Span::styled(format!("  {} edge", temp(Some(e))), theme.fg(Role::Text))]);
     }
     if let Some(m) = g.temp_mem_c {
-        spans.push(Span::styled(temp(Some(m)), theme.fg(Role::Text)));
-        spans.push(Span::styled(" mem", theme.fg(Role::Text)));
+        groups.push(vec![Span::styled(format!("  {} mem", temp(Some(m))), theme.fg(Role::Text))]);
     }
-    Line::from(spans)
+    groups
 }
 
 /// The style for a temperature severity: Normal is plain text, Warning/Critical the accent colour.

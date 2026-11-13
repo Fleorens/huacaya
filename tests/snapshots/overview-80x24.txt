@@ -1,7 +1,7 @@
  llamatop  gpu-box  up 4d 3h  ● server ok  b12151      1 Overview  2 3 4 5
 ╭ Model ───────────────────────────────────────────────────────────────────────╮
 │Cyber-Tiel-Coder-35B-A3B  Q4_K_M        49.3 t/s now                          │
-│◉ GENERATING  task #9000 · 0s           prompt 591 t/s   cache 98 %   draft 64│
+│◉ GENERATING  task #9000 · 0s           prompt 591 t/s   cache 98 %           │
 │draft-mtp · n-cpu-moe 21 · ngl 99       ctx  █████▌░░░░░░░░░░░  63.8K / 196.6K│
 │                                        req  1 running · 0 queued             │
 ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -21,4 +21,4 @@
 │10:00:32 POST /v1/chat/completions 200                                        │
 │10:00:32 all slots are idle                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-q quit · ? help · p pause · +/- refresh 1.0 s · / filter · e level · r raw · x p
+q quit · ? help · p pause · +/- refresh 1.0 s · / filter · e level · r raw

@@ -1,5 +1,6 @@
-//! Small text helpers shared by every panel: number, percentage, temperature, truncation and a
-//! bytes pair. Pure, no I/O — exercised by `tests/panels_model.rs` and `tests/tui2_layout.rs`.
+//! Small text helpers shared by every panel: number, percentage, temperature, truncation, a bytes
+//! pair and whole-group fitting. Pure, no I/O — exercised by `tests/panels_model.rs` and
+//! `tests/tui2_layout.rs`.
 
 /// Token count with a thin grouping, a space every three digits: `0`, `999`, `1 043`, `1 234 567`.
 pub fn group_thousands(n: u64) -> String {
@@ -71,4 +72,21 @@ pub fn bytes_pair(used: u64, total: u64) -> String {
         if i == 0 { n.to_string() } else { format!("{:.1}", n as f64 / divisor) }
     };
     format!("{}/{} {}", fmt(used), fmt(total), UNITS[i])
+}
+
+/// The groups of spans that fit in `width`, in order, stopping at the first one that does not: a row
+/// drops its least important parts whole instead of being cut mid-word. The first group is always kept
+/// (`set_line` cuts it if it alone is too wide).
+pub fn fit_groups<'a>(groups: Vec<Vec<ratatui::text::Span<'a>>>, width: usize) -> ratatui::text::Line<'a> {
+    let mut spans = Vec::new();
+    let mut used = 0;
+    for (i, group) in groups.into_iter().enumerate() {
+        let w: usize = group.iter().map(|s| s.width()).sum();
+        if i > 0 && used + w > width {
+            break;
+        }
+        used += w;
+        spans.extend(group);
+    }
+    ratatui::text::Line::from(spans)
 }

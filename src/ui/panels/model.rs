@@ -14,7 +14,7 @@ use crate::ui::big::big_digits;
 use crate::ui::frame::{badge, panel};
 use crate::ui::graph::BrailleGraph;
 use crate::ui::panels::{Ctx, gauge_row};
-use crate::ui::text::{fit, pct, tps};
+use crate::ui::text::{fit, fit_groups, pct, tps};
 use crate::ui::theme::{PCT_THRESHOLDS, Role, Theme};
 use crate::util::{count, duration, short_model_name};
 
@@ -324,15 +324,15 @@ fn settings_row(info: Option<&ModelInfo>, theme: &Theme, x: u16, y: u16, width: 
 
 /// Row 3 (wide) or row 1 (medium/small): the prompt speed, cache reuse and draft acceptance.
 fn prompt_row(metrics: Option<&Metrics>, theme: &Theme, x: u16, y: u16, width: u16, buf: &mut Buffer) {
-    let line = Line::from(vec![
-        Span::styled("prompt ", theme.fg(Role::Dim)),
-        Span::styled(tps(metrics.and_then(|m| m.avg_prompt_tps())), theme.fg(Role::Text)),
-        Span::styled(" t/s   cache ", theme.fg(Role::Dim)),
-        Span::styled(pct(metrics.and_then(|m| m.cache_reuse_pct())), theme.fg(Role::Text)),
-        Span::styled("   draft ", theme.fg(Role::Dim)),
-        Span::styled(pct(metrics.and_then(|m| m.draft_acceptance_pct())), theme.fg(Role::Text)),
-    ]);
-    buf.set_line(x, y, &line, width);
+    let dim = |t: &'static str| Span::styled(t, theme.fg(Role::Dim));
+    let text = |t: String| Span::styled(t, theme.fg(Role::Text));
+    // Draft, then cache, are dropped whole when the column is narrow.
+    let groups = vec![
+        vec![dim("prompt "), text(tps(metrics.and_then(|m| m.avg_prompt_tps()))), dim(" t/s")],
+        vec![dim("   cache "), text(pct(metrics.and_then(|m| m.cache_reuse_pct())))],
+        vec![dim("   draft "), text(pct(metrics.and_then(|m| m.draft_acceptance_pct())))],
+    ];
+    buf.set_line(x, y, &fit_groups(groups, width as usize), width);
 }
 
 /// The request count row: `req  <running> running · <queued> queued`.

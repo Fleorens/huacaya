@@ -101,20 +101,25 @@ The repository goes public: llamatop must suit any llama.cpp machine, not only t
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T29](T29-auto-mounts.md) | Show the machine's real disks by default | T28 | livrée |
-| [T30](T30-nvidia.md) | NVIDIA GPUs through `nvidia-smi` | T29 | livrée |
+| [T29](T29-auto-mounts.md) | Show the machine's real disks by default | T28 | validée |
+| [T30](T30-nvidia.md) | NVIDIA GPUs through `nvidia-smi` | T29 | validée |
 
 ## Batch 7 — the TUI v2 (mockups validated by Florian on 2026-11-12)
 
 Mockups: the design canvas "llamatop TUI" (Overview, Agents, 80×24, Models, Logs, System).
 
+T29–T35 reviewed by the orchestrator on 2026-11-13. Fixed in the review: rows cut mid-word in narrow columns
+(GPU temperature and power rows, the model band's prompt line, the key bar) now drop their last parts whole
+(`text::fit_groups`); the Agents queue header was one column off its rows. Not checked yet: the OpenCode
+parser against a real OpenCode server (the T34 fixtures were written from its documentation).
+
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T31](T31-tui2-data-widgets.md) | Data and widgets: request history, task timer, CPU name, big digits, level bars | T30 | livrée |
-| [T32](T32-tui2-layout.md) | One-line header, Overview skeleton, Requests table, key bar | T31 | livrée |
-| [T33](T33-tui2-panels.md) | Model band (big digits) and GPU / CPU / Memory panels v2 | T32 | livrée |
-| [T34](T34-opencode-client.md) | OpenCode client, `[opencode]` settings, setup question | T33 | livrée |
-| [T35](T35-agents-screen.md) | Agents screen (5) | T34 | livrée |
+| [T31](T31-tui2-data-widgets.md) | Data and widgets: request history, task timer, CPU name, big digits, level bars | T30 | validée |
+| [T32](T32-tui2-layout.md) | One-line header, Overview skeleton, Requests table, key bar | T31 | validée |
+| [T33](T33-tui2-panels.md) | Model band (big digits) and GPU / CPU / Memory panels v2 | T32 | validée |
+| [T34](T34-opencode-client.md) | OpenCode client, `[opencode]` settings, setup question | T33 | validée |
+| [T35](T35-agents-screen.md) | Agents screen (5) | T34 | validée |
 | T36 | Models v2 | T33 | outlined |
 | T37 | Logs v2 | T33 | outlined |
 | T38 | System v2 | T33 | outlined |
