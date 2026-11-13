@@ -114,8 +114,8 @@ snapshot's `steps` by `parse_steps(messages-real.json, Some("/home/dev/work/.wt/
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented; the list view is unchanged.
-- [ ] Every earlier test passes; the tests above pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented; the list view is unchanged.
+- [x] Every earlier test passes; the tests above pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) a running job's map moves: pulses on each step, the running clock ticks,
       counts grow; `m` switches views.

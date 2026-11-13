@@ -10,10 +10,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 
-use crate::agent::client::AgentClient;
 use crate::app::clock;
 use crate::app::demo;
-use crate::app::threads::opencode_loop;
+use crate::app::threads::{agent_loop, opencode_loop};
 use crate::app::{App, Event};
 use crate::collect::llama_poll::Poller;
 use crate::collect::logs::{self, Level, LogLine};
@@ -177,6 +176,7 @@ fn dashboard_loop(
     rx: &Receiver<Event>,
     opencode_focus: &Mutex<Option<String>>,
 ) -> Result<()> {
+    app.now_ms = clock::now_ms();
     let mut shown_clock = draw_frame(terminal, app, theme, offset)?;
     loop {
         let mut drew = false;
@@ -198,6 +198,7 @@ fn dashboard_loop(
         }
         // The header clock must tick even when nothing else moves (idle server, long interval).
         if drew || wall_clock(offset) != shown_clock {
+            app.now_ms = clock::now_ms();
             shown_clock = draw_frame(terminal, app, theme, offset)?;
         }
     }
@@ -317,84 +318,5 @@ pub(super) fn sleep(stop: &Arc<AtomicBool>, interval_ms: u64) {
         let slice = (interval - slept).min(Duration::from_millis(100));
         thread::sleep(slice);
         slept += slice;
-    }
-}
-
-/// The agent thread: every shared interval, `system()` → `Event::System`, then `log(since)` → one
-/// `Event::Log` per line. Warns once on the transition to unreachable, says once on the return; never floods.
-fn agent_loop(
-    tx: Sender<Event>,
-    stop: Arc<AtomicBool>,
-    interval: Arc<AtomicU64>,
-    url: String,
-    token: Option<String>,
-) {
-    let client = AgentClient::new(&url, token);
-    let mut since = 0u64;
-    let mut reachable: Option<bool> = None;
-    loop {
-        if stop.load(Ordering::Relaxed) {
-            return;
-        }
-
-        // One reachability verdict per round (ok only if both calls succeed), so a half-working agent
-        // cannot alternate `agent back` / `agent unreachable` every round.
-        let mut events = Vec::new();
-        let mut error = None;
-        match client.system() {
-            Ok(snapshot) => events.push(Event::System(snapshot)),
-            Err(e) => error = Some(format!("{e:#}")),
-        }
-        match client.log(since) {
-            Ok(page) if page.next < since => {
-                // The agent restarted: its numbering began again at 1, below our cursor. Start over from its
-                // whole ring next round rather than waiting forever for numbers it will not reach soon.
-                since = 0;
-            }
-            Ok(page) => {
-                events.extend(page.lines.into_iter().map(Event::Log));
-                since = page.next;
-                if page.dropped {
-                    let line = agent_message("agent log: some lines were missed", Level::Warn);
-                    events.push(Event::Log(line));
-                }
-            }
-            Err(e) => {
-                error.get_or_insert(format!("{e:#}"));
-            }
-        }
-        if let Some(line) = reachability_line(&mut reachable, error) {
-            events.insert(0, Event::Log(line));
-        }
-        for event in events {
-            if tx.send(event).is_err() {
-                return;
-            }
-        }
-
-        sleep(&stop, interval.load(Ordering::Relaxed));
-    }
-}
-
-/// The reachability transition line, if the state changed this round: `agent back` (Info) on return,
-/// `agent unreachable: <error>` (Warn) on the way down. Never more than one per change.
-fn reachability_line(reachable: &mut Option<bool>, error: Option<String>) -> Option<LogLine> {
-    let prev = reachable.replace(error.is_none());
-    match (prev, error) {
-        (Some(false), None) => Some(agent_message("agent back", Level::Info)),
-        (Some(true) | None, Some(e)) => Some(agent_message(&format!("agent unreachable: {e}"), Level::Warn)),
-        _ => None,
-    }
-}
-
-fn agent_message(text: &str, level: Level) -> LogLine {
-    LogLine {
-        time: None,
-        source: None,
-        instance: None,
-        task: None,
-        level,
-        text: text.to_string(),
-        event: None,
     }
 }

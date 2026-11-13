@@ -12,7 +12,9 @@ use crate::app::App;
 use crate::app::clock;
 use crate::collect::opencode::{OpenCodeSnapshot, Session, Step, StepKind};
 use crate::ui::frame::panel;
+use crate::ui::map;
 use crate::ui::panels::Ctx;
+use crate::ui::screens::agents_map;
 use crate::ui::text::fit;
 use crate::ui::theme::{Role, Theme};
 use crate::util::{count, duration, short_model_name};
@@ -43,10 +45,19 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         Rect::new(right_x, area.y + SESSION_H, right_w, area.height.saturating_sub(SESSION_H));
 
     render_queue(app, snapshot, theme, queue_area, buf);
-    if let Some(session) = focused_session(app, snapshot) {
-        render_session(snapshot, session, theme, session_area, buf);
+    let right = Rect::new(right_x, area.y, right_w, area.height);
+    // The map view: one panel on the right, when it is wide and tall enough. Otherwise the list view.
+    // Without a followed session, the list view still shows the timeline.
+    let map_session = focused_session(app, snapshot)
+        .filter(|_| app.agent_map && right.width >= map::MIN_W + 2 && right.height >= map::MIN_H + 12);
+    if let Some(session) = map_session {
+        agents_map::render(app, snapshot, session, theme, right, buf);
+    } else {
+        if let Some(session) = focused_session(app, snapshot) {
+            render_session(snapshot, session, theme, session_area, buf);
+        }
+        render_timeline(app, snapshot, theme, timeline_area, buf);
     }
-    render_timeline(app, snapshot, theme, timeline_area, buf);
 }
 
 /// The followed session: `agent_focus` when set, else the fetched `focus`, looked up in the queue.
@@ -74,6 +85,16 @@ pub fn short_title(title: &str) -> String {
         .unwrap_or(without_job);
     let name = file.strip_suffix(".md").unwrap_or(file);
     name.rsplit('/').next().unwrap_or(name).to_string()
+}
+
+/// The session panel's title: `#<job> · <short_title>`, or `#? · <short_title>` without a job. Reused by
+/// the map view so both panels show the same text.
+pub(crate) fn session_title(session: &Session) -> String {
+    format!(
+        "#{} · {}",
+        session.job.map(|j| j.to_string()).unwrap_or_else(|| "?".to_string()),
+        short_title(&session.title)
+    )
 }
 
 /// The not-configured case: one `Agents` panel with a single `Dim` message.
@@ -191,11 +212,7 @@ fn render_session(
     if area.width < 3 || area.height < 3 {
         return;
     }
-    let title = format!(
-        "#{} · {}",
-        session.job.map(|j| j.to_string()).unwrap_or_else(|| "?".to_string()),
-        short_title(&session.title)
-    );
+    let title = session_title(session);
     let block = panel(&title, Role::Server, true, theme);
     let inner = block.inner(area);
     block.render(area, buf);
@@ -251,7 +268,7 @@ fn render_session(
 }
 
 /// The session age: `fetched - created` while running, else `idle - created` (or `fetched - created`).
-fn session_time(snapshot: &OpenCodeSnapshot, session: &Session) -> u64 {
+pub(crate) fn session_time(snapshot: &OpenCodeSnapshot, session: &Session) -> u64 {
     let secs = if session.running {
         snapshot.fetched_ms.saturating_sub(session.created_ms) / 1000
     } else if let Some(idle) = session.idle_ms {
@@ -289,7 +306,14 @@ fn render_timeline(app: &App, snapshot: &OpenCodeSnapshot, theme: &Theme, area: 
 
 /// One timeline row: the dim time, the coloured glyph, the summary (`Dim` for `think`) and the detail
 /// (`Critical` on failure, `Good` for a successful shell, else `Dim`), cut to the panel body.
-fn render_timeline_row(buf: &mut Buffer, inner: Rect, y: u16, step: &Step, utc_offset_s: i32, theme: &Theme) {
+pub(crate) fn render_timeline_row(
+    buf: &mut Buffer,
+    inner: Rect,
+    y: u16,
+    step: &Step,
+    utc_offset_s: i32,
+    theme: &Theme,
+) {
     let (glyph, glyph_role) = step_glyph(step);
     let time = Span::styled(clock::hms(step.time_ms / 1000, utc_offset_s), theme.fg(Role::Dim));
     let glyph = Span::styled(format!("{:<8}", glyph), theme.fg(glyph_role).add_modifier(Modifier::BOLD));

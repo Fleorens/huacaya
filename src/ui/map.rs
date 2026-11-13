@@ -25,7 +25,7 @@ pub const MIN_W: u16 = 60;
 pub const MIN_H: u16 = 18;
 
 /// The role colour of a station.
-fn station_role(s: Station) -> Role {
+pub(crate) fn station_role(s: Station) -> Role {
     match s {
         Station::You => Role::Text,
         Station::Model => Role::Server,

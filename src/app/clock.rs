@@ -1,5 +1,7 @@
 //! Wall-clock helpers for the dashboard header: the UTC offset and `HH:MM:SS` formatting.
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 /// Parses the output of `date +%z` (`+0100`, `-0530`, with or without a trailing newline) into seconds
 /// east of UTC. `None` on anything else.
 pub fn parse_utc_offset(text: &str) -> Option<i32> {
@@ -37,6 +39,11 @@ pub fn local_utc_offset() -> i32 {
 pub fn hms(unix_seconds: i64, offset_s: i32) -> String {
     let secs = (unix_seconds + offset_s as i64).rem_euclid(86_400);
     format!("{:02}:{:02}:{:02}", secs / 3600, (secs % 3600) / 60, secs % 60)
+}
+
+/// Wall-clock time since the Unix epoch, in milliseconds; 0 when the clock cannot be read.
+pub fn now_ms() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
 #[cfg(test)]

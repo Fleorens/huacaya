@@ -115,6 +115,10 @@ pub struct App {
     pub agent_focus: Option<String>,
     /// Index into `opencode.sessions` on the Agents screen (T35).
     pub agent_selected: usize,
+    /// Whether the Agents screen shows the map view instead of the list (T44); toggled by `m`.
+    pub agent_map: bool,
+    /// Wall-clock Unix ms of the frame being drawn, for the map's running clock (T44); 0 in tests.
+    pub now_ms: i64,
     /// Seconds east of UTC, for `HH:MM:SS` on the Agents timeline (T35).
     pub utc_offset_s: i32,
     pub logs: VecDeque<LogLine>,
@@ -156,6 +160,8 @@ impl App {
             opencode: None,
             agent_focus: None,
             agent_selected: 0,
+            agent_map: true,
+            now_ms: 0,
             utc_offset_s: 0,
             logs: VecDeque::new(),
             gpu_load: History::new(HISTORY_CAPACITY),
@@ -285,116 +291,17 @@ impl App {
     }
 
     /// `true` when something on screen moves by itself: a slot of an active model `is_processing`, or a
-    /// model in state `Loading`. `false` without a llama snapshot.
+    /// model in state `Loading`; or the Agents map, while its activity has a pulse or a running station.
     pub fn animating(&self) -> bool {
-        let Some(llama) = &self.llama else {
-            return false;
-        };
-        llama.active.iter().any(|m| m.slots.iter().any(|s| s.is_processing))
-            || llama.models.iter().any(|m| m.state == ModelState::Loading)
-    }
-
-    /// Merges one classified line into `last_request`, following the timing-line rules.
-    fn update_last_request(&mut self, line: &LogLine) {
-        match line.event.as_ref() {
-            Some(LogEvent::PromptTiming { tokens, tps }) => {
-                self.last_request = Some(LastRequest {
-                    task: line.task,
-                    time: line.time.clone(),
-                    prompt_tokens: Some(*tokens),
-                    prompt_tps: Some(*tps),
-                    gen_tokens: None,
-                    gen_tps: None,
-                    draft_pct: None,
-                    ctx_tokens: None,
-                });
-                self.sync_request(false);
-            }
-            Some(LogEvent::GenTiming { tokens, tps }) => {
-                if let Some(req) = &mut self.last_request
-                    && req.task == line.task
-                {
-                    req.gen_tokens = Some(*tokens);
-                    req.gen_tps = Some(*tps);
-                    self.sync_request(true);
-                } else {
-                    self.last_request = Some(LastRequest {
-                        task: line.task,
-                        time: line.time.clone(),
-                        prompt_tokens: None,
-                        prompt_tps: None,
-                        gen_tokens: Some(*tokens),
-                        gen_tps: Some(*tps),
-                        draft_pct: None,
-                        ctx_tokens: None,
-                    });
-                    self.sync_request(false);
-                }
-            }
-            Some(LogEvent::DraftAcceptance { accepted, generated }) => {
-                let draft_pct =
-                    if *generated == 0 { None } else { Some(*accepted as f64 / *generated as f64 * 100.0) };
-                if let Some(req) = &mut self.last_request
-                    && req.task == line.task
-                {
-                    req.draft_pct = draft_pct;
-                    self.sync_request(true);
-                } else {
-                    self.last_request = Some(LastRequest {
-                        task: line.task,
-                        time: line.time.clone(),
-                        prompt_tokens: None,
-                        prompt_tps: None,
-                        gen_tokens: None,
-                        gen_tps: None,
-                        draft_pct,
-                        ctx_tokens: None,
-                    });
-                    self.sync_request(false);
-                }
-            }
-            Some(LogEvent::Released { n_tokens }) => {
-                if let Some(req) = &mut self.last_request
-                    && req.task == line.task
-                {
-                    req.ctx_tokens = Some(*n_tokens);
-                    self.sync_request(true);
-                } else {
-                    self.last_request = Some(LastRequest {
-                        task: line.task,
-                        time: line.time.clone(),
-                        prompt_tokens: None,
-                        prompt_tps: None,
-                        gen_tokens: None,
-                        gen_tps: None,
-                        draft_pct: None,
-                        ctx_tokens: Some(*n_tokens),
-                    });
-                    self.sync_request(false);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    /// Seconds since `task_started`, from the 100 ms ticks (`(frame - start) / 10`); `None` without a task.
-    pub fn task_elapsed_s(&self) -> Option<u64> {
-        let (_, start) = self.task_started?;
-        Some(self.frame.saturating_sub(start) / 10)
-    }
-
-    /// Keep `requests` in step with `last_request`: replace the back when filling, else push a new one.
-    fn sync_request(&mut self, fill: bool) {
-        let Some(req) = self.last_request.clone() else {
-            return;
-        };
-        if fill {
-            self.requests.back_mut().into_iter().for_each(|back| *back = req.clone());
-        } else {
-            self.requests.push_back(req);
-            while self.requests.len() > REQUEST_HISTORY {
-                self.requests.pop_front();
-            }
-        }
+        let llama_anim = self.llama.as_ref().is_some_and(|llama| {
+            llama.active.iter().any(|m| m.slots.iter().any(|s| s.is_processing))
+                || llama.models.iter().any(|m| m.state == ModelState::Loading)
+        });
+        llama_anim
+            || self.screen == Screen::Agents
+                && self.agent_map
+                && self.opencode.as_ref().is_some_and(|s| {
+                    !s.activity.pulses.is_empty() || s.activity.stations.iter().any(|x| x.running > 0)
+                })
     }
 }

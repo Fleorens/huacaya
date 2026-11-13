@@ -64,6 +64,8 @@ fn fixture_app() -> App {
     app.screen = Screen::Agents;
     app.agent_focus = Some(focus);
     app.utc_offset_s = 0;
+    // The existing Agents golden is the list view: keep the map off.
+    app.agent_map = false;
     app
 }
 
