@@ -4,22 +4,22 @@
 │◉ GENERATING  task #9000 · 0s           prompt 591 t/s   cache 98 %   draft 64 %                  │
 │draft-mtp · n-cpu-moe 21 · ngl 99       ctx  ████████████░░░░░░░░░░░░░░░░░░░░░░░░░  63.8K / 196.6K│
 │                                        req  1 running · 0 queued                                 │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭ GPU  RX 7800 XT ────╭ Help ────────────────────────────────────────────────╮─────────────────────╮
-│load  ███████████████│1-5 Tab S-Tab  switch screen                          │████░░░░  21.6/31.1 G│
-│VRAM  ███████████▉  1│a              Agents: follow the running session     │░░░░░░░░░░  0.0/8.0 G│
-│temp  73 °C junction │q Ctrl-C       quit                                   │G rss   router 287 M │
-│power 117 W / 212 W  │? Esc          close this help                        │   cached 18.2 G     │
-│⣿⣿⣾⣿⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣾⣿│p              pause / resume the display             │%   /srv/models 61 %…│
-│⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿│+ -            faster / slower refresh (now 1.0 s)    │                     │
-╰─────────────────────│↑ ↓ PgUp PgDn  scroll (Logs, Models)                  │─────────────────────╯
-╭ Activity ───────────│Home End       top / bottom                           │─────────── follow ● ╮
-│10:00:15 #9000 n_gen │f              follow the log                         │                     │
-│10:00:18 #9000 n_gen │/              filter the log, Esc clears             │                     │
-│10:00:21 #9000 n_gen │e              level filter: all, warnings, errors    │                     │
-│10:00:24 #9000 n_gen │x              show / hide the router's proxy lines   │                     │
-│10:00:27 #9000 n_gen │r              raw / compact log lines                │                     │
-│10:00:30 #9000 n_gen │t              Logs: tasks list, Enter shows one task │                     │
+╰─────────────────────╭ Help ────────────────────────────────────────────────╮─────────────────────╯
+╭ GPU  RX 7800 XT ────│1-5 Tab S-Tab  switch screen                          │─────────────────────╮
+│load  ███████████████│a              Agents: follow the running session     │████░░░░  21.6/31.1 G│
+│VRAM  ███████████▉  1│q Ctrl-C       quit                                   │░░░░░░░░░░  0.0/8.0 G│
+│temp  73 °C junction │? Esc          close this help                        │G rss   router 287 M │
+│power 117 W / 212 W  │p              pause / resume the display             │   cached 18.2 G     │
+│⣿⣿⣾⣿⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣾⣿│+ -            faster / slower refresh (now 1.0 s)    │%   /srv/models 61 %…│
+│⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿│↑ ↓ PgUp PgDn  scroll (Logs, Models)                  │                     │
+╰─────────────────────│Home End       top / bottom                           │─────────────────────╯
+╭ Activity ───────────│f              follow the log                         │─────────── follow ● ╮
+│10:00:15 #9000 n_gen │/              filter the log, Esc clears             │                     │
+│10:00:18 #9000 n_gen │e              level filter: all, warnings, errors    │                     │
+│10:00:21 #9000 n_gen │x              show / hide the router's proxy lines   │                     │
+│10:00:24 #9000 n_gen │r              raw / compact log lines                │                     │
+│10:00:27 #9000 n_gen │t              Logs: tasks list, Enter shows one task │                     │
+│10:00:30 #9000 n_gen │s              System: every sensor, or the summary   │                     │
 │10:00:32 #9000 gen 10╰──────────────────────────────────────────────────────╯                     │
 │10:00:32 #9000 total time = 29195.00 ms / 9232 tokens                                             │
 │10:00:32 #9000 draft 728/1040 accepted  70 %                                                      │

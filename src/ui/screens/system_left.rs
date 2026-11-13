@@ -176,7 +176,7 @@ fn draw_load(buf: &mut Buffer, sys: &SystemSnapshot, theme: &Theme, x: u16, y: u
         .cpu
         .load
         .as_ref()
-        .map(|l| format!("{} {} {}", l.one, l.five, l.fifteen))
+        .map(|l| format!("{:.2} {:.2} {:.2}", l.one, l.five, l.fifteen))
         .unwrap_or_else(|| "n/a n/a n/a".to_string());
     let uptime = sys.uptime_s.map(duration).unwrap_or_else(|| "n/a".to_string());
     let line = Line::from(vec![
@@ -198,11 +198,8 @@ pub(crate) fn render_sensors(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer)
         None => return,
     };
 
-    let right = if app.all_sensors {
-        format!("{} sensors · s: all", sys.temps.len())
-    } else {
-        format!("{} sensors · s: summary", sys.temps.len())
-    };
+    let mode = if app.all_sensors { "summary" } else { "all" };
+    let right = format!("{} sensors · s: {mode}", sys.temps.len());
     let block = panel("Sensors", Role::Gpu, false, theme);
     let inner = block.inner(area);
     block.render(area, buf);
@@ -367,7 +364,7 @@ fn draw_sensor_row(
     label: &str,
     celsius: f32,
 ) {
-    let label = format!("{:<15}", fit(label, 15));
+    let label = format!("  {:<15}", fit(label, 15));
     buf.set_line(x, y, &Line::from(Span::styled(label, theme.fg(Role::Dim))), 17);
     Gauge { ratio: celsius as f64 / 100.0, accent, thresholds: sensor_thresholds(chip), theme }
         .render(Rect::new(x + 17, y, 16, 1), buf);

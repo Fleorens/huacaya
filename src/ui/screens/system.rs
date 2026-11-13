@@ -41,8 +41,10 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let right_x = area.x + left_w;
     let right_w = area.width - left_w;
 
-    // Left column: the CPU panel at its own height, the Sensors panel on the rest.
-    let left_h = area.height;
+    // Left column: the CPU panel at its own height, the Sensors panel on the rest; the hint row, when
+    // shown, is kept out of both columns so it does not overwrite their bottom borders.
+    let hint_rows = u16::from(area.height >= 12);
+    let left_h = area.height - hint_rows;
     let cpu_h = cpu_needed_height(sys, ctx).min(left_h);
     render_cpu(app, ctx, Rect::new(area.x, area.y, left_w, cpu_h), buf);
     render_sensors(app, ctx, Rect::new(area.x, area.y + cpu_h, left_w, left_h - cpu_h), buf);
@@ -51,14 +53,20 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.height >= 12 {
         let y = area.y + area.height - 1;
         let hint = "cores: brighter = busier · sensors grouped by chip · s: all sensors";
-        let groups: Vec<Vec<Span>> =
-            hint.split(" · ").map(|g| vec![Span::styled(g.to_string(), theme.fg(Role::Dim))]).collect();
+        let groups: Vec<Vec<Span>> = hint
+            .split(" · ")
+            .enumerate()
+            .map(|(i, g)| {
+                let text = if i == 0 { g.to_string() } else { format!(" · {g}") };
+                vec![Span::styled(text, theme.fg(Role::Dim))]
+            })
+            .collect();
         buf.set_line(area.x, y, &fit_groups(groups, area.width as usize), area.width);
     }
 
     // Right column: stack the panels, cutting or dropping the ones that do not fit.
     let mut y = area.y;
-    let bottom = area.y + area.height;
+    let bottom = area.y + left_h;
 
     let r = slot(sys.disks.len() as u16 + 2, bottom - y, y, right_x, right_w);
     let Some(rect) = r else { return };
@@ -126,7 +134,7 @@ fn draw_disks(buf: &mut Buffer, rect: Rect, disks: &[DiskSample], theme: &Theme)
         return;
     }
     for (d, y) in disks.iter().zip(inner.y..inner.bottom()) {
-        let label = format!("{:<12} ", fit(&d.mount, 12));
+        let label = format!("{:<15} ", fit(&d.mount, 15));
         let ratio = if d.total > 0 { d.used as f64 / d.total as f64 } else { 0.0 };
         gauge_row(
             buf,
@@ -152,9 +160,11 @@ fn draw_network(buf: &mut Buffer, app: &App, rect: Rect, nets: &[NetSample], ctx
     if inner.height < 1 || inner.width < 1 {
         return;
     }
-    for (n, y) in nets.iter().zip(inner.y..inner.bottom()) {
+    for (n, y) in nets.iter().zip((inner.y..inner.bottom()).step_by(2)) {
         draw_net_row(buf, app, inner.x, y, inner.width, n, ctx, true);
-        draw_net_row(buf, app, inner.x, y + 1, inner.width, n, ctx, false);
+        if y + 1 < inner.bottom() {
+            draw_net_row(buf, app, inner.x, y + 1, inner.width, n, ctx, false);
+        }
     }
 }
 
@@ -193,12 +203,15 @@ fn draw_net_row(
     buf.set_span(x, y, &Span::styled(prefix, theme.fg(Role::Text)), prefix_w);
     if graph_present {
         let accent = if down { Role::Memory } else { Role::Gpu };
-        let values = match rates_for(app, &n.iface) {
-            Some((_, r, _)) if down => r.tail(usize::MAX),
-            Some((_, _, t)) => t.tail(usize::MAX),
-            None => Vec::new(),
+        // One scale for both rows of the interface: the larger of the rx and tx maxima.
+        let (values, max) = match rates_for(app, &n.iface) {
+            Some((_, r, t)) => {
+                let (rx, tx) = (r.tail(usize::MAX), t.tail(usize::MAX));
+                let max = graph_max(&rx).max(graph_max(&tx));
+                (if down { rx } else { tx }, max)
+            }
+            None => (Vec::new(), 1.0),
         };
-        let max = graph_max(&values);
         BrailleGraph { values: &values, max, accent, theme }.render(Rect::new(x + prefix_w, y, 22, 1), buf);
     }
     let suffix_x = prefix_w + graph_w;
@@ -208,7 +221,7 @@ fn draw_net_row(
     }
 }
 
-/// The graph max: the larger of the rx/tx histories' maxima, at least 1 (NaN becomes 1).
+/// The maximum of one rate history, at least 1 (NaN becomes 1).
 fn graph_max(values: &[f32]) -> f32 {
     let max = values.iter().copied().fold(0.0, f32::max);
     if max.is_nan() || max <= 0.0 { 1.0 } else { max }
@@ -224,10 +237,9 @@ fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], ctx: &Ctx,
     if inner.height < 2 || inner.width < 1 {
         return;
     }
-    // rss is 9 wide, not the sheet's 10: at 140 columns the model column then holds the full
-    // 24-character demo name (`Cyber-Tiel-Coder-35B-A3B`) that the sheet's test expects.
-    let header = format!("{:<9}{:<10}{:<7}{:<9}{:<9}model", "pid", "role", "port", "rss", "threads");
-    let fixed: u16 = 9 + 10 + 7 + 9 + 9;
+    // The sheet's header `pid     role      port    rss      thr  model`: columns 8, 10, 8, 9, 5.
+    let header = format!("{:<8}{:<10}{:<8}{:<9}{:<5}model", "pid", "role", "port", "rss", "thr");
+    let fixed: u16 = 8 + 10 + 8 + 9 + 5;
     let model_w = inner.width.saturating_sub(fixed);
     buf.set_line(
         inner.x,
@@ -251,7 +263,7 @@ fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], ctx: &Ctx,
             None => "-".to_string(),
         };
         let line = format!(
-            "{:<9}{:<10}{:<7}{:<9}{:<9}{}",
+            "{:<8}{:<10}{:<8}{:<9}{:<5}{}",
             p.pid,
             role,
             port,
@@ -267,7 +279,6 @@ fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], ctx: &Ctx,
     if let Some(g) = gpus.first()
         && y + 2 <= inner.bottom()
     {
-        y += 1;
         buf.set_line(inner.x, y, &Line::raw(""), inner.width);
         y += 1;
         buf.set_line(inner.x, y, &fit_groups(gpu_summary_line(g, theme), inner.width as usize), inner.width);
@@ -277,13 +288,14 @@ fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], ctx: &Ctx,
 /// The GPU summary line, as groups for `fit_groups` split at ` · `: `GPU  <name>` in `Gpu`, the rest in
 /// `Dim`, only the parts that exist.
 fn gpu_summary_line(g: &GpuSample, theme: &Theme) -> Vec<Vec<Span<'static>>> {
-    let mut groups: Vec<Vec<Span>> = vec![vec![
+    let mut first = vec![
         Span::styled("GPU  ", theme.fg(Role::Gpu)),
         Span::styled(short_gpu_name(&g.name).to_string(), theme.fg(Role::Gpu)),
-    ]];
+    ];
     if let Some(link) = &g.link {
-        groups.last_mut().unwrap().push(Span::styled(format!("  {link}"), theme.fg(Role::Dim)));
+        first.push(Span::styled(format!("  {link}"), theme.fg(Role::Dim)));
     }
+    let mut groups: Vec<Vec<Span>> = vec![first];
     if let Some(sclk) = g.sclk_mhz {
         groups.push(vec![Span::styled(format!(" · {sclk:.0} MHz"), theme.fg(Role::Dim))]);
     }

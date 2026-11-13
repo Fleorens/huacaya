@@ -1,11 +1,13 @@
 // Cell-by-cell tests for the System screen (T18, T38). The model has no visual access, so every screen
 // is rendered into a `Buffer` and checked row by row; the golden files capture the whole frame.
 
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier};
 
 use llamatop::app::demo::{self, DemoState, app as demo_app};
+use llamatop::app::keys::handle;
 use llamatop::app::{App, Event, Screen};
 use llamatop::collect::net::NetSample;
 use llamatop::ui::panels::Ctx;
@@ -69,12 +71,12 @@ fn cpu_title_and_heatmap() {
     assert!(all.contains("CPU  Intel Core i7-11700K · 8 cores / 16 threads"), "{:?}", rows);
     assert!(all.contains("60 °C · 3.5 GHz"), "{:?}", rows);
 
-    // A heatmap row shows the first eight cores, rounded, in order.
-    let row = rows
-        .iter()
-        .find(|r| ordered(r, &["44", "48", "52", "56", "44", "48", "52", "56"]))
-        .expect("a heatmap row with the first eight cores in order");
-    assert!(ordered(row, &["44", "48", "52", "56", "44", "48", "52", "56"]), "{row:?}");
+    // A heatmap row shows the first eight cores of the snapshot, rounded, in order.
+    let per_core = &app.system.as_ref().expect("demo snapshot").cpu.per_core_pct;
+    let expected: Vec<String> = per_core.iter().take(8).map(|p| format!("{:.0}", p.round())).collect();
+    let needles: Vec<&str> = expected.iter().map(String::as_str).collect();
+    assert_eq!(needles.len(), 8);
+    assert!(rows.iter().any(|r| ordered(r, &needles)), "no heatmap row with {needles:?}: {rows:?}");
 }
 
 #[test]
@@ -148,10 +150,9 @@ fn sensors_grouped() {
     let i_store = all.find("Storage · nvme").unwrap();
     assert!(i_gpu < i_cpu && i_cpu < i_store, "groups out of order: {all:?}");
 
-    // The summary readings: junction 73 °C and the CPU package 60 °C.
-    assert!(all.contains("73 °C"), "{:?}", rows);
-    assert!(all.contains("package"), "{:?}", rows);
-    assert!(all.contains("60 °C"), "{:?}", rows);
+    // The summary readings, each label with its value on one row.
+    assert!(rows.iter().any(|r| ordered(r, &["junction", "73 °C"])), "{:?}", rows);
+    assert!(rows.iter().any(|r| ordered(r, &["package", "60 °C"])), "{:?}", rows);
 }
 
 #[test]
@@ -159,15 +160,17 @@ fn sensors_all_toggle() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let mut app = demo_app(DemoState::Generating);
-    // `all_sensors` starts false, so the panel right title shows the summary.
+    app.screen = Screen::System;
+    // `all_sensors` starts false: the right title offers `s: all`.
     assert!(!app.all_sensors);
     let rows = draw(|area, buf| system::render(&app, &ctx, area, buf), 140, 40);
-    assert!(rows.join("\n").contains("s: summary"), "{:?}", rows);
-
-    // Toggling it on switches the right title (and the readings) to every sensor.
-    app.all_sensors = true;
-    let rows = draw(|area, buf| system::render(&app, &ctx, area, buf), 140, 40);
     assert!(rows.join("\n").contains("s: all"), "{:?}", rows);
+
+    // `s` on the System screen sets it; the right title then offers `s: summary`.
+    handle(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE));
+    assert!(app.all_sensors);
+    let rows = draw(|area, buf| system::render(&app, &ctx, area, buf), 140, 40);
+    assert!(rows.join("\n").contains("s: summary"), "{:?}", rows);
 }
 
 // --------------------------------------------------------------------------- Disks, network, processes
@@ -184,6 +187,10 @@ fn disks_network_processes() {
         "/srv/models",
         "72.1/117.6 G",
         "wlp9s0",
+        "2.1 K/s",
+        "12.7 K/s",
+        "total 187 M",
+        "total 188 M",
         "1194",
         "router",
         "8080",
