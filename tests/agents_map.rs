@@ -7,6 +7,7 @@ use ratatui::layout::Rect;
 
 use llamatop::app::{App, Event, Screen};
 use llamatop::collect::activity::Activity;
+use llamatop::collect::llama_poll::{Health, LlamaSnapshot};
 use llamatop::collect::opencode::{OpenCodeSnapshot, Step, StepKind, parse_sessions, parse_steps};
 use llamatop::ui::panels::Ctx;
 use llamatop::ui::screens::agents;
@@ -202,6 +203,22 @@ fn animating_map() {
     assert!(app.animating(), "the map on should animate");
     app.agent_map = false;
     assert!(!app.animating(), "the map off should not animate");
+}
+
+#[test]
+fn animating_map_with_idle_llama() {
+    let mut app = map_app();
+    // A running server with nothing in flight must not hide the map's own animation.
+    app.llama = Some(LlamaSnapshot {
+        health: Health::Ok,
+        router: true,
+        build_info: None,
+        models: vec![],
+        active: vec![],
+    });
+    assert!(app.animating(), "the map should animate next to an idle llama snapshot");
+    app.agent_map = false;
+    assert!(!app.animating(), "an idle llama snapshot with the map off should not animate");
 }
 
 // --------------------------------------------------------------------------- Golden file

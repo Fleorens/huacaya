@@ -47,10 +47,11 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     render_queue(app, snapshot, theme, queue_area, buf);
     let right = Rect::new(right_x, area.y, right_w, area.height);
     // The map view: one panel on the right, when it is wide and tall enough. Otherwise the list view.
-    if app.agent_map && right.width >= map::MIN_W + 2 && right.height >= map::MIN_H + 12 {
-        if let Some(session) = focused_session(app, snapshot) {
-            agents_map::render(app, snapshot, session, theme, right, buf);
-        }
+    // Without a followed session, the list view still shows the timeline.
+    let map_session = focused_session(app, snapshot)
+        .filter(|_| app.agent_map && right.width >= map::MIN_W + 2 && right.height >= map::MIN_H + 12);
+    if let Some(session) = map_session {
+        agents_map::render(app, snapshot, session, theme, right, buf);
     } else {
         if let Some(session) = focused_session(app, snapshot) {
             render_session(snapshot, session, theme, session_area, buf);

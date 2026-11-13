@@ -7,7 +7,7 @@ pub mod keys;
 pub mod log_tasks;
 pub mod log_view;
 mod net_rates;
-pub(crate) mod requests;
+mod requests;
 pub mod run;
 pub mod state;
 mod threads;

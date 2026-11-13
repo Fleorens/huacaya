@@ -8,7 +8,6 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
 
 use crate::app::App;
-use crate::collect::activity::Station;
 use crate::collect::opencode::{OpenCodeSnapshot, Session, Step};
 use crate::ui::frame::panel;
 use crate::ui::map;
@@ -30,7 +29,7 @@ pub fn render(
         return;
     }
     let title = session_title(session);
-    let block = panel(&title, Role::Border, true, theme);
+    let block = panel(&title, Role::Server, false, theme);
     let inner = block.inner(area);
     block.render(area, buf);
     if inner.height < 3 || inner.width < 3 {
@@ -66,7 +65,7 @@ pub fn render(
         ColorMode::TrueColor => Style::new().fg(Color::Rgb(r, g, b)),
         _ => theme.fg(Role::Border),
     };
-    let rule = Span::styled("─".repeat(inner.width as usize).to_string(), rule_style);
+    let rule = Span::styled("─".repeat(inner.width as usize), rule_style);
     buf.set_line(inner.x, rule_y, &Line::from(rule), inner.width);
 
     // The feed: the newest steps that fit, oldest on top, each with its duration in the last four columns.
@@ -113,7 +112,7 @@ fn map_core(app: &App, session: &Session) -> map::Core {
 /// `<h>h` otherwise, `0s` when negative. `Good` for a running step, else `Dim`.
 fn set_duration(buf: &mut Buffer, inner: Rect, y: u16, step: &Step, now_ms: i64, theme: &Theme) {
     let end = step.end_ms.unwrap_or(now_ms);
-    let dur_s = end.saturating_sub(step.time_ms) / 1000;
+    let dur_s = (end - step.time_ms).max(0) / 1000;
     let raw = if dur_s < 60 {
         format!("{}s", dur_s)
     } else if dur_s < 3600 {
@@ -146,7 +145,7 @@ fn set_now_line(
     let mut spans: Vec<Span> = Vec::new();
     match &snapshot.activity.now {
         Some((station, summary, start)) => {
-            let style = theme.fg(station_role(*station)).add_modifier(Modifier::BOLD);
+            let style = theme.fg(map::station_role(*station)).add_modifier(Modifier::BOLD);
             spans.push(Span::styled("◉ ", style));
             spans.push(Span::styled(station.name().to_string(), style));
             spans.push(Span::styled("  ", theme.fg(Role::Text)));
@@ -158,7 +157,7 @@ fn set_now_line(
         None => spans.push(Span::styled("○ idle", theme.fg(Role::Dim))),
     }
     let stats = format!(
-        "   in {}  out {}  · {}",
+        "   in {}  out {} · {}",
         count(session.tokens_in),
         count(session.tokens_out),
         duration(session_time(snapshot, session))
@@ -169,7 +168,8 @@ fn set_now_line(
     buf.set_line(inner.x, y, &Line::from(spans), inner.width);
 }
 
-/// Right-title segments on the top border, packed from the right corner leftward (in screen order);
+/// Right-title segments on the top border, packed from the right corner leftward: the first segment
+/// is the rightmost;
 /// omitted when they collide with the left title or the corner.
 fn set_right_titles(buf: &mut Buffer, area: Rect, title: &str, parts: &[(String, Style)]) {
     let right = (area.x + area.width.saturating_sub(1)) as usize;
@@ -186,19 +186,5 @@ fn set_right_titles(buf: &mut Buffer, area: Rect, title: &str, parts: &[(String,
             break;
         }
         buf.set_line(x as u16, area.y, &Line::from(Span::styled(text.clone(), *style)), w);
-    }
-}
-
-/// The role colour of a station, mirroring the map's so the now line matches it.
-fn station_role(s: Station) -> Role {
-    match s {
-        Station::You => Role::Text,
-        Station::Model => Role::Server,
-        Station::Files => Role::Cpu,
-        Station::Shell => Role::Memory,
-        Station::Checks => Role::Good,
-        Station::Web => Role::Gpu,
-        Station::Agents => Role::Warning,
-        Station::Tools => Role::Text,
     }
 }

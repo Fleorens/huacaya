@@ -36,5 +36,5 @@
 │                                                  ││16:11:37 » say    state.rs is fixed (400). Now system_left.rs (419) needs -19.…     3m│
 │                                                  ││16:15:27 ▸ read   src/ui/screens/system_left.rs                                     1s│
 │                                                  ││16:18:36 ◉ think                                                                    5s│
-│3 sessions · 1 running                            ││◉ Checks  cargo test  0:01   in 145.0K  out 112.2K  · 46m 16s   step 22               │
+│3 sessions · 1 running                            ││◉ Checks  cargo test  0:01   in 145.0K  out 112.2K · 46m 16s   step 22                │
 ╰──────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────────────╯

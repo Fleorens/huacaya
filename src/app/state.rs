@@ -291,17 +291,17 @@ impl App {
     }
 
     /// `true` when something on screen moves by itself: a slot of an active model `is_processing`, or a
-    /// model in state `Loading`. `false` without a llama snapshot, except the Agents map, which animates
-    /// while its activity has a pulse or a running station.
+    /// model in state `Loading`; or the Agents map, while its activity has a pulse or a running station.
     pub fn animating(&self) -> bool {
-        if let Some(llama) = &self.llama {
-            return llama.active.iter().any(|m| m.slots.iter().any(|s| s.is_processing))
-                || llama.models.iter().any(|m| m.state == ModelState::Loading);
-        }
-        self.screen == Screen::Agents
-            && self.agent_map
-            && self.opencode.as_ref().is_some_and(|s| {
-                !s.activity.pulses.is_empty() || s.activity.stations.iter().any(|x| x.running > 0)
-            })
+        let llama_anim = self.llama.as_ref().is_some_and(|llama| {
+            llama.active.iter().any(|m| m.slots.iter().any(|s| s.is_processing))
+                || llama.models.iter().any(|m| m.state == ModelState::Loading)
+        });
+        llama_anim
+            || self.screen == Screen::Agents
+                && self.agent_map
+                && self.opencode.as_ref().is_some_and(|s| {
+                    !s.activity.pulses.is_empty() || s.activity.stations.iter().any(|x| x.running > 0)
+                })
     }
 }
