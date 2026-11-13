@@ -291,3 +291,21 @@ fn steps_survive_a_compress_part() {
     assert_eq!(steps[1].kind, StepKind::Write);
     assert_eq!(steps[1].detail.as_deref(), Some("2 lines"));
 }
+
+/// `messages-real.json`: 8 messages captured from the live OpenCode 2.2.7 server on 2026-11-13 (job #145),
+/// strings cut at 240 characters. Newest first, the first one still running (reasoning only).
+#[test]
+fn steps_real_fixture() {
+    let steps = parse_steps(&fixture("messages-real.json"), Some("/home/dev/work/.wt/llamatop-145")).unwrap();
+    assert_eq!(steps.len(), 21);
+    assert_eq!(steps[2].kind, StepKind::Other("compress".to_string()));
+    assert_eq!(steps[5].kind, StepKind::Read);
+    assert_eq!(steps[5].summary, "src/app/state.rs");
+    assert_eq!(steps[8].kind, StepKind::Edit);
+    assert_eq!(steps[8].detail.as_deref(), Some("+0 −1"));
+    assert_eq!(steps[13].kind, StepKind::Shell);
+    assert_eq!(steps[13].ok, Some(true));
+    assert_eq!(steps[13].detail.as_deref(), Some("EXIT: 0"));
+    let last = steps.last().unwrap();
+    assert_eq!((last.kind.clone(), last.time_ms, last.ok), (StepKind::Think, 1794586716911, None));
+}
