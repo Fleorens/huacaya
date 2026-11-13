@@ -239,3 +239,24 @@ fn map_golden() {
     let expected = std::fs::read_to_string(path).unwrap();
     assert_eq!(expected, content, "golden file {path} is stale");
 }
+
+// --------------------------------------------------------------------------- Offset area
+
+#[test]
+fn offset_area() {
+    // Drawn at (5, 3) inside a larger buffer, the map must be the (0, 0) map shifted, nothing clipped.
+    let theme = true_color();
+    let origin = map_rows(&theme, 86, 23, NOW);
+    let mut buf = Buffer::empty(Rect::new(0, 0, 91, 26));
+    render(&activity(), &core(), NOW, &theme, Rect::new(5, 3, 86, 23), &mut buf);
+    let shifted: Vec<String> = (3..26u16)
+        .map(|y| {
+            (5..91u16).map(|x| buf[(x, y)].symbol().to_string()).collect::<String>().trim_end().to_string()
+        })
+        .collect();
+    assert_eq!(origin, shifted);
+
+    // An area that overflows the buffer is clipped, never a panic.
+    let mut small = Buffer::empty(Rect::new(0, 0, 40, 10));
+    render(&activity(), &core(), NOW, &theme, Rect::new(5, 3, 86, 23), &mut small);
+}

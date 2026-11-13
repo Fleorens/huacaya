@@ -13,13 +13,15 @@ use crate::ui::theme::{ColorMode, PCT_THRESHOLDS, Role, Theme, gauge_color, lerp
 pub struct Core {
     /// Short model name, e.g. `Coder-35B`.
     pub model: String,
+    /// Generation speed, tokens per second.
     pub tps: Option<f64>,
     /// Context used, 0.0–1.0.
     pub ctx_ratio: Option<f64>,
 }
 
-/// Smallest area the map draws in.
+/// Smallest width the map draws in.
 pub const MIN_W: u16 = 60;
+/// Smallest height the map draws in.
 pub const MIN_H: u16 = 18;
 
 /// The role colour of a station.
@@ -203,7 +205,7 @@ pub fn render(activity: &Activity, core: &Core, now_ms: i64, theme: &Theme, area
             };
             let tx = hx - travel * ux * k as f64;
             let ty = hy - travel * uy * k as f64;
-            dots.plot(tx as i32, ty as i32, tail, 19);
+            dots.plot(tx.round() as i32, ty.round() as i32, tail, 19);
         }
     }
 
@@ -211,7 +213,8 @@ pub fn render(activity: &Activity, core: &Core, now_ms: i64, theme: &Theme, area
     dots.arc((geo.cx, geo.cy), geo.ring, 0.0, 1.0, faint, 3);
     if let Some(ratio) = core.ctx_ratio {
         let lit = gauge_color(theme, Role::Good, ratio as f32 * 100.0, PCT_THRESHOLDS);
-        dots.arc((geo.cx, geo.cy), geo.ring, 0.0, ratio, lit, 9);
+        // Clamped: a bogus ratio must not wind the ring many times (or loop for ages).
+        dots.arc((geo.cx, geo.cy), geo.ring, 0.0, ratio.clamp(0.0, 1.0), lit, 9);
     }
 
     // 4. The braille canvas.
@@ -279,8 +282,12 @@ fn put_glyph(buf: &mut Buffer, area: Rect, col: i32, row: i32, ch: char, color: 
     if col < 0 || row < 0 || col as u16 >= area.width || row as u16 >= area.height {
         return;
     }
-    let x = area.x + col as u16;
-    let y = area.y + row as u16;
+    let x = area.x.saturating_add(col as u16);
+    let y = area.y.saturating_add(row as u16);
+    // A cell outside the buffer would panic on indexing: skip it instead.
+    if !buf.area.contains((x, y).into()) {
+        return;
+    }
     let cell = &mut buf[(x, y)];
     cell.set_char(ch);
     if let Some(color) = color {
@@ -300,7 +307,8 @@ fn label(buf: &mut Buffer, area: Rect, sd: &StationData, name: &str, now_ms: i64
     parts.push((format!(" {}", sd.calls), theme.color(Role::Dim), false));
     if sd.running > 0 {
         let since = sd.running_since.unwrap_or(now_ms);
-        let secs = (now_ms - since) / 1000;
+        // Clock skew can put `since` after `now_ms`: show 0:00 rather than a negative clock.
+        let secs = (now_ms - since).max(0) / 1000;
         parts.push((format!(" ◷ {}:{:02}", secs / 60, secs % 60), sd.color, false));
     }
     if sd.errors > 0 {
@@ -321,7 +329,8 @@ fn label(buf: &mut Buffer, area: Rect, sd: &StationData, name: &str, now_ms: i64
         } else if sin_a > 0.0 {
             (node_row, node_col + 2)
         } else {
-            (node_row, node_col - 2 - len as i32)
+            // Mirrors the right side: the last char sits 2 columns left of the node.
+            (node_row, node_col - 1 - len as i32)
         }
     };
 

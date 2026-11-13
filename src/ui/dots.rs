@@ -114,9 +114,13 @@ impl Dots {
                 if bits == 0 {
                     continue;
                 }
-                let x = area.x + col;
-                let y = area.y + row;
-                if x >= area.width || y >= area.height {
+                if col >= area.width || row >= area.height {
+                    continue;
+                }
+                let x = area.x.saturating_add(col);
+                let y = area.y.saturating_add(row);
+                // A cell outside the buffer would panic on indexing: skip it instead.
+                if !buf.area.contains((x, y).into()) {
                     continue;
                 }
                 let ch = char::from_u32(0x2800 + bits as u32).unwrap_or(' ');
