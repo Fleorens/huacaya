@@ -240,7 +240,12 @@ pub fn handle(app: &mut App, key: KeyEvent) {
         }
     }
 
-    // 7. The Agents screen: move the selection within the sessions, follow / unfollow.
+    // 7. The System screen: `s` toggles every sensor / the summary.
+    if app.screen == Screen::System && key.code == KeyCode::Char('s') {
+        app.all_sensors = !app.all_sensors;
+    }
+
+    // 8. The Agents screen: move the selection within the sessions, follow / unfollow.
     if app.screen == Screen::Agents {
         let n = app.opencode.as_ref().map_or(0, |o| o.sessions.len());
         match key.code {

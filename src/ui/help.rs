@@ -61,5 +61,6 @@ fn help_rows(app: &App) -> Vec<(&'static str, String)> {
         ("x", "show / hide the router's proxy lines".into()),
         ("r", "raw / compact log lines".into()),
         ("t", "Logs: tasks list, Enter shows one task".into()),
+        ("s", "System: every sensor, or the summary".into()),
     ]
 }
