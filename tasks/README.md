@@ -144,7 +144,7 @@ page); the model prefixes every command with `cd <worktree> && `.
 | [T42](T42-live-poller.md) | Poller: whole history once, then a 12-message round every second | T41 | validée |
 | [T43](T43-map-widget.md) | The map widget: braille dots, stations, spokes, pulses, context ring | T42 | validée |
 | [T44](T44-agents-map-screen.md) | Agents screen: the map view (`m`), its feed and "now" line | T43 | validée |
-| [T45](T45-dense-shared-helpers.md) | The dense view uses the model band's helpers instead of copies | T44 | livrée |
+| [T45](T45-dense-shared-helpers.md) | The dense view uses the model band's helpers instead of copies | T44 | validée |
 
 T41–T44 reviewed by the orchestrator on 2026-11-13, with the poller and the map view run end to end against
 the live OpenCode server (`opencode api` as the fetcher): history over every page (424 steps for job #150),
