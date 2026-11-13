@@ -179,3 +179,10 @@ fn session_change_resets() {
     assert_eq!(a.stations[Station::Files.index()].last_ms, Some(3000));
     assert!(a.pulses.is_empty());
 }
+
+#[test]
+fn command_station_stderr_redirect() {
+    // `2>&1` must not split the line on its `&`.
+    assert_eq!(command_station("tail -8 /tmp/x 2>&1"), Station::Files);
+    assert_eq!(command_station("grep -rn foo src 2>&1 | head"), Station::Files);
+}

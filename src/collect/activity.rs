@@ -6,6 +6,9 @@ use std::collections::HashMap;
 
 use crate::collect::opencode::{Step, StepKind};
 
+mod commands;
+use commands::{is_check, is_file, is_neutral, is_web};
+
 /// A place on the Agents map. `ALL` is the drawing order, clockwise from the top.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Station {
@@ -177,7 +180,7 @@ impl Activity {
             self.stations[idx].running += 1;
             self.stations[idx].running_since =
                 Some(self.stations[idx].running_since.map_or(step.time_ms, |c| c.min(step.time_ms)));
-            if now.is_none() || step.time_ms > now.as_ref().unwrap().2 {
+            if now.as_ref().is_none_or(|n| step.time_ms > n.2) {
                 now = Some((s, step.summary.clone(), step.time_ms));
             }
         }
@@ -196,7 +199,9 @@ pub fn command_station(command: &str) -> Station {
     let mut any_web = false;
     let mut non_neutral = 0usize;
     let mut all_file = true;
-    for seg in command.split(['&', '|', ';']) {
+    // Turn `&&`/`||` into `;` first so a lone `&` (as in `2>&1`) never splits a segment.
+    let line = command.replace("&&", ";").replace("||", ";");
+    for seg in line.split([';', '|']) {
         match classify_segment(seg) {
             Seg::Neutral => {}
             Seg::Check => {
@@ -307,94 +312,4 @@ fn program_name(w: &str) -> &str {
         Some(name) => name,
         None => w,
     }
-}
-
-fn is_neutral(program: &str) -> bool {
-    matches!(
-        program,
-        "cd" | "echo"
-            | "printf"
-            | "export"
-            | "true"
-            | "false"
-            | "set"
-            | "pwd"
-            | "sleep"
-            | "which"
-            | "test"
-            | "["
-            | "exit"
-    )
-}
-
-fn is_check(program: &str, args: &[&str]) -> bool {
-    match program {
-        "cargo" => {
-            matches!(args.first(), Some(&"test" | &"nextest" | &"clippy" | &"check"))
-                || (args.first() == Some(&"fmt") && args.contains(&"--check"))
-        }
-        "fmt" => args.contains(&"--check"),
-        "bash" | "sh" => args.first().is_some_and(|s| s.ends_with("check")),
-        "check" => true,
-        "make" => matches!(args.first(), Some(&"test" | &"check" | &"lint")),
-        "pytest" | "ruff" | "mypy" | "eslint" | "tsc" => true,
-        "go" => args.first() == Some(&"test"),
-        "npm" => {
-            args.first() == Some(&"test")
-                || (args.first() == Some(&"run")
-                    && args.get(1).copied().is_some_and(|s| matches!(s, "test" | "lint" | "check")))
-        }
-        _ => false,
-    }
-}
-
-fn is_web(program: &str, args: &[&str]) -> bool {
-    match program {
-        "curl" | "wget" | "gh" | "ssh" | "scp" | "rsync" | "ping" => true,
-        "git" => matches!(args.first(), Some(&"push" | &"pull" | &"fetch" | &"clone" | &"ls-remote")),
-        "cargo" => matches!(args.first(), Some(&"add" | &"install" | &"update" | &"fetch" | &"publish")),
-        "npm" | "pnpm" | "yarn" => {
-            matches!(args.first(), Some(&"install" | &"i" | &"ci" | &"add" | &"update"))
-        }
-        "pip" | "pip3" => matches!(args.first(), Some(&"install" | &"download")),
-        _ => false,
-    }
-}
-
-fn is_file(program: &str) -> bool {
-    matches!(
-        program,
-        "cat"
-            | "head"
-            | "tail"
-            | "sed"
-            | "grep"
-            | "rg"
-            | "find"
-            | "ls"
-            | "wc"
-            | "cp"
-            | "mv"
-            | "mkdir"
-            | "touch"
-            | "diff"
-            | "cmp"
-            | "sort"
-            | "uniq"
-            | "cut"
-            | "tr"
-            | "awk"
-            | "tee"
-            | "stat"
-            | "file"
-            | "du"
-            | "tree"
-            | "ln"
-            | "rm"
-            | "rmdir"
-            | "realpath"
-            | "basename"
-            | "dirname"
-            | "jq"
-    )
 }
