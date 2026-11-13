@@ -143,7 +143,7 @@ page); the model prefixes every command with `cd <worktree> && `.
 | [T41](T41-activity-model.md) | Activity model: stations, command classification, ids and end times of steps (pure) | T40 | livrée |
 | [T42](T42-live-poller.md) | Poller: whole history once, then a 12-message round every second | T41 | livrée |
 | [T43](T43-map-widget.md) | The map widget: braille dots, stations, spokes, pulses, context ring | T42 | livrée |
-| [T44](T44-agents-map-screen.md) | Agents screen: the map view (`m`), its feed and "now" line | T43 | prête |
+| [T44](T44-agents-map-screen.md) | Agents screen: the map view (`m`), its feed and "now" line | T43 | livrée |
 
 Later cleanup, no sheet yet: `src/ui/dense.rs` (T39) keeps private copies of `speed`, `ctx_used` and
 `ctx_ratio` from `src/ui/panels/model.rs`; once T44 makes the model helpers public, use them there.

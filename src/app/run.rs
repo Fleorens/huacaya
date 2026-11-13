@@ -176,6 +176,7 @@ fn dashboard_loop(
     rx: &Receiver<Event>,
     opencode_focus: &Mutex<Option<String>>,
 ) -> Result<()> {
+    app.now_ms = clock::now_ms();
     let mut shown_clock = draw_frame(terminal, app, theme, offset)?;
     loop {
         let mut drew = false;
@@ -197,6 +198,7 @@ fn dashboard_loop(
         }
         // The header clock must tick even when nothing else moves (idle server, long interval).
         if drew || wall_clock(offset) != shown_clock {
+            app.now_ms = clock::now_ms();
             shown_clock = draw_frame(terminal, app, theme, offset)?;
         }
     }

@@ -90,10 +90,14 @@ fn generating(m: &ActiveModel) -> bool {
     m.slots.first().is_some_and(|s| s.is_processing && s.n_decoded > 0)
 }
 
+/// The speed value to show: live while slot 0 decodes, else the average generation speed, or `None`.
+pub fn speed_value(m: &ActiveModel) -> Option<f64> {
+    if generating(m) { m.live_gen_tps } else { m.metrics.as_ref().and_then(|m| m.avg_gen_tps()) }
+}
+
 /// The speed to show: live while generating, else the average.
 fn speed(m: &ActiveModel) -> String {
-    let value = if generating(m) { m.live_gen_tps } else { m.metrics.as_ref().and_then(|m| m.avg_gen_tps()) };
-    tps(value)
+    tps(speed_value(m))
 }
 
 /// The speed's label: `t/s now` while generating, else `t/s avg`.
@@ -358,6 +362,13 @@ fn ctx_used(slot: Option<&SlotInfo>) -> (u64, u64) {
 fn ctx_ratio(slot: Option<&SlotInfo>) -> f64 {
     let (used, n_ctx) = ctx_used(slot);
     if n_ctx == 0 { 0.0 } else { used as f64 / n_ctx as f64 }
+}
+
+/// Context used by slot 0, 0.0–1.0; `None` without a slot or a context size.
+pub fn ctx_ratio_of(m: &ActiveModel) -> Option<f64> {
+    let slot = m.slots.first();
+    let (used, n_ctx) = ctx_used(slot);
+    if n_ctx == 0 { None } else { Some(used as f64 / n_ctx as f64) }
 }
 
 /// `<used> / <n_ctx>`, or `n/a` without a slot or a context size.

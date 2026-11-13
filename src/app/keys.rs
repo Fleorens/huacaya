@@ -274,6 +274,8 @@ pub fn handle(app: &mut App, key: KeyEvent) {
                 app.agent_focus = app.opencode.as_ref().map(|o| o.sessions[n - 1].id.clone());
             }
             KeyCode::Char('a') => app.agent_focus = None,
+            // `m` toggles the map view (T44).
+            KeyCode::Char('m') => app.agent_map = !app.agent_map,
             _ => {}
         }
     }

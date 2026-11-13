@@ -115,6 +115,10 @@ pub struct App {
     pub agent_focus: Option<String>,
     /// Index into `opencode.sessions` on the Agents screen (T35).
     pub agent_selected: usize,
+    /// Whether the Agents screen shows the map view instead of the list (T44); toggled by `m`.
+    pub agent_map: bool,
+    /// Wall-clock Unix ms of the frame being drawn, for the map's running clock (T44); 0 in tests.
+    pub now_ms: i64,
     /// Seconds east of UTC, for `HH:MM:SS` on the Agents timeline (T35).
     pub utc_offset_s: i32,
     pub logs: VecDeque<LogLine>,
@@ -156,6 +160,8 @@ impl App {
             opencode: None,
             agent_focus: None,
             agent_selected: 0,
+            agent_map: true,
+            now_ms: 0,
             utc_offset_s: 0,
             logs: VecDeque::new(),
             gpu_load: History::new(HISTORY_CAPACITY),
@@ -285,13 +291,17 @@ impl App {
     }
 
     /// `true` when something on screen moves by itself: a slot of an active model `is_processing`, or a
-    /// model in state `Loading`. `false` without a llama snapshot.
+    /// model in state `Loading`. `false` without a llama snapshot, except the Agents map, which animates
+    /// while its activity has a pulse or a running station.
     pub fn animating(&self) -> bool {
-        let Some(llama) = &self.llama else {
-            return false;
-        };
-        llama.active.iter().any(|m| m.slots.iter().any(|s| s.is_processing))
-            || llama.models.iter().any(|m| m.state == ModelState::Loading)
+        if let Some(llama) = &self.llama {
+            return llama.active.iter().any(|m| m.slots.iter().any(|s| s.is_processing))
+                || llama.models.iter().any(|m| m.state == ModelState::Loading);
+        }
+        self.screen == Screen::Agents
+            && self.agent_map
+            && self.opencode.as_ref().is_some_and(|s| {
+                !s.activity.pulses.is_empty() || s.activity.stations.iter().any(|x| x.running > 0)
+            })
     }
-
 }
