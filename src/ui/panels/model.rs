@@ -95,8 +95,8 @@ pub fn speed_value(m: &ActiveModel) -> Option<f64> {
     if generating(m) { m.live_gen_tps } else { m.metrics.as_ref().and_then(|m| m.avg_gen_tps()) }
 }
 
-/// The speed to show: live while generating, else the average.
-fn speed(m: &ActiveModel) -> String {
+/// The speed to show, formatted: live while generating, else the average.
+pub fn speed(m: &ActiveModel) -> String {
     tps(speed_value(m))
 }
 
@@ -351,15 +351,16 @@ fn req_row(metrics: Option<&Metrics>, theme: &Theme, x: u16, y: u16, width: u16,
     set_text(buf, x, y, width, &format!("req  {processing} running · {deferred} queued"), Role::Text, theme);
 }
 
-/// The context used by the active slot, `(used, n_ctx)`.
-fn ctx_used(slot: Option<&SlotInfo>) -> (u64, u64) {
+/// The context used by slot 0, `(used, n_ctx)`; `(0, 0)` without a slot.
+pub fn ctx_used(slot: Option<&SlotInfo>) -> (u64, u64) {
     match slot {
         Some(s) => (s.n_prompt_tokens.saturating_add(s.n_decoded), s.n_ctx),
         None => (0, 0),
     }
 }
 
-fn ctx_ratio(slot: Option<&SlotInfo>) -> f64 {
+/// Context used by slot 0, 0.0–1.0; `0.0` without a slot or a context size (the gauges' ratio).
+pub fn ctx_ratio(slot: Option<&SlotInfo>) -> f64 {
     let (used, n_ctx) = ctx_used(slot);
     if n_ctx == 0 { 0.0 } else { used as f64 / n_ctx as f64 }
 }
