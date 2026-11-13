@@ -123,10 +123,12 @@ pub fn handle(app: &mut App, key: KeyEvent) {
             return;
         }
 
-        // While focused on the tasks list, the navigation keys, Enter and Esc move the selection, filter
-        // on the task, or clear it; every other key falls through to the log handling below.
+        // While focused on the tasks list, the navigation keys and Enter move the selection or filter on
+        // the task; every other key (Esc included) falls through to the log handling below.
         if app.log_view.tasks_focus {
             let tasks = crate::app::log_tasks::log_tasks(app.logs.iter(), 50);
+            // The list changes as lines arrive or leave the buffer: keep the index inside it.
+            app.log_view.task_selected = app.log_view.task_selected.min(tasks.len().saturating_sub(1));
             let handled = match key.code {
                 KeyCode::Up => {
                     if !tasks.is_empty() {
@@ -159,12 +161,6 @@ pub fn handle(app: &mut App, key: KeyEvent) {
                         app.log_view.scroll = 0;
                         app.log_view.follow = true;
                     }
-                    true
-                }
-                KeyCode::Esc => {
-                    app.log_view.task = None;
-                    app.log_view.scroll = 0;
-                    app.log_view.follow = true;
                     true
                 }
                 _ => false,

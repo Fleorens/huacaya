@@ -148,6 +148,7 @@ fn help_overlay() {
     assert!(all.contains("Help"), "{:?}", all);
     assert!(all.contains("switch screen"), "{:?}", all);
     assert!(all.contains("faster / slower refresh (now 1.0 s)"), "{:?}", all);
+    assert!(all.contains("Logs: tasks list, Enter shows one task"), "{:?}", all);
     assert!(all.contains("show / hide the router's proxy lines"), "{:?}", all);
 
     let mut fast = demo_app(DemoState::Generating);
@@ -209,11 +210,25 @@ fn logs_v2_layout() {
     assert!(all.contains("Levels"), "{:?}", all);
     assert!(all.contains("Tasks"), "{:?}", all);
     assert!(all.contains("Log"), "{:?}", all);
-    assert!(all.contains("filter"), "{:?}", all);
+    assert!(all.contains("Filter"), "{:?}", all);
     // The log header is the `time  task  lvl  message` row.
     assert!(all.contains("time      task      lvl  message"), "{:?}", all);
     // A log row shows the task and a generation line.
     assert!(rows.iter().any(|r| r.contains("#9000") && r.contains("n_gen 156")), "{:?}", all);
+}
+
+#[test]
+fn logs_v2_short_bodies() {
+    // From 12 rows the v2 layout is used: the short heights must not panic, focused or not.
+    let mut app = demo_app(DemoState::Generating);
+    for focus in [false, true] {
+        app.log_view.tasks_focus = focus;
+        for w in [90, 100, 120] {
+            for h in 12..=17 {
+                let _ = body(&app, w, h);
+            }
+        }
+    }
 }
 
 #[test]

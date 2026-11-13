@@ -120,7 +120,7 @@ fn render_log_row(
     buf.set_span(area.x, area.y, &Span::styled(time, theme.fg(Role::Dim)), 10);
 
     let task = match line.task {
-        Some(t) if t >= 0 => format!("#{t:<10}"),
+        Some(t) if t >= 0 => format!("{:<10}", format!("#{t}")),
         _ => "          ".to_string(),
     };
     buf.set_span(area.x + 10, area.y, &Span::styled(task, theme.fg(Role::Dim)), 10);
@@ -146,8 +146,14 @@ fn render_hint_row(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer) {
         return;
     }
     let hint = "f follow · / filter · e level · r raw · x proxy · t tasks · Enter filter on task · ↑↓ scroll";
-    let groups: Vec<Vec<Span>> =
-        hint.split(" · ").map(|g| vec![Span::styled(g.to_string(), theme.fg(Role::Dim))]).collect();
+    let groups: Vec<Vec<Span>> = hint
+        .split(" · ")
+        .enumerate()
+        .map(|(i, g)| {
+            let text = if i == 0 { g.to_string() } else { format!(" · {g}") };
+            vec![Span::styled(text, theme.fg(Role::Dim))]
+        })
+        .collect();
     let line = crate::ui::text::fit_groups(groups, area.width as usize);
     buf.set_line(area.x, area.y, &line, area.width);
 }

@@ -64,12 +64,15 @@ fn filter_row(buf: &mut Buffer, x: u16, y: u16, label: &str, value: Span, width:
     buf.set_span(x + 7, y, &value, width.saturating_sub(7));
 }
 
-/// The Filter section (7 rows, no border): the `text`, `task`, `level`, `lines` and `shown` rows,
+/// The Filter section (7 rows, no border): the `Filter` title, then the `text`, `task`, `level`, `lines` and `shown` rows,
 /// labels `Dim` padded to 7, starting one row below the section top.
 fn render_filter(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let theme = ctx.theme;
     let width = area.width;
     let lv = &app.log_view;
+
+    let title = Span::styled("Filter", theme.fg(Role::Server).add_modifier(ratatui::style::Modifier::BOLD));
+    buf.set_span(area.x + 1, area.y, &title, width.saturating_sub(1));
 
     filter_row(
         buf,
@@ -167,9 +170,13 @@ fn render_tasks(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 
     // Show the list scrolled so `task_selected` stays visible (anchored to the bottom of the view).
     let visible_count = inner.height as usize;
+    if visible_count == 0 {
+        return;
+    }
+    let selected_idx = app.log_view.task_selected.min(tasks.len() - 1);
     let max_offset = tasks.len().saturating_sub(visible_count);
     let offset = if tasks.len() > visible_count {
-        app.log_view.task_selected.saturating_sub(visible_count - 1).min(max_offset)
+        selected_idx.saturating_sub(visible_count - 1).min(max_offset)
     } else {
         0
     };
@@ -179,10 +186,11 @@ fn render_tasks(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
         if y >= inner.bottom() {
             break;
         }
-        let selected = (offset + j) == app.log_view.task_selected;
+        let selected = (offset + j) == selected_idx;
+        let shown = app.log_view.task == Some(summary.task);
         let style = |role: Role| -> ratatui::style::Style {
             let mut s = theme.fg(role);
-            if selected {
+            if shown {
                 s = s.add_modifier(ratatui::style::Modifier::BOLD);
             }
             s
@@ -216,12 +224,15 @@ fn render_tasks(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 /// The left band at `area`: Levels, then Filter, then Tasks.
 pub fn render_side(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let left_w = 32u16;
-    let levels_area = Rect::new(area.x, area.y, left_w, 6);
-    let filter_area = Rect::new(area.x, area.y + 6, left_w, 7);
-    let tasks_area = Rect::new(area.x, area.y + 13, left_w, area.height - 13);
+    // A short body (12 to 16 rows) cannot hold all three: draw only the sections that fit whole.
+    let levels_area = Rect::new(area.x, area.y, left_w, area.height.min(6));
     render_levels(app, ctx, levels_area, buf);
-    render_filter(app, ctx, filter_area, buf);
-    render_tasks(app, ctx, tasks_area, buf);
+    if area.height >= 13 {
+        render_filter(app, ctx, Rect::new(area.x, area.y + 6, left_w, 7), buf);
+    }
+    if area.height >= 16 {
+        render_tasks(app, ctx, Rect::new(area.x, area.y + 13, left_w, area.height - 13), buf);
+    }
 }
 
 /// Fit a message for the log row: cut to `width`, and when `filter_lower` is not empty, style its first
