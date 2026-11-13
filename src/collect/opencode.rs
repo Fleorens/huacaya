@@ -1,13 +1,13 @@
 //! The OpenCode server (`opencode serve`) client: its sessions and, for the followed session, its
 //! timeline of steps (`tasks/T34`), read through any `llama_poll::Fetch` so tests need no network.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anyhow::{Context, Result};
 
-use crate::collect::llama_poll::Fetch;
+use crate::collect::activity::Activity;
 
+mod poller;
 mod raw;
+pub use poller::OpenCodePoller;
 use raw::{RawMessages, RawPart, RawSession, RawSessions};
 
 /// One OpenCode session.
@@ -73,6 +73,9 @@ pub struct OpenCodeSnapshot {
     /// The session whose `steps` these are.
     pub focus: Option<String>,
     pub steps: Vec<Step>,
+    /// The map's state for the followed session (tasks/T42), folded from every round.
+    #[serde(skip)]
+    pub activity: Activity,
     /// The last error (`unreachable: …`, `HTTP 401` …), never containing the password.
     pub error: Option<String>,
     /// Wall-clock time (Unix ms) this round was fetched; `0` when unread.
@@ -119,6 +122,21 @@ fn patch_delta<'a>(patches: impl Iterator<Item = &'a str>) -> String {
 pub fn parse_sessions(json: &str) -> Result<Vec<Session>> {
     let raw: RawSessions = serde_json::from_str(json).context("parse sessions")?;
     Ok(raw.data.into_iter().map(session_from).collect())
+}
+
+/// Messages per page when loading a session's history (the server's maximum, 200 is `HTTP 400` above).
+pub const HISTORY_PAGE: usize = 200;
+/// Pages loaded at most for one history (2000 messages).
+pub const HISTORY_PAGES: usize = 10;
+/// Messages fetched by a live round.
+pub const LIVE_LIMIT: usize = 12;
+/// Steps kept in `OpenCodeSnapshot::steps` (the newest).
+pub const SNAPSHOT_STEPS: usize = 200;
+
+/// The `cursor.next` of a messages page: the token for the next older page, `None` when absent, null or
+/// when the JSON does not parse.
+pub fn next_cursor(json: &str) -> Option<String> {
+    serde_json::from_str::<RawMessages>(json).ok().and_then(|m| m.cursor).and_then(|c| c.next)
 }
 
 fn session_from(raw: RawSession) -> Session {
@@ -337,63 +355,4 @@ fn step(
     end_ms: Option<i64>,
 ) -> Step {
     Step { time_ms, kind, id, end_ms, summary, ok, detail }
-}
-
-/// Polls OpenCode through any `llama_poll::Fetch`.
-pub struct OpenCodePoller<F: Fetch> {
-    fetch: F,
-}
-
-impl<F: Fetch> OpenCodePoller<F> {
-    /// A poller over `fetch`.
-    pub fn new(fetch: F) -> Self {
-        Self { fetch }
-    }
-
-    /// One round: the sessions, then the steps of `focus` when it is one of them, else of the newest
-    /// running session, else of the newest session. An error gives a snapshot with `error` set and empty lists.
-    pub fn poll(&mut self, focus: Option<&str>) -> OpenCodeSnapshot {
-        let empty = |error: String| OpenCodeSnapshot { error: Some(error), ..Default::default() };
-
-        let sessions = match self.fetch.get("/api/session", &[]) {
-            Ok(body) => match parse_sessions(&body) {
-                Ok(sessions) => sessions,
-                Err(e) => return empty(format!("{e:#}")),
-            },
-            Err(e) => return empty(fetch_error(&e)),
-        };
-
-        let focus = match focus {
-            Some(id) if sessions.iter().any(|s| s.id == id) => Some(id.to_string()),
-            _ => sessions.iter().find(|s| s.running).or_else(|| sessions.first()).map(|s| s.id.clone()),
-        };
-
-        let steps = match focus.as_deref() {
-            Some(id) => {
-                let directory = sessions.iter().find(|s| s.id == id).and_then(|s| s.directory.clone());
-                match self.fetch.get(&format!("/api/session/{id}/message"), &[]) {
-                    Ok(body) => parse_steps(&body, directory.as_deref()).map_err(|e| format!("{e:#}")),
-                    Err(e) => return empty(fetch_error(&e)),
-                }
-            }
-            None => Ok(Vec::new()),
-        };
-        let steps = match steps {
-            Ok(steps) => steps,
-            Err(e) => return empty(e),
-        };
-
-        OpenCodeSnapshot { sessions, focus, steps, error: None, fetched_ms: now_ms() }
-    }
-}
-
-/// Wall-clock round time in Unix ms, `0` when the clock cannot be read.
-fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
-}
-
-/// A fetch error as shown: the server's answer as is (`GET …: HTTP 401`), else `unreachable: …`.
-fn fetch_error(e: &anyhow::Error) -> String {
-    let message = format!("{e:#}");
-    if message.contains(": HTTP ") { message } else { format!("unreachable: {message}") }
 }
