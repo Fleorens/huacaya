@@ -120,7 +120,7 @@ parser against a real OpenCode server (the T34 fixtures were written from its do
 | [T33](T33-tui2-panels.md) | Model band (big digits) and GPU / CPU / Memory panels v2 | T32 | validée |
 | [T34](T34-opencode-client.md) | OpenCode client, `[opencode]` settings, setup question | T33 | validée |
 | [T35](T35-agents-screen.md) | Agents screen (5) | T34 | validée |
-| T36 | Models v2 | T33 | outlined |
-| T37 | Logs v2 | T33 | outlined |
-| T38 | System v2 | T33 | outlined |
-| T39 | 80×24 v2 | T33 | outlined |
+| [T36](T36-models-v2.md) | Models v2: table summary, four detail panels | T35 | prête |
+| [T37](T37-logs-v2.md) | Logs v2: levels, filter and tasks beside the log | T36 | prête |
+| [T38](T38-system-v2.md) | System v2: core heatmap, grouped sensors, network graphs | T37 | prête |
+| [T39](T39-dense-80x24.md) | 80×24 v2: the dense Overview of the Narrow tier | T38 | prête |
