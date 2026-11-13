@@ -51,7 +51,7 @@ fn fixture_snapshot() -> OpenCodeSnapshot {
     let sessions = parse_sessions(&sessions_json()).unwrap();
     let steps = parse_steps(&messages_json(), Some("/work/.wt/demo-131")).unwrap();
     let focus = sessions.iter().find(|s| s.job == Some(131)).map(|s| s.id.clone());
-    OpenCodeSnapshot { sessions, focus, steps, error: None, fetched_ms: 1794514000000 }
+    OpenCodeSnapshot { sessions, focus, steps, error: None, fetched_ms: 1794514000000, ..Default::default() }
 }
 
 /// An app on the Agents screen, following the done session, with `utc_offset_s = 0` (UTC).

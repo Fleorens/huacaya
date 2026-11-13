@@ -122,8 +122,8 @@ assistant messages, each with one tool part (`state.status` `"completed"` when `
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented; `poll` keeps its signature and documented behaviour.
-- [ ] Every earlier test passes; the tests above pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented; `poll` keeps its signature and documented behaviour.
+- [x] Every earlier test passes; the tests above pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (Real server, by the orchestrator) a running job's map counts match its whole history and new steps show
       within about a second.

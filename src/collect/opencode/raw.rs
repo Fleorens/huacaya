@@ -60,6 +60,15 @@ pub(super) struct RawLocation {
 #[derive(Deserialize)]
 pub(super) struct RawMessages {
     pub(super) data: Vec<RawMessage>,
+    /// The `cursor.next` token for the next older page, present only when the server sends one.
+    #[serde(default)]
+    pub(super) cursor: Option<RawCursor>,
+}
+
+#[derive(Deserialize, Default)]
+pub(super) struct RawCursor {
+    #[serde(default)]
+    pub(super) next: Option<String>,
 }
 #[derive(Deserialize)]
 pub(super) struct RawMessage {

@@ -44,7 +44,7 @@ fn running_snapshot() -> OpenCodeSnapshot {
     let sessions = parse_sessions(&sessions_json()).unwrap();
     let steps = parse_steps(&messages_json(), Some("/work/.wt/demo-136")).unwrap();
     let focus = sessions.iter().find(|s| s.job == Some(136)).map(|s| s.id.clone());
-    OpenCodeSnapshot { sessions, focus, steps, error: None, fetched_ms: 1794514000000 }
+    OpenCodeSnapshot { sessions, focus, steps, error: None, fetched_ms: 1794514000000, ..Default::default() }
 }
 
 /// An app on the Overview screen, following the running session `#136`, UTC.
