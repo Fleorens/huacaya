@@ -144,12 +144,10 @@ page); the model prefixes every command with `cd <worktree> && `.
 | [T42](T42-live-poller.md) | Poller: whole history once, then a 12-message round every second | T41 | validée |
 | [T43](T43-map-widget.md) | The map widget: braille dots, stations, spokes, pulses, context ring | T42 | validée |
 | [T44](T44-agents-map-screen.md) | Agents screen: the map view (`m`), its feed and "now" line | T43 | validée |
+| [T45](T45-dense-shared-helpers.md) | The dense view uses the model band's helpers instead of copies | T44 | prête |
 
 T41–T44 reviewed by the orchestrator on 2026-11-13, with the poller and the map view run end to end against
 the live OpenCode server (`opencode api` as the fetcher): history over every page (424 steps for job #150),
 one light round a second, each under 90 ms. Fixed in the review: real user prompts sit in a top-level `text`
 (the You station stayed at 0); a real model name spilled out of the ring. Not checked yet: the pulses moving
 in a real terminal during a running job (Florian, on screen).
-
-Later cleanup, no sheet yet: `src/ui/dense.rs` (T39) keeps private copies of `speed`, `ctx_used` and
-`ctx_ratio` from `src/ui/panels/model.rs`; once T44 makes the model helpers public, use them there.
