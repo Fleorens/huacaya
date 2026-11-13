@@ -135,3 +135,12 @@ fn demo_agents_golden() {
     let expected = std::fs::read_to_string(path).unwrap();
     assert_eq!(expected, fresh, "golden file {path} is stale");
 }
+
+#[test]
+fn long_run_keeps_newest_steps() {
+    // Past SNAPSHOT_STEPS steps the snapshot keeps the newest ones, so the map keeps cycling.
+    let snap = replay(DEMO_START_MS, 720.0);
+    assert_eq!(snap.steps.len(), llamatop::collect::opencode::SNAPSHOT_STEPS);
+    assert!(snap.steps.last().is_some_and(|s| s.id.starts_with("demo-12-")));
+    assert!(snap.steps.windows(2).all(|w| w[0].time_ms <= w[1].time_ms));
+}

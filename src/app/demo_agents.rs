@@ -238,7 +238,10 @@ impl DemoAgents {
 /// The existing steps at demo time `t` (cycles 0, 1, …), in time order, newest `SNAPSHOT_STEPS` only.
 fn steps_at(script: &[Script], start_ms: i64, t: f64) -> Vec<Step> {
     let mut steps = Vec::new();
-    let mut c = 0usize;
+    // Older cycles fall outside the newest SNAPSHOT_STEPS anyway: start just early enough that the
+    // whole cycles before the current one hold at least SNAPSHOT_STEPS steps, so a round stays bounded.
+    let current = (t.max(0.0) / AGENT_CYCLE_S).floor() as usize;
+    let mut c = current.saturating_sub(SNAPSHOT_STEPS.div_ceil(script.len()));
     loop {
         let c_s = c as f64 * AGENT_CYCLE_S;
         // The first step of this cycle already starts after `t`: later cycles do too.
@@ -264,9 +267,9 @@ fn steps_at(script: &[Script], start_ms: i64, t: f64) -> Vec<Step> {
         }
         c += 1;
     }
-    if steps.len() > SNAPSHOT_STEPS {
-        steps.truncate(steps.len() - SNAPSHOT_STEPS);
-    }
+    // Keep the newest SNAPSHOT_STEPS, as the real poller does.
+    let excess = steps.len().saturating_sub(SNAPSHOT_STEPS);
+    steps.drain(..excess);
     steps
 }
 
