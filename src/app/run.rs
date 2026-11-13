@@ -2,6 +2,7 @@
 //! `--demo` event generator (`tasks/T15-run-loop.md`).
 
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
@@ -12,6 +13,7 @@ use anyhow::Result;
 use crate::agent::client::AgentClient;
 use crate::app::clock;
 use crate::app::demo;
+use crate::app::threads::opencode_loop;
 use crate::app::{App, Event};
 use crate::collect::llama_poll::Poller;
 use crate::collect::logs::{self, Level, LogLine};
@@ -27,6 +29,10 @@ pub fn run(cli: &Cli) -> Result<()> {
     let theme = Theme::new(ColorMode::detect());
     let offset = clock::local_utc_offset();
     let mut app = App::new(cli.interval_ms);
+
+    // What the Agents screen follows: read by the opencode poller, mirrored from `app.agent_focus` by
+    // the main loop after each batch.
+    let opencode_focus: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(app.agent_focus.clone()));
 
     // One channel, one stop flag, one interval shared with the data threads so `+`/`-` take effect
     // without a restart.
@@ -123,6 +129,15 @@ pub fn run(cli: &Cli) -> Result<()> {
                 }
             };
         }
+
+        // The opencode poller: only when configured, and not in the demo (which has no server).
+        if let Some(url) = cli.opencode.clone() {
+            let user = cli.opencode_user.clone().unwrap_or_else(|| "opencode".to_string());
+            let password = cli.opencode_password().unwrap_or_default();
+            let client = Client::new_basic(&url, &user, &password, Duration::from_secs(3));
+            let (opencode_tx, opencode_stop, focus) = (tx.clone(), stop.clone(), opencode_focus.clone());
+            thread::spawn(move || opencode_loop(client, opencode_tx, opencode_stop, focus));
+        }
     }
 
     // Input and tick threads end on the stop flag.
@@ -141,7 +156,8 @@ pub fn run(cli: &Cli) -> Result<()> {
             return Err(e.into());
         }
     };
-    let loop_result = dashboard_loop(&mut terminal, &mut app, &theme, offset, &interval, &rx);
+    let loop_result =
+        dashboard_loop(&mut terminal, &mut app, &theme, offset, &interval, &rx, &opencode_focus);
 
     // Whatever happened in the loop: stop the threads, restore the terminal, then return its result.
     // The poller is not joined: an HTTP request may still be waiting for its 2 s timeout.
@@ -159,6 +175,7 @@ fn dashboard_loop(
     offset: i32,
     interval: &Arc<AtomicU64>,
     rx: &Receiver<Event>,
+    opencode_focus: &Mutex<Option<String>>,
 ) -> Result<()> {
     let mut shown_clock = draw_frame(terminal, app, theme, offset)?;
     loop {
@@ -171,6 +188,10 @@ fn dashboard_loop(
         // A burst of already-waiting events costs one frame.
         while let Ok(event) = rx.try_recv() {
             drew |= apply_event(app, event, interval);
+        }
+        // Selecting a session takes effect at the poller's next round.
+        if let Ok(mut guard) = opencode_focus.lock() {
+            *guard = app.agent_focus.clone();
         }
         if app.quit {
             break;
@@ -286,7 +307,7 @@ fn tick_loop(stop: Arc<AtomicBool>, tx: Sender<Event>) {
 }
 
 /// Sleeps `interval_ms` in slices of at most 100 ms, waking early when `stop` is set.
-fn sleep(stop: &Arc<AtomicBool>, interval_ms: u64) {
+pub(super) fn sleep(stop: &Arc<AtomicBool>, interval_ms: u64) {
     let interval = Duration::from_millis(interval_ms);
     let mut slept = Duration::ZERO;
     while slept < interval {

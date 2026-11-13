@@ -179,7 +179,7 @@ Steps, part by part (paths: `directory` + `/` removed from the front when it mat
 
 ## Acceptance criteria
 
-- [ ] The public API above exists; with `--opencode`, the `App` receives `Event::OpenCode` every 2 s.
-- [ ] Every earlier test passes (setup tests with their extra `\n`); the 8 tests above pass.
-- [ ] README: the `[opencode]` table and the `--opencode*` flags.
-- [ ] `bash .devbox/check` is green.
+- [x] The public API above exists; with `--opencode`, the `App` receives `Event::OpenCode` every 2 s.
+- [x] Every earlier test passes (setup tests with their extra `\n`); the 8 tests above pass.
+- [x] README: the `[opencode]` table and the `--opencode*` flags.
+- [x] `bash .devbox/check` is green.

@@ -19,7 +19,7 @@ use llamatop::agent::client::AgentClient;
 use llamatop::agent::server::{self, AgentConfig};
 use llamatop::collect::llama::{ModelInfo, parse_models};
 use llamatop::config::Cli;
-use llamatop::settings::{self, AgentSettings, LlamaSettings, Settings};
+use llamatop::settings::{self, AgentSettings, LlamaSettings, OpenCodeSettings, Settings};
 use llamatop::setup::{self, Probe};
 
 /// The agent config pointed at the fixture machine and log, listening on an OS-assigned port.
@@ -123,6 +123,12 @@ fn settings_agent_round_trip() {
             token: Some("tok".to_string()),
             token_file: Some(PathBuf::from("/etc/llamatop/agent-token")),
         },
+        opencode: OpenCodeSettings {
+            url: Some("http://a:8080".to_string()),
+            user: Some("dev".to_string()),
+            password: Some("pw".to_string()),
+            ..Default::default()
+        },
     };
     let path = temp_path();
     settings::save(&path, &settings).unwrap();
@@ -152,11 +158,15 @@ impl Probe for FakeProbe {
     fn agent(&self, _url: &str, _token: Option<&str>) -> Result<String> {
         Ok("aibox-flo".to_string())
     }
+
+    fn opencode(&self, _url: &str, _user: &str, _password: Option<&str>) -> Result<usize> {
+        Ok(0)
+    }
 }
 
 #[test]
 fn setup_asks_for_the_agent() {
-    let mut input = Cursor::new("\n\nhttp://a:9099\n".to_string());
+    let mut input = Cursor::new("\n\nhttp://a:9099\n\n".to_string());
     let mut out = Vec::new();
     // First secret: the llama key (""); second: the agent token.
     let mut idx = 0usize;
@@ -182,12 +192,12 @@ fn setup_enter_keeps_the_agent_dash_removes_it() {
     current.agent.token = Some("tok".to_string());
     // Enter at the agent question keeps it (then Enter keeps the token).
     let mut secret = |_: &str| -> Result<String> { Ok(String::new()) };
-    let mut input = Cursor::new("\n\n\n".to_string());
+    let mut input = Cursor::new("\n\n\n\n".to_string());
     let kept = setup::wizard(&mut input, &mut Vec::new(), &mut secret, &FakeProbe, &current).unwrap();
     assert_eq!(kept.agent.url.as_deref(), Some("http://a:9099"));
     assert_eq!(kept.agent.token.as_deref(), Some("tok"));
     // `-` removes it.
-    let mut input = Cursor::new("\n\n-\n".to_string());
+    let mut input = Cursor::new("\n\n-\n\n".to_string());
     let removed = setup::wizard(&mut input, &mut Vec::new(), &mut secret, &FakeProbe, &current).unwrap();
     assert_eq!(removed.agent.url, None);
     assert_eq!(removed.agent.token, None);

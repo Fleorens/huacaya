@@ -24,6 +24,7 @@ pub mod llama_poll;
 pub mod logs;
 pub mod net;
 pub mod nvidia;
+pub mod opencode;
 pub mod process;
 pub mod sampler;
 pub mod sensors;

@@ -39,6 +39,10 @@ impl Probe for FakeProbe {
     fn agent(&self, _url: &str, _token: Option<&str>) -> Result<String> {
         Ok("aibox-flo".to_string())
     }
+
+    fn opencode(&self, _url: &str, _user: &str, _password: Option<&str>) -> Result<usize> {
+        Ok(3)
+    }
 }
 
 /// Runs the dialogue with a cursor, a fixed secret answer, and the fake probe; returns the settings and the
@@ -59,7 +63,7 @@ fn normalize() {
 
 #[test]
 fn defaults_accepted() {
-    let (settings, out) = run_wizard("\n\n\n", "", Settings::default());
+    let (settings, out) = run_wizard("\n\n\n\n", "", Settings::default());
     assert_eq!(settings.llama.url.as_deref(), Some("http://127.0.0.1:8080"));
     assert_eq!(settings.llama.api_key, None);
     assert_eq!(settings.llama.log_cmd.as_deref(), Some(LOG_CMD));
@@ -69,7 +73,7 @@ fn defaults_accepted() {
 
 #[test]
 fn remote_url_suggests_ssh_log() {
-    let (settings, _) = run_wizard("192.168.1.203:8080\n\n\n", "", Settings::default());
+    let (settings, _) = run_wizard("192.168.1.203:8080\n\n\n\n", "", Settings::default());
     assert_eq!(
         settings.llama.log_cmd.as_deref(),
         Some("ssh 192.168.1.203 journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise")
@@ -78,19 +82,19 @@ fn remote_url_suggests_ssh_log() {
 
 #[test]
 fn unreachable_then_other_url() {
-    let (settings, _) = run_wizard("bad:1\nn\nhttp://ok:8080\n\n\n", "", Settings::default());
+    let (settings, _) = run_wizard("bad:1\nn\nhttp://ok:8080\n\n\n\n", "", Settings::default());
     assert_eq!(settings.llama.url.as_deref(), Some("http://ok:8080"));
 }
 
 #[test]
 fn unreachable_kept() {
-    let (settings, _) = run_wizard("bad:1\ny\n\n\n", "", Settings::default());
+    let (settings, _) = run_wizard("bad:1\ny\n\n\n\n", "", Settings::default());
     assert_eq!(settings.llama.url.as_deref(), Some("http://bad:1"));
 }
 
 #[test]
 fn key_refused_then_accepted() {
-    let mut input = Cursor::new("\n\n\n".to_string());
+    let mut input = Cursor::new("\n\n\n\n".to_string());
     let mut out = Vec::new();
     let keys = ["wrong".to_string(), "right".to_string()];
     let mut idx = 0usize;
@@ -112,7 +116,7 @@ fn existing_key_kept_and_never_shown() {
         llama: LlamaSettings { api_key: Some("sk-OLD-123".to_string()), ..Default::default() },
         ..Default::default()
     };
-    let (settings, out) = run_wizard("\n\n\n", "", current);
+    let (settings, out) = run_wizard("\n\n\n\n", "", current);
     assert_eq!(settings.llama.api_key.as_deref(), Some("sk-OLD-123"));
     assert!(!out.contains("sk-OLD"));
     assert!(!out.contains("right"));
@@ -120,7 +124,7 @@ fn existing_key_kept_and_never_shown() {
 
 #[test]
 fn aborts_after_three_refusals() {
-    let input = "bad:1\nn\nbad:2\nn\nbad:3\nn\n\n";
+    let input = "bad:1\nn\nbad:2\nn\nbad:3\nn\n\n\n";
     let mut out = Vec::new();
     let mut secret = |_: &str| -> Result<String> { Ok(String::new()) };
     let result =
@@ -131,7 +135,7 @@ fn aborts_after_three_refusals() {
 
 #[test]
 fn end_of_input_aborts() {
-    let input = "bad:1\n\n";
+    let input = "bad:1\n\n\n";
     let mut out = Vec::new();
     let mut secret = |_: &str| -> Result<String> { Ok(String::new()) };
     let result =

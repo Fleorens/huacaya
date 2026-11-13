@@ -7,10 +7,13 @@ use std::collections::VecDeque;
 
 use crate::collect::llama::ModelState;
 use crate::collect::llama_poll::LlamaSnapshot;
-use crate::collect::logs::{Level, LogEvent, LogLine};
+use crate::collect::logs::{LogEvent, LogLine};
+use crate::collect::opencode::OpenCodeSnapshot;
 use crate::collect::sampler::SystemSnapshot;
 use crate::util::History;
 use crossterm::event::KeyEvent;
+
+use super::log_view::{LevelFilter, LogView};
 
 /// Log lines kept in memory; the oldest is dropped beyond.
 pub const LOG_CAPACITY: usize = 2000;
@@ -28,6 +31,7 @@ pub const REQUEST_HISTORY: usize = 50;
 pub enum Event {
     System(SystemSnapshot),
     Llama(LlamaSnapshot),
+    OpenCode(OpenCodeSnapshot),
     Log(LogLine),
     Key(KeyEvent),
     /// The terminal changed size; the next frame is laid out again.
@@ -78,54 +82,6 @@ impl Screen {
     }
 }
 
-/// Which levels the log shows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LevelFilter {
-    All,
-    WarnAndErrors,
-    Errors,
-}
-
-impl LevelFilter {
-    /// `All` → `WarnAndErrors` → `Errors` → `All`.
-    pub fn next(self) -> Self {
-        match self {
-            LevelFilter::All => LevelFilter::WarnAndErrors,
-            LevelFilter::WarnAndErrors => LevelFilter::Errors,
-            LevelFilter::Errors => LevelFilter::All,
-        }
-    }
-
-    /// `All`: every level; `WarnAndErrors`: `Warn` and `Error`; `Errors`: `Error` only.
-    pub fn accepts(self, level: Level) -> bool {
-        matches!(
-            (self, level),
-            (LevelFilter::All, _)
-                | (LevelFilter::WarnAndErrors, Level::Warn | Level::Error)
-                | (LevelFilter::Errors, Level::Error)
-        )
-    }
-}
-
-/// What the log view shows and where it stands.
-#[derive(Debug, Clone, PartialEq)]
-pub struct LogView {
-    /// `true`: the view sticks to the newest line.
-    pub follow: bool,
-    /// Visible lines hidden below the view; 0 = the newest line is the last one shown.
-    pub scroll: usize,
-    /// Case-insensitive substring searched in `LogLine::text`; empty = no filter.
-    pub filter: String,
-    /// `true` while the user types the filter after `/`.
-    pub editing_filter: bool,
-    /// `true`: log lines are shown as printed; `false`: in compact form.
-    pub raw: bool,
-    pub level: LevelFilter,
-    /// `false`: lines whose event is `LogEvent::Proxy` are hidden. The router prints two of them for
-    /// every polling round of llamatop itself, so they are noise by default.
-    pub show_proxy: bool,
-}
-
 /// The last request, assembled from the timing lines of one task.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LastRequest {
@@ -147,6 +103,10 @@ pub struct LastRequest {
 pub struct App {
     pub system: Option<SystemSnapshot>,
     pub llama: Option<LlamaSnapshot>,
+    /// The OpenCode sessions and steps, or `None` until the first round.
+    pub opencode: Option<OpenCodeSnapshot>,
+    /// The session the Agents screen follows; set by T35.
+    pub agent_focus: Option<String>,
     pub logs: VecDeque<LogLine>,
     /// `busy_pct` of the first GPU.
     pub gpu_load: History,
@@ -178,6 +138,8 @@ impl App {
         App {
             system: None,
             llama: None,
+            opencode: None,
+            agent_focus: None,
             logs: VecDeque::new(),
             gpu_load: History::new(HISTORY_CAPACITY),
             cpu_usage: History::new(HISTORY_CAPACITY),
@@ -236,6 +198,10 @@ impl App {
                 }
                 self.model_selected = self.model_selected.min(s.models.len().saturating_sub(1));
                 self.llama = Some(s);
+                !self.paused
+            }
+            Event::OpenCode(s) => {
+                self.opencode = Some(s);
                 !self.paused
             }
             Event::Log(l) => {

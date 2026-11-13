@@ -17,6 +17,7 @@ use anyhow::{Context, Result};
 pub struct Settings {
     pub llama: LlamaSettings,
     pub agent: AgentSettings,
+    pub opencode: OpenCodeSettings,
 }
 
 /// The `[llama]` table.
@@ -50,6 +51,24 @@ pub struct AgentSettings {
     /// A file holding the token, like `--agent-token-file`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token_file: Option<PathBuf>,
+}
+
+/// The `[opencode]` table: the OpenCode server the Agents screen reads (`tasks/T34`).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct OpenCodeSettings {
+    /// Base URL of the OpenCode server, like `--opencode`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    /// The HTTP Basic user.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+    /// The HTTP Basic password itself (the file is created with mode 600).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+    /// A file holding the password, like `--opencode-password-file`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password_file: Option<PathBuf>,
 }
 
 /// `$XDG_CONFIG_HOME/llamatop/config.toml` when `XDG_CONFIG_HOME` is set and not empty, else
