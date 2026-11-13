@@ -59,6 +59,7 @@ fn fixture_app() -> App {
     let mut app = App::new(1000);
     let snapshot = fixture_snapshot();
     let focus = snapshot.focus.clone().unwrap();
+    app.agent_selected = snapshot.sessions.iter().position(|s| s.id == focus).unwrap();
     app.opencode = Some(snapshot);
     app.screen = Screen::Agents;
     app.agent_focus = Some(focus);

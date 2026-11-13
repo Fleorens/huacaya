@@ -1,4 +1,4 @@
- llamatop  gpu-box  up 4d 3h  ● server ok  b12151 1 Overview   2 Models   3 Logs   4 System   5 Agents  10:21:03  ? help
+ llamatop  gpu-box  up 4d 3h  ● server ok  b12151     1 Overview 2 Models 3 Logs 4 System 5 Agents      10:21:03  ? help
 ╭ Models ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │   state       model                                                        quant    ctx      moe   spec          img │
 │   ○ unloaded  Ornith-1.5-35B-A3B                                           Q4_K_M   163.8K   16    -             img │

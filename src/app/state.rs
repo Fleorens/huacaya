@@ -212,12 +212,11 @@ impl App {
                 !self.paused
             }
             Event::OpenCode(s) => {
-                // Keep the queue selection valid; when not following, point it at the fetched session.
+                // Keep the queue selection valid and on the session shown: the followed one, else the
+                // fetched focus. The list may reorder or lose sessions between two fetches.
                 self.agent_selected = self.agent_selected.min(s.sessions.len().saturating_sub(1));
-                if self.agent_focus.is_none()
-                    && let Some(i) =
-                        s.focus.as_deref().and_then(|focus| s.sessions.iter().position(|x| x.id == focus))
-                {
+                let shown = self.agent_focus.as_deref().or(s.focus.as_deref());
+                if let Some(i) = shown.and_then(|id| s.sessions.iter().position(|x| x.id == id)) {
                     self.agent_selected = i;
                 }
                 self.opencode = Some(s);

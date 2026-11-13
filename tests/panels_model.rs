@@ -87,7 +87,7 @@ fn header_states() {
     let ctx = make_ctx(&theme);
     let mut app = demo_app(DemoState::Generating);
     app.paused = true;
-    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 130, 1);
+    let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 120, 1);
     assert!(rows[0].contains("PAUSED"), "{:?}", rows[0]);
 }
 
@@ -97,9 +97,9 @@ fn header_current_tab() {
     let ctx = make_ctx(&theme);
     let mut app = demo_app(DemoState::Idle);
     app.screen = Screen::Logs;
-    let mut buf = Buffer::empty(Rect::new(0, 0, 120, 3));
-    header::render(&app, &ctx, Rect::new(0, 0, 120, 3), &mut buf);
-    let row0 = (0..120).map(|x| buf[(x, 0)].symbol().to_string()).collect::<String>();
+    let mut buf = Buffer::empty(Rect::new(0, 0, 100, 3));
+    header::render(&app, &ctx, Rect::new(0, 0, 100, 3), &mut buf);
+    let row0 = (0..100).map(|x| buf[(x, 0)].symbol().to_string()).collect::<String>();
     let i3 = row0[..row0.find("3 Logs").unwrap()].chars().count();
     let i1 = row0[..row0.find("1 Overview").unwrap()].chars().count();
     assert!(buf[(i3 as u16, 0)].modifier.contains(Modifier::REVERSED));

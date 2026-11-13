@@ -25,14 +25,13 @@ const SESSION_H: u16 = 7;
 /// setup message; with an error, the queue's last row shows it. Never panics.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let theme = ctx.theme;
-    if app.opencode.is_none() {
+    let Some(snapshot) = app.opencode.as_ref() else {
         render_not_configured(theme, area, buf);
         return;
-    }
+    };
     if area.width < 30 || area.height < SESSION_H {
         return;
     }
-    let snapshot = app.opencode.as_ref().unwrap();
 
     // The queue on the left; the session (fixed height) then the timeline on the rest, to the right.
     let queue_w = (area.width * 2 / 5).min(52);
@@ -45,7 +44,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 
     render_queue(app, snapshot, theme, queue_area, buf);
     if let Some(session) = focused_session(app, snapshot) {
-        render_session(app, snapshot, session, theme, session_area, buf);
+        render_session(snapshot, session, theme, session_area, buf);
     }
     render_timeline(app, snapshot, theme, timeline_area, buf);
 }
@@ -102,22 +101,16 @@ fn render_queue(app: &App, snapshot: &OpenCodeSnapshot, theme: &Theme, area: Rec
         return;
     }
     // The `opencode` right title on the top border.
-    set_right(buf, area, "opencode ", theme.fg(Role::Dim));
-    // The header row.
-    set_line(
-        buf,
-        inner.x,
-        inner.y,
-        &Line::from(Span::styled(queue_header(), theme.fg(Role::Dim))),
-        inner.width,
-    );
+    set_right(buf, area, "Queue", "opencode", theme.fg(Role::Dim));
+    let header = Line::from(Span::styled(QUEUE_HEADER, theme.fg(Role::Dim)));
+    buf.set_line(inner.x, inner.y, &header, inner.width);
 
+    // The rows between the header and the summary; scrolled so the selected session stays visible.
     let last_y = inner.y + inner.height - 1;
-    for (i, session) in snapshot.sessions.iter().enumerate() {
-        let y = inner.y + 1 + i as u16;
-        if y >= last_y {
-            break;
-        }
+    let rows = last_y.saturating_sub(inner.y + 1) as usize;
+    let first = (app.agent_selected + 1).saturating_sub(rows);
+    for (i, session) in snapshot.sessions.iter().enumerate().skip(first).take(rows) {
+        let y = inner.y + 1 + (i - first) as u16;
         render_queue_row(buf, inner, y, session, i == app.agent_selected, snapshot.fetched_ms, theme);
     }
 
@@ -135,10 +128,8 @@ fn render_queue(app: &App, snapshot: &OpenCodeSnapshot, theme: &Theme, area: Rec
     buf.set_line(inner.x, last_y, &Line::from(line), inner.width);
 }
 
-/// The queue header, aligned under the data columns.
-fn queue_header() -> String {
-    format!("{:<2}{:<5}{:<12}{:<6}{}", "  ", "#", "state", "age", "task")
-}
+/// The queue header of the sheet; each data cell below is followed by one space so columns never touch.
+const QUEUE_HEADER: &str = "  #     state        age   task";
 
 /// One queue row: the marker (reversed only on the `▶` of the selected row), the job, state, age and
 /// title, each cut and padded to its column, the whole row cut to the panel body.
@@ -159,21 +150,22 @@ fn render_queue_row(
         spans.push(Span::styled("  ", theme.fg(Role::Text)));
     }
     let job = session.job.map(|j| j.to_string()).unwrap_or_else(|| "-".to_string());
-    spans.push(Span::styled(format!("{:>5}", job), theme.fg(Role::Text)));
+    spans.push(Span::styled(format!("{:<5} ", job), theme.fg(Role::Text)));
 
     let (state_text, state_role) = queue_state(session);
     let bold = state_role != Role::Dim;
     spans.push(Span::styled(
-        format!("{:<12}", state_text),
+        format!("{:<12} ", state_text),
         theme.fg(state_role).add_modifier(if bold { Modifier::BOLD } else { Modifier::empty() }),
     ));
 
     let age_s = fetched_ms.saturating_sub(session.created_ms) / 1000;
-    spans.push(Span::styled(format!("{:<6}", duration(age_s.max(0) as u64)), theme.fg(Role::Text)));
+    spans.push(Span::styled(format!("{:<6} ", duration(age_s.max(0) as u64)), theme.fg(Role::Text)));
 
+    // The title takes what is left after the marker and the padded cells (a longer age eats into it).
+    let used: usize = spans.iter().map(|s| s.width()).sum();
     let title = short_title(&session.title);
-    let title_w = inner.width.saturating_sub(2 + 5 + 12 + 6);
-    spans.push(Span::styled(fit(&title, title_w as usize), theme.fg(Role::Text)));
+    spans.push(Span::styled(fit(&title, (inner.width as usize).saturating_sub(used)), theme.fg(Role::Text)));
     buf.set_line(inner.x, y, &Line::from(spans), inner.width);
 }
 
@@ -190,7 +182,6 @@ fn queue_state(session: &Session) -> (String, Role) {
 
 /// The followed session's details: model, tokens, state and age, one `label value` row each.
 fn render_session(
-    app: &App,
     snapshot: &OpenCodeSnapshot,
     session: &Session,
     theme: &Theme,
@@ -219,6 +210,9 @@ fn render_session(
         .map(|(name, _)| name)
         .unwrap_or_else(|| "n/a".to_string());
     let agent = session.agent.as_deref().unwrap_or("n/a");
+    // `◉ working` while running (same role as the queue's `◉ running`), else the queue's outcome cell.
+    let (outcome, state_role) = queue_state(session);
+    let state = if session.running { "◉ working".to_string() } else { outcome };
 
     let rows: Vec<Line> = vec![
         Line::from(vec![
@@ -239,11 +233,11 @@ fn render_session(
         ]),
         Line::from(vec![
             Span::styled("state   ".to_string(), theme.fg(Role::Dim)),
-            Span::styled(state_text(session), theme.fg(state_role(session)).add_modifier(Modifier::BOLD)),
+            Span::styled(state, theme.fg(state_role).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
             Span::styled("time    ".to_string(), theme.fg(Role::Dim)),
-            Span::styled(duration(session_time(app, snapshot, session)), theme.fg(Role::Text)),
+            Span::styled(duration(session_time(snapshot, session)), theme.fg(Role::Text)),
         ]),
     ];
 
@@ -256,26 +250,8 @@ fn render_session(
     }
 }
 
-/// The session state text: `◉ working` when running, else the queue's outcome line.
-fn state_text(session: &Session) -> String {
-    if session.running { "◉ working".to_string() } else { queue_state(session).0 }
-}
-
-/// The role of the session state cell (`Server` when running, else the queue's role).
-fn state_role(session: &Session) -> Role {
-    if session.running {
-        Role::Server
-    } else {
-        match session.outcome.as_deref() {
-            Some("succeeded") => Role::Good,
-            Some("failed") => Role::Critical,
-            _ => Role::Dim,
-        }
-    }
-}
-
 /// The session age: `fetched - created` while running, else `idle - created` (or `fetched - created`).
-fn session_time(_app: &App, snapshot: &OpenCodeSnapshot, session: &Session) -> u64 {
+fn session_time(snapshot: &OpenCodeSnapshot, session: &Session) -> u64 {
     let secs = if session.running {
         snapshot.fetched_ms.saturating_sub(session.created_ms) / 1000
     } else if let Some(idle) = session.idle_ms {
@@ -297,7 +273,7 @@ fn render_timeline(app: &App, snapshot: &OpenCodeSnapshot, theme: &Theme, area: 
     if inner.height < 1 || inner.width < 3 {
         return;
     }
-    set_right(buf, area, "follow ● ", theme.fg(Role::Good));
+    set_right(buf, area, "Timeline", "follow ●", theme.fg(Role::Good));
 
     // The last `rows` steps, oldest first (the data is already oldest first).
     let rows = inner.height as usize;
@@ -357,15 +333,15 @@ fn step_glyph(step: &Step) -> (String, Role) {
     }
 }
 
-/// One `set_line`, cut to `width`.
-fn set_line(buf: &mut Buffer, x: u16, y: u16, line: &Line, width: u16) {
-    buf.set_line(x, y, line, width);
-}
-
-/// A right-aligned title on `area`'s top border, cut so it never overflows.
-fn set_right(buf: &mut Buffer, area: Rect, text: &str, style: ratatui::style::Style) {
-    let right = area.x + area.width;
-    let w = text.chars().count() as u16;
-    let x = right.saturating_sub(w).max(area.x);
-    buf.set_line(x, area.y, &Line::from(Span::styled(text.to_string(), style)), area.width.saturating_sub(x));
+/// A right-aligned ` <text> ` on `area`'s top border, ending just before the right corner and never over
+/// the `╭ <title> ` on the left (as the Log panel's indicators); omitted when it does not fit.
+fn set_right(buf: &mut Buffer, area: Rect, title: &str, text: &str, style: ratatui::style::Style) {
+    let padded = format!(" {text} ");
+    let w = padded.chars().count() as u16;
+    let left = area.x.saturating_add(title.chars().count() as u16 + 3);
+    let right = area.x + area.width.saturating_sub(1);
+    if right < left + w {
+        return;
+    }
+    buf.set_line(right - w, area.y, &Line::from(Span::styled(padded, style)), w);
 }

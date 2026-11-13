@@ -47,7 +47,7 @@ pub fn render(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
 fn help_rows(app: &App) -> Vec<(&'static str, String)> {
     let refresh = format!("faster / slower refresh (now {:.1} s)", app.interval_ms as f64 / 1000.0);
     vec![
-        ("1-4 Tab S-Tab", "switch screen".into()),
+        ("1-5 Tab S-Tab", "switch screen".into()),
         ("a", "Agents: follow the running session".into()),
         ("q Ctrl-C", "quit".into()),
         ("? Esc", "close this help".into()),
