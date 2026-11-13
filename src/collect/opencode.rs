@@ -220,8 +220,12 @@ fn tool_step(part: &RawPart, time: i64, directory: Option<&str>) -> Option<Step>
         "write" => {
             let path =
                 input.and_then(|i| i.path.as_deref()).map(|p| shorten(p, directory)).unwrap_or_default();
-            let lines =
-                input.and_then(|i| i.content.as_deref()).map(str::lines).map(|l| l.count()).unwrap_or(0);
+            let lines = input
+                .and_then(|i| i.content.as_ref())
+                .and_then(|v| v.as_str())
+                .map(str::lines)
+                .map(|l| l.count())
+                .unwrap_or(0);
             Some(step(time, StepKind::Write, path, ok, Some(format!("{lines} lines"))))
         }
         "shell" => {

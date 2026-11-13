@@ -101,7 +101,7 @@ pub(super) struct RawToolInput {
     #[serde(default)]
     pub(super) pattern: Option<String>,
     #[serde(default)]
-    pub(super) content: Option<String>,
+    pub(super) content: Option<serde_json::Value>,
 }
 #[derive(Deserialize)]
 pub(super) struct RawPartContent {

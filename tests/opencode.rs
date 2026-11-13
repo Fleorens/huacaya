@@ -269,3 +269,25 @@ fn setup_asks_again_after_a_refused_password() {
         llamatop::setup::wizard(&mut input, &mut Vec::new(), &mut secret, &FakeProbe, &Settings::default());
     assert!(result.is_err());
 }
+
+/// Real OpenCode 2.2.7 answer (2026-11-13): the `compress` tool sends `input.content` as a list, not a
+/// string. One such part must not make the whole timeline fail to parse.
+#[test]
+fn steps_survive_a_compress_part() {
+    let json = r#"{"data": [{"id": "msg_1", "time": {"created": 1794585494726}, "type": "assistant",
+      "agent": "nightshift", "content": [
+        {"type": "tool", "id": "c1", "name": "compress", "executed": false,
+         "state": {"status": "completed",
+                   "input": {"topic": "fix", "content": [{"startId": "@212@", "endId": "@237@", "summary": "s"}]},
+                   "content": [{"type": "text", "text": "Compressed 26 messages."}]},
+         "time": {"created": 1794585582687, "completed": 1794585602850}},
+        {"type": "tool", "id": "w1", "name": "write", "executed": false,
+         "state": {"status": "completed", "input": {"path": "/w/a.rs", "content": "a\nb\n"}},
+         "time": {"created": 1794585602900}}]}], "cursor": null}"#;
+    let steps = parse_steps(json, Some("/w")).unwrap();
+    assert_eq!(steps.len(), 2);
+    assert_eq!(steps[0].kind, StepKind::Other("compress".to_string()));
+    assert_eq!(steps[0].ok, Some(true));
+    assert_eq!(steps[1].kind, StepKind::Write);
+    assert_eq!(steps[1].detail.as_deref(), Some("2 lines"));
+}
