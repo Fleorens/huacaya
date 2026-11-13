@@ -11,7 +11,7 @@ use crate::collect::logs::{Level, LogLine};
 use crate::ui::frame::panel;
 use crate::ui::panels::Ctx;
 use crate::ui::panels::log;
-use crate::ui::screens::logs_side::message_line;
+use crate::ui::text::fit;
 use crate::ui::theme::{Role, Theme};
 
 /// The Logs screen in `area` (the body below the header). Below 90 columns or 12 rows: `panels::log::render`
@@ -266,5 +266,68 @@ fn set_cell(buf: &mut Buffer, x: u16, y: u16, ch: char, role: Role, theme: &Them
         if let Some(color) = theme.color(role) {
             cell.fg = color;
         }
+    }
+}
+
+/// Fit a message for the log row: cut to `width`, and when `filter_lower` is not empty, style its first
+/// (ASCII, case-insensitive) occurrence `Warning` + `REVERSED`.
+fn message_line<'a>(msg: &str, filter_lower: &str, role: Role, theme: &'a Theme, width: usize) -> Line<'a> {
+    let displayed = fit(msg, width);
+    if filter_lower.is_empty() {
+        return Line::from(Span::styled(displayed, theme.fg(role)));
+    }
+    let (start, len) = match find_ci(&displayed, filter_lower) {
+        Some(hit) => hit,
+        None => return Line::from(Span::styled(displayed, theme.fg(role))),
+    };
+    let chars: Vec<char> = displayed.chars().collect();
+    let before: String = chars[..start].iter().collect();
+    let matched: String = chars[start..start + len].iter().collect();
+    let after: String = chars[start + len..].iter().collect();
+    let mut spans = Vec::new();
+    if !before.is_empty() {
+        spans.push(Span::styled(before, theme.fg(role)));
+    }
+    spans.push(Span::styled(
+        matched,
+        theme.fg(Role::Warning).add_modifier(ratatui::style::Modifier::REVERSED),
+    ));
+    if !after.is_empty() {
+        spans.push(Span::styled(after, theme.fg(role)));
+    }
+    Line::from(spans)
+}
+
+/// The `(start_char, len_chars)` of the first ASCII case-insensitive occurrence of `needle` in `haystack`.
+fn find_ci(haystack: &str, needle: &str) -> Option<(usize, usize)> {
+    if needle.is_empty() {
+        return None;
+    }
+    let h: Vec<char> = haystack.to_ascii_lowercase().chars().collect();
+    let n: Vec<char> = needle.to_ascii_lowercase().chars().collect();
+    // The line was kept on its raw text, so the shown (compact) message can be shorter than the filter.
+    if n.len() > h.len() {
+        return None;
+    }
+    'outer: for i in 0..=h.len().saturating_sub(n.len()) {
+        for j in 0..n.len() {
+            if h[i + j] != n[j] {
+                continue 'outer;
+            }
+        }
+        return Some((i, n.len()));
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find_ci;
+
+    #[test]
+    fn find_ci_needle_longer_than_haystack() {
+        assert_eq!(find_ci("done", "done "), None);
+        assert_eq!(find_ci("", "x"), None);
+        assert_eq!(find_ci("Is Done", "done"), Some((3, 4)));
     }
 }

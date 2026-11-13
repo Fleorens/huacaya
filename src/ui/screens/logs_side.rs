@@ -15,7 +15,7 @@ use crate::collect::logs::{Level, LogEvent};
 use crate::ui::frame::panel;
 use crate::ui::panels::Ctx;
 use crate::ui::screens::logs::level_name;
-use crate::ui::text::{fit, group_thousands};
+use crate::ui::text::group_thousands;
 use crate::ui::theme::{Role, Theme};
 use crate::util::{count, duration};
 
@@ -155,7 +155,7 @@ fn render_tasks(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let block = panel("Tasks", Role::Server, app.log_view.tasks_focus, theme);
     let inner = block.inner(area);
     block.render(area, buf);
-    right_title(buf, area, "Enter: filter", theme);
+    right_title(buf, area, " Enter: filter ", theme);
 
     let tasks = log_tasks(app.logs.iter(), 50);
     if tasks.is_empty() {
@@ -196,7 +196,7 @@ fn render_tasks(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
             s
         };
         let marker = if selected { "▶ " } else { "  " };
-        let task_col = format!("#{task:<9}", task = summary.task);
+        let task_col = format!("{:<9}", format!("#{}", summary.task));
         let (glyph, glyph_role) = match summary.outcome {
             TaskOutcome::Running => ("◉", Role::Server),
             TaskOutcome::Done => ("✓", Role::Good),
@@ -233,57 +233,4 @@ pub fn render_side(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.height >= 16 {
         render_tasks(app, ctx, Rect::new(area.x, area.y + 13, left_w, area.height - 13), buf);
     }
-}
-
-/// Fit a message for the log row: cut to `width`, and when `filter_lower` is not empty, style its first
-/// (ASCII, case-insensitive) occurrence `Warning` + `REVERSED`.
-pub(crate) fn message_line<'a>(
-    msg: &str,
-    filter_lower: &str,
-    role: Role,
-    theme: &'a Theme,
-    width: usize,
-) -> Line<'a> {
-    let displayed = fit(msg, width);
-    if filter_lower.is_empty() {
-        return Line::from(Span::styled(displayed, theme.fg(role)));
-    }
-    let (start, len) = match find_ci(&displayed, filter_lower) {
-        Some(hit) => hit,
-        None => return Line::from(Span::styled(displayed, theme.fg(role))),
-    };
-    let chars: Vec<char> = displayed.chars().collect();
-    let before: String = chars[..start].iter().collect();
-    let matched: String = chars[start..start + len].iter().collect();
-    let after: String = chars[start + len..].iter().collect();
-    let mut spans = Vec::new();
-    if !before.is_empty() {
-        spans.push(Span::styled(before, theme.fg(role)));
-    }
-    spans.push(Span::styled(
-        matched,
-        theme.fg(Role::Warning).add_modifier(ratatui::style::Modifier::REVERSED),
-    ));
-    if !after.is_empty() {
-        spans.push(Span::styled(after, theme.fg(role)));
-    }
-    Line::from(spans)
-}
-
-/// The `(start_char, len_chars)` of the first ASCII case-insensitive occurrence of `needle` in `haystack`.
-fn find_ci(haystack: &str, needle: &str) -> Option<(usize, usize)> {
-    if needle.is_empty() {
-        return None;
-    }
-    let h: Vec<char> = haystack.to_ascii_lowercase().chars().collect();
-    let n: Vec<char> = needle.to_ascii_lowercase().chars().collect();
-    'outer: for i in 0..=h.len().saturating_sub(n.len()) {
-        for j in 0..n.len() {
-            if h[i + j] != n[j] {
-                continue 'outer;
-            }
-        }
-        return Some((i, n.len()));
-    }
-    None
 }
