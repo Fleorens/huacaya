@@ -320,7 +320,7 @@ fn render_timeline_row(buf: &mut Buffer, inner: Rect, y: u16, step: &Step, utc_o
 
 /// The glyph + label of a step and its colour: Read / Search in `Cpu`, Edit / Write in `Gpu`, Shell in
 /// `Memory`, Think / Say in `Server`, other tools in `Text`.
-fn step_glyph(step: &Step) -> (String, Role) {
+pub(crate) fn step_glyph(step: &Step) -> (String, Role) {
     match &step.kind {
         StepKind::Read => ("▸ read".to_string(), Role::Cpu),
         StepKind::Search => ("⌕ grep".to_string(), Role::Cpu),
