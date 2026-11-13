@@ -117,7 +117,7 @@ New tests:
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented.
-- [ ] The updated and new tests pass; golden files regenerated and read.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented.
+- [x] The updated and new tests pass; golden files regenerated and read.
+- [x] `bash .devbox/check` is green.
 - [ ] On screen (Florian): the Models screen looks like the validated mockup at 140 × 40.
