@@ -29,7 +29,7 @@ pub fn run(cli: &Cli) -> Result<()> {
     let theme = Theme::new(ColorMode::detect());
     let offset = clock::local_utc_offset();
     let mut app = App::new(cli.interval_ms);
-
+    app.utc_offset_s = offset;
     // What the Agents screen follows: read by the opencode poller, mirrored from `app.agent_focus` by
     // the main loop after each batch.
     let opencode_focus: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(app.agent_focus.clone()));

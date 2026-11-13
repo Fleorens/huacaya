@@ -1,6 +1,8 @@
 //! The OpenCode server (`opencode serve`) client: its sessions and, for the followed session, its
 //! timeline of steps (`tasks/T34`), read through any `llama_poll::Fetch` so tests need no network.
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use anyhow::{Context, Result};
 
 use crate::collect::llama_poll::Fetch;
@@ -65,6 +67,9 @@ pub struct OpenCodeSnapshot {
     pub steps: Vec<Step>,
     /// The last error (`unreachable: …`, `HTTP 401` …), never containing the password.
     pub error: Option<String>,
+    /// Wall-clock time (Unix ms) this round was fetched; `0` when unread.
+    #[serde(default)]
+    pub fetched_ms: i64,
 }
 
 /// `#136 Execute …` → `Some(136)`: the digits right after a leading `#`.
@@ -288,8 +293,13 @@ impl<F: Fetch> OpenCodePoller<F> {
             Err(e) => return empty(e),
         };
 
-        OpenCodeSnapshot { sessions, focus, steps, error: None }
+        OpenCodeSnapshot { sessions, focus, steps, error: None, fetched_ms: now_ms() }
     }
+}
+
+/// Wall-clock round time in Unix ms, `0` when the clock cannot be read.
+fn now_ms() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
 /// A fetch error as shown: the server's answer as is (`GET …: HTTP 401`), else `unreachable: …`.

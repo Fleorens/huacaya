@@ -138,9 +138,10 @@ fn screen_keys() {
     app.apply(Event::Key(code(KeyCode::BackTab)));
     app.apply(Event::Key(code(KeyCode::BackTab)));
     assert_eq!(app.screen, Screen::Overview);
+    // BackTab wraps onto the last screen, Agents.
     app.apply(Event::Key(code(KeyCode::BackTab)));
-    assert_eq!(app.screen, Screen::System);
-    app.apply(Event::Key(key('4')));
+    assert_eq!(app.screen, Screen::Agents);
+    app.apply(Event::Key(key('5')));
     app.apply(Event::Key(code(KeyCode::Tab)));
     assert_eq!(app.screen, Screen::Overview);
 }

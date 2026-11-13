@@ -21,7 +21,7 @@ use crate::ui::theme::Role;
 /// `layout.header`, then each present panel on its rectangle, with `Ctx { graphs: layout.graphs, ..*ctx }`.
 /// The Models screen draws `screens::models::render` on the body under the header instead of the panels;
 /// the Logs screen shows the log full screen on the body (the header says which tab is selected); the
-/// System screen draws `screens::system::render` on the body. On every tier except `TooSmall`, when `app.help`, the help
+/// System screen draws `screens::system::render` on the body; the Agents screen `screens::agents::render`. On every tier except `TooSmall`, when `app.help`, the help
 /// overlay is drawn over the whole frame, last. Never panics, whatever the size (0 × 0 included).
 pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let tier = layout::tier(area.width, area.height);
@@ -44,6 +44,7 @@ pub fn draw(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
                 Screen::Models => screens::models::render(app, &ctx, body, buf),
                 Screen::Logs => screens::logs::render(app, &ctx, body, buf),
                 Screen::System => screens::system::render(app, &ctx, body, buf),
+                Screen::Agents => screens::agents::render(app, &ctx, body, buf),
                 _ => {
                     draw_panel(app, &ctx, layout.model, buf, model::render);
                     draw_panel(app, &ctx, layout.request, buf, request::render);

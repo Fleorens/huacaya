@@ -108,7 +108,8 @@ fn right_spans(app: &App, ctx: &Ctx, theme: &Theme) -> Vec<Span<'static>> {
     spans
 }
 
-/// The screen tabs, ` <n> <title> ` each, separated by one space; the current tab reversed + bold.
+/// The screen tabs, ` <n> <title> ` each, separated by one space; the current tab reversed + bold. The
+/// Agents tab gains a trailing ` ●` (`Server`) when a session is running.
 fn tabs_spans(app: &App, theme: &Theme) -> Vec<Span<'static>> {
     let mut tabs = Vec::new();
     for (i, sc) in Screen::ALL.iter().enumerate() {
@@ -117,7 +118,13 @@ fn tabs_spans(app: &App, theme: &Theme) -> Vec<Span<'static>> {
         } else {
             theme.fg(Role::Dim)
         };
-        tabs.push(Span::styled(format!(" {} {} ", i + 1, sc.title()), style));
+        if *sc == Screen::Agents && agents_running(app) {
+            // No trailing space: the running dot follows the tab on its own (`Server`) style.
+            tabs.push(Span::styled(format!(" {} {}", i + 1, sc.title()), style));
+            tabs.push(Span::styled(" ● ", theme.fg(Role::Server).add_modifier(Modifier::BOLD)));
+        } else {
+            tabs.push(Span::styled(format!(" {} {} ", i + 1, sc.title()), style));
+        }
         tabs.push(Span::raw(" "));
     }
     tabs
@@ -133,4 +140,9 @@ fn set_row(buf: &mut Buffer, x: u16, y: u16, spans: &[Span], width: u16, right_e
 /// The cell width of `spans`.
 fn spans_width(spans: &[Span]) -> u16 {
     spans.iter().map(|s| s.width() as u16).sum()
+}
+
+/// Whether the Agents screen has a running session, to show the running dot on its tab.
+fn agents_running(app: &App) -> bool {
+    app.opencode.as_ref().is_some_and(|o| o.sessions.iter().any(|s| s.running))
 }

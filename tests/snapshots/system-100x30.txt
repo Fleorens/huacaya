@@ -1,4 +1,4 @@
- llamatop  gpu-box  up 4d 3h  ● server ok  b12151    1 Overview   2 Models   3 Logs   4 System
+ llamatop  gpu-box  up 4d 3h  ● server ok  b12151
 ╭ Cores ─────────────────────────────────────────╮╭ Sensors ───────────────────────────────────────╮
 │cpu0  ███████████████▉░░░░░░░░░░░░░░░░░░░░  44 %││coretemp/Package id 0   60 °C                   │
 │cpu1  █████████████████▎░░░░░░░░░░░░░░░░░░  48 %││nvme/Composite          42 °C                   │

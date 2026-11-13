@@ -77,6 +77,10 @@ pub fn handle(app: &mut App, key: KeyEvent) {
             app.screen = Screen::System;
             true
         }
+        KeyCode::Char('5') => {
+            app.screen = Screen::Agents;
+            true
+        }
         KeyCode::Tab => {
             app.screen = app.screen.next();
             true
@@ -177,6 +181,39 @@ pub fn handle(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Home => app.model_selected = 0,
             KeyCode::End if n > 0 => app.model_selected = n - 1,
+            _ => {}
+        }
+    }
+
+    // 7. The Agents screen: move the selection within the sessions, follow / unfollow.
+    if app.screen == Screen::Agents {
+        let n = app.opencode.as_ref().map_or(0, |o| o.sessions.len());
+        match key.code {
+            KeyCode::Down => {
+                if n > 0 {
+                    let i = (app.agent_selected + 1).min(n - 1);
+                    app.agent_selected = i;
+                    app.agent_focus = app.opencode.as_ref().map(|o| o.sessions[i].id.clone());
+                }
+            }
+            KeyCode::Up => {
+                if n > 0 {
+                    let i = app.agent_selected.saturating_sub(1);
+                    app.agent_selected = i;
+                    app.agent_focus = app.opencode.as_ref().map(|o| o.sessions[i].id.clone());
+                }
+            }
+            KeyCode::Home => {
+                if n > 0 {
+                    app.agent_selected = 0;
+                    app.agent_focus = app.opencode.as_ref().map(|o| o.sessions[0].id.clone());
+                }
+            }
+            KeyCode::End if n > 0 => {
+                app.agent_selected = n - 1;
+                app.agent_focus = app.opencode.as_ref().map(|o| o.sessions[n - 1].id.clone());
+            }
+            KeyCode::Char('a') => app.agent_focus = None,
             _ => {}
         }
     }
