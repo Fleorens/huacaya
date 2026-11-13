@@ -4,6 +4,7 @@ pub mod clock;
 pub mod demo;
 mod demo_log;
 pub mod keys;
+pub mod log_tasks;
 pub mod log_view;
 pub mod run;
 pub mod state;
