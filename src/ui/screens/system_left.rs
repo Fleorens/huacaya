@@ -35,6 +35,9 @@ fn heatmap_rows(sys: &SystemSnapshot) -> u16 {
 /// busier), the usage graph, and the load averages plus uptime.
 pub(crate) fn render_cpu(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let theme = ctx.theme;
+    if area.height == 0 || area.width == 0 {
+        return;
+    }
     let sys = match &app.system {
         Some(s) => s,
         None => return,
@@ -193,6 +196,9 @@ fn draw_load(buf: &mut Buffer, sys: &SystemSnapshot, theme: &Theme, x: u16, y: u
 /// `Dim` header, rows that do not fit dropped from the bottom.
 pub(crate) fn render_sensors(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let theme = ctx.theme;
+    if area.height == 0 || area.width == 0 {
+        return;
+    }
     let sys = match &app.system {
         Some(s) => s,
         None => return,
@@ -311,21 +317,11 @@ fn sensor_rows(readings: &[TempReading], all: bool) -> Vec<(String, f32)> {
             }
         }
         "nvme" => {
-            let mut chips: Vec<String> = Vec::new();
-            for t in readings {
-                if !chips.iter().any(|c| c == &t.chip) {
-                    chips.push(t.chip.clone());
-                    let c = readings
-                        .iter()
-                        .filter(|x| x.chip == t.chip)
-                        .find(|x| x.label == "Composite")
-                        .map(|x| x.celsius)
-                        .or_else(|| readings.iter().find(|x| x.chip == t.chip).map(|x| x.celsius));
-                    if let Some(c) = c {
-                        rows.push(("composite".to_string(), c));
-                    }
-                }
-            }
+            // Every nvme chip is named `nvme`: one drive per `Composite` reading, else the first reading.
+            let comps: Vec<f32> =
+                readings.iter().filter(|t| t.label == "Composite").map(|t| t.celsius).collect();
+            let temps = if comps.is_empty() { vec![readings[0].celsius] } else { comps };
+            rows.extend(temps.into_iter().map(|c| ("composite".to_string(), c)));
         }
         _ => {
             if let Some(hot) = readings.iter().max_by(|a, b| a.celsius.total_cmp(&b.celsius)) {
@@ -364,10 +360,14 @@ fn draw_sensor_row(
     label: &str,
     celsius: f32,
 ) {
+    // The value (9 columns: `  `, 6, the mark) is reserved first; the gauge shrinks, then goes.
     let label = format!("  {:<15}", fit(label, 15));
-    buf.set_line(x, y, &Line::from(Span::styled(label, theme.fg(Role::Dim))), 17);
-    Gauge { ratio: celsius as f64 / 100.0, accent, thresholds: sensor_thresholds(chip), theme }
-        .render(Rect::new(x + 17, y, 16, 1), buf);
+    buf.set_line(x, y, &Line::from(Span::styled(label, theme.fg(Role::Dim))), width.min(17));
+    let gauge_w = width.saturating_sub(17 + 9).min(16);
+    if gauge_w > 0 {
+        Gauge { ratio: celsius as f64 / 100.0, accent, thresholds: sensor_thresholds(chip), theme }
+            .render(Rect::new(x + 17, y, gauge_w, 1), buf);
+    }
     let sev = severity(celsius, sensor_thresholds(chip).0, sensor_thresholds(chip).1);
     let style = match sev {
         Severity::Normal => theme.fg(Role::Text),
@@ -375,7 +375,8 @@ fn draw_sensor_row(
         Severity::Critical => theme.fg(Role::Critical),
     };
     let value = format!("  {:>6}{}", temp(Some(celsius)), hot_mark(sev));
-    buf.set_line(x + 33, y, &Line::from(Span::styled(value, style)), width.saturating_sub(33));
+    let vx = width.min(17 + gauge_w);
+    buf.set_line(x + vx, y, &Line::from(Span::styled(value, style)), width - vx);
 }
 
 /// A plain `<value>` row in `Role::Dim`, cut to `width`.

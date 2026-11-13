@@ -13,7 +13,7 @@ use llamatop::collect::net::NetSample;
 use llamatop::ui::panels::Ctx;
 use llamatop::ui::screens::system;
 use llamatop::ui::snapshot::snapshot;
-use llamatop::ui::theme::{ColorMode, Theme};
+use llamatop::ui::theme::{ColorMode, Role, Theme, rgb};
 
 /// Render `system::render` over a `w × h` area and return each row's symbols concatenated.
 fn draw<F>(f: F, w: u16, h: u16) -> Vec<String>
@@ -91,8 +91,10 @@ fn heatmap_colours() {
     let mut buf = Buffer::empty(Rect::new(0, 0, 140, 40));
     system::render(&app, &ctx, Rect::new(0, 0, 140, 40), &mut buf);
     // CPU panel inner is (1,1); cell width 7, 8 per row, 1-col gap. Core 0 ("0") at x=4, core 1 ("100") at x=11.
-    assert_eq!(buf[(4, 1)].style().bg, Some(Color::Rgb(0x28, 0x34, 0x57)), "0 % cell bg");
-    assert_eq!(buf[(11, 1)].style().bg, Some(Color::Rgb(0x7a, 0xa2, 0xf7)), "100 % cell bg");
+    let (r, g, b) = rgb(Role::Selection);
+    assert_eq!(buf[(4, 1)].style().bg, Some(Color::Rgb(r, g, b)), "0 % cell bg");
+    let (r, g, b) = rgb(Role::Cpu);
+    assert_eq!(buf[(11, 1)].style().bg, Some(Color::Rgb(r, g, b)), "100 % cell bg");
 
     // No colour: the 95 % number is bold.
     let theme = Theme::new(ColorMode::NoColor);
@@ -134,6 +136,15 @@ fn sensors_and_marks() {
     let rows = draw(|area, buf| system::render(&app, &ctx, area, buf), 140, 37);
     let all: String = rows.join("\n");
     assert!(all.contains("96 °C▲"), "{:?}", rows);
+
+    // At 80 columns the value and its mark keep their room: the gauge shrinks instead.
+    let rows = draw(|area, buf| system::render(&app, &ctx, area, buf), 80, 37);
+    assert!(rows.join("\n").contains("96 °C▲"), "{:?}", rows);
+    // At 60 columns the sensor rows stay inside the left column (its right border intact).
+    let rows = draw(|area, buf| system::render(&app, &ctx, area, buf), 60, 37);
+    for r in &rows[1..rows.len() - 1] {
+        assert!(matches!(r.chars().nth(29), Some('│' | '╮' | '╯' | '╭' | '╰' | '┤')), "{r:?}");
+    }
 }
 
 #[test]

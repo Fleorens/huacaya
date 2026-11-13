@@ -78,7 +78,13 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     draw_network(buf, app, rect, &sys.nets, ctx);
     y = rect.bottom();
 
-    let r = slot(sys.procs.len() as u16 + 5, bottom - y, y, right_x, right_w);
+    let r = slot(
+        sys.procs.len() as u16 + 3 + if sys.gpus.is_empty() { 0 } else { 2 },
+        bottom - y,
+        y,
+        right_x,
+        right_w,
+    );
     let Some(rect) = r else { return };
     draw_processes(buf, rect, &sys.procs, ctx, &sys.gpus);
 }
