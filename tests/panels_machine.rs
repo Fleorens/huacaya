@@ -8,6 +8,7 @@ use ratatui::style::Color;
 use llamatop::app::demo::{DemoState, app as demo_app};
 use llamatop::app::{App, Event};
 use llamatop::collect::logs::parse_line;
+use llamatop::ui::big::level_bars;
 use llamatop::ui::panels::{Ctx, cpu, gauge_row, gpu, log, memory};
 use llamatop::ui::theme::{ColorMode, PCT_THRESHOLDS, Role, Theme};
 
@@ -88,8 +89,8 @@ fn gpu_generating() {
     assert!(all.contains("GPU  RX 7800 XT"), "{:?}", rows[0]);
     assert!(all.contains("95 %"), "{:?}", rows);
     assert!(all.contains("15.9/16.0 G"), "{:?}", rows);
-    assert!(all.contains("temp  73 °C junction   62 °C edge"), "{:?}", rows);
-    assert!(all.contains("power 117 W / 212 W   fan 1233 rpm"), "{:?}", rows);
+    assert!(all.contains("temp  73 °C junction  62 °C edge  76 °C mem"), "{:?}", rows);
+    assert!(all.contains("power 117 W / 212 W   fan 34 %   clk 2204 MHz"), "{:?}", rows);
     // The last inner row holds the braille load graph.
     let last_inner = rows.len() - 2;
     assert!(
@@ -140,15 +141,17 @@ fn cpu_generating() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    let rows = draw(|area, buf| cpu::render(&app, &ctx, area, buf), 40, 6);
+    let rows = draw(|area, buf| cpu::render(&app, &ctx, area, buf), 48, 9);
     let all: String = rows.join("\n");
-    assert!(all.contains("50 %"), "{:?}", rows);
-    assert!(all.contains("temp  60 °C   3.5 GHz avg"), "{:?}", rows);
+    assert!(rows[0].contains("CPU  Intel Core i7-11700K"), "{:?}", rows[0]);
+    let per_core = app.system.as_ref().unwrap().cpu.per_core_pct.clone();
+    assert!(all.contains(&format!("cores {}  16 thr", level_bars(&per_core))), "{:?}", rows);
+    assert!(all.contains("temp  60 °C   freq 3.5 GHz"), "{:?}", rows);
     assert!(all.contains("load  8.33 7.14 5.56"), "{:?}", rows);
 
     // With graphs off, no braille character anywhere.
     let ctx = Ctx { theme: &theme, graphs: false, clock: "10:21:03" };
-    let rows = draw(|area, buf| cpu::render(&app, &ctx, area, buf), 40, 6);
+    let rows = draw(|area, buf| cpu::render(&app, &ctx, area, buf), 48, 9);
     let all: String = rows.join("\n");
     assert!(!all.chars().any(|c| (0x2800..=0x28ff).contains(&(c as u32))), "{:?}", rows);
 }
@@ -160,17 +163,19 @@ fn memory_generating() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 40, 5);
+    let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 60, 9);
     let all: String = rows.join("\n");
     assert!(all.contains("RAM   "), "{:?}", rows);
     assert!(all.contains("21.6/31.1 G"), "{:?}", rows);
     assert!(all.contains("swap  "), "{:?}", rows);
     assert!(all.contains("0.0/8.0 G"), "{:?}", rows);
-    assert!(all.contains("model 19.2 G"), "{:?}", rows);
+    assert!(all.contains("model 19.2 G rss   router 287 M"), "{:?}", rows);
+    assert!(all.contains("avail 9.5 G   cached 18.2 G"), "{:?}", rows);
+    assert!(all.contains("disk  / 61 %   /srv/models 61 %   /srv/data 11 %"), "{:?}", rows);
 
     // Down: router only.
     let app = demo_app(DemoState::Down);
-    let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 40, 5);
+    let rows = draw(|area, buf| memory::render(&app, &ctx, area, buf), 60, 9);
     let all: String = rows.join("\n");
     assert!(all.contains("server 287 M"), "{:?}", rows);
 }

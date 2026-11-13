@@ -7,6 +7,7 @@ use ratatui::style::Modifier;
 
 use llamatop::app::demo::{DemoState, app as demo_app};
 use llamatop::app::{App, Screen};
+use llamatop::ui::big::big_digits;
 use llamatop::ui::panels::model::badge_state;
 use llamatop::ui::panels::{Ctx, header, model, request};
 use llamatop::ui::text::{bytes_pair, fit, pct, temp, tps};
@@ -124,18 +125,18 @@ fn model_generating() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
-    let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), 60, 8);
+    let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), 140, 6);
     let all: String = rows.join("\n");
-    assert!(all.contains("Cyber-Tiel-Coder-35B-A3B   Q4_K_M"), "{:?}", rows);
-    assert!(all.contains("◉ GENERATING   task 9000"), "{:?}", rows);
-    assert!(all.contains("prompt 591 t/s   cache 98 %"), "{:?}", rows);
-    assert!(all.contains("63.8K / 196.6K"), "{:?}", rows);
-    assert!(all.contains("draft  64 %"), "{:?}", rows);
-    assert!(all.contains("n-cpu-moe 21"), "{:?}", rows);
-
-    // The gen row has ` t/s` and no ` avg`.
-    let gen_row = rows.iter().find(|r| r.contains("gen    ")).unwrap();
-    assert!(gen_row.contains(" t/s") && !gen_row.contains(" avg"), "{:?}", gen_row);
+    assert!(all.contains("Cyber-Tiel-Coder-35B-A3B  Q4_K_M"), "{:?}", rows);
+    assert!(all.contains("◉ GENERATING  task #9000"), "{:?}", rows);
+    for row in big_digits("49.3") {
+        assert!(all.contains(&row), "big_digits {:?}: {:?}", row, rows);
+    }
+    assert!(all.contains("t/s now"), "{:?}", rows);
+    assert!(all.contains("prompt 591 t/s   cache 98 %   draft 64 %"), "{:?}", rows);
+    assert!(all.contains("63.8K / 196.6K  32 %"), "{:?}", rows);
+    assert!(all.contains("req  1 running · 0 queued"), "{:?}", rows);
+    assert!(all.contains("draft-mtp · n-cpu-moe 21 · ngl 99"), "{:?}", rows);
 }
 
 #[test]
@@ -143,11 +144,34 @@ fn model_idle() {
     let theme = true_color();
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Idle);
-    let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), 60, 8);
+    let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), 140, 6);
     let all: String = rows.join("\n");
     assert!(all.contains("◉ IDLE"), "{:?}", rows);
-    assert!(all.contains("gen    56.7 t/s avg"), "{:?}", rows);
-    assert!(all.contains("9.2K / 196.6K"), "{:?}", rows);
+    for row in big_digits("56.7") {
+        assert!(all.contains(&row), "big_digits {:?}: {:?}", row, rows);
+    }
+    assert!(all.contains("t/s avg"), "{:?}", rows);
+    assert!(all.contains("9.2K / 196.6K  5 %"), "{:?}", rows);
+}
+
+#[test]
+fn model_medium_and_small() {
+    let theme = true_color();
+
+    // Medium (90 cols): the name on the left, the speed and label on the row below.
+    let ctx = make_ctx(&theme);
+    let app = demo_app(DemoState::Generating);
+    let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), 90, 6);
+    let all: String = rows.join("\n");
+    assert!(all.contains("49.3 t/s now"), "{:?}", rows);
+
+    // Small (50 cols): one column, the speed and label and the ctx gauge.
+    let ctx = make_ctx(&theme);
+    let app = demo_app(DemoState::Generating);
+    let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), 50, 6);
+    let all: String = rows.join("\n");
+    assert!(all.contains("49.3 t/s now"), "{:?}", rows);
+    assert!(all.contains("ctx"), "{:?}", rows);
 }
 
 #[test]
@@ -174,15 +198,17 @@ fn model_graph_toggle() {
     let theme = true_color();
     let app = demo_app(DemoState::Generating);
 
+    // Graphs on: the wide layout draws a braille speed graph somewhere.
     let ctx = make_ctx(&theme);
-    let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), 60, 8);
-    let gen_row = rows.iter().find(|r| r.contains("gen    ")).unwrap();
-    assert!(gen_row.chars().any(|c| (0x2800..=0x28ff).contains(&(c as u32))), "{:?}", gen_row);
+    let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), 140, 6);
+    let any_braille = rows.iter().any(|r| r.chars().any(|c| (0x2800..=0x28ff).contains(&(c as u32))));
+    assert!(any_braille, "{:?}", rows);
 
+    // Graphs off: no braille glyph anywhere in the band.
     let graphs_false = Ctx { theme: &theme, graphs: false, clock: "10:21:03" };
-    let rows = draw(|area, buf| model::render(&app, &graphs_false, area, buf), 60, 8);
-    let gen_row = rows.iter().find(|r| r.contains("gen    ")).unwrap();
-    assert!(!gen_row.chars().any(|c| (0x2800..=0x28ff).contains(&(c as u32))), "{:?}", gen_row);
+    let rows = draw(|area, buf| model::render(&app, &graphs_false, area, buf), 140, 6);
+    let any_braille = rows.iter().any(|r| r.chars().any(|c| (0x2800..=0x28ff).contains(&(c as u32))));
+    assert!(!any_braille, "{:?}", rows);
 }
 
 // --------------------------------------------------------------------------- Request
@@ -265,5 +291,23 @@ fn model_narrow_keeps_border() {
             assert_eq!(buf[(w - 1, y)].symbol(), "│", "width {w}, row {y}");
             assert_eq!(buf[(w, y)].symbol(), " ", "width {w}, row {y}");
         }
+    }
+}
+
+#[test]
+fn model_ctx_without_slot() {
+    let theme = true_color();
+    let ctx = make_ctx(&theme);
+    let mut app = demo_app(DemoState::Idle);
+    if let Some(llama) = app.llama.as_mut() {
+        for m in &mut llama.active {
+            m.slots.clear();
+        }
+    }
+    for w in [140, 90, 50] {
+        let rows = draw(|area, buf| model::render(&app, &ctx, area, buf), w, 6);
+        let all: String = rows.join("\n");
+        assert!(!all.contains("NaN") && !all.contains("inf") && !all.contains("0 / 0"), "{w}: {:?}", rows);
+        assert!(all.contains("n/a"), "{w}: {:?}", rows);
     }
 }
