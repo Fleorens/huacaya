@@ -236,7 +236,8 @@ pub fn render(activity: &Activity, core: &Core, now_ms: i64, theme: &Theme, area
     // 6. Core text, centred on the model column.
     let core_col = (geo.cx / 2.0).round() as i32;
     let model_row = (geo.cy / 4.0).floor() as i32 - 1;
-    put_text(buf, area, core_col, model_row, &core.model, theme.color(Role::Server), true);
+    let name = ring_name(&core.model, (geo.ring as usize).saturating_sub(4));
+    put_text(buf, area, core_col, model_row, &name, theme.color(Role::Server), true);
     put_text(
         buf,
         area,
@@ -267,6 +268,19 @@ fn unit(cx: f64, cy: f64, x: f64, y: f64) -> (f64, f64) {
     let dy = y - cy;
     let dist = (dx * dx + dy * dy).sqrt();
     if dist == 0.0 { (0.0, 0.0) } else { (dx / dist, dy / dist) }
+}
+
+/// The model name as it fits inside the ring: leading `-` segments dropped while too long
+/// (`Cyber-Tiel-Coder-35B-A3B` → `Coder-35B-A3B`, keeping the size), then cut with `…`.
+fn ring_name(name: &str, max: usize) -> String {
+    let mut rest = name;
+    while rest.chars().count() > max {
+        match rest.split_once('-') {
+            Some((_, tail)) if !tail.is_empty() => rest = tail,
+            _ => break,
+        }
+    }
+    crate::ui::text::fit(rest, max)
 }
 
 /// Writes a string at `(col, row)` relative to `area`, clipping off-screen cells.

@@ -260,3 +260,14 @@ fn offset_area() {
     let mut small = Buffer::empty(Rect::new(0, 0, 40, 10));
     render(&activity(), &core(), NOW, &theme, Rect::new(5, 3, 86, 23), &mut small);
 }
+
+/// A real model name is longer than the ring: it loses its leading segments, never spills out.
+#[test]
+fn long_model_name_fits_the_ring() {
+    let core = Core { model: "Cyber-Tiel-Coder-35B-A3B".into(), tps: Some(62.5), ctx_ratio: Some(0.617) };
+    let mut buf = Buffer::empty(Rect::new(0, 0, 86, 23));
+    render(&activity(), &core, 1794586722300, &true_color(), Rect::new(0, 0, 86, 23), &mut buf);
+    let row: String = (0..86).map(|x| buf[(x, 10)].symbol().to_string()).collect();
+    assert!(row.contains("Coder-35B-A3B"), "row: {row}");
+    assert!(!row.contains("Cyber"), "row: {row}");
+}
