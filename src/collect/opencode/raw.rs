@@ -80,6 +80,9 @@ pub(super) struct RawMessage {
     pub(super) time: Option<RawTime>,
     #[serde(default)]
     pub(super) content: Vec<RawPart>,
+    /// A real `user` message carries its prompt here, not in `content`.
+    #[serde(default)]
+    pub(super) text: Option<String>,
 }
 #[derive(Deserialize)]
 pub(super) struct RawPart {

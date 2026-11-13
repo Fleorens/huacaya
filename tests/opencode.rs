@@ -315,3 +315,17 @@ fn steps_real_fixture() {
     let last = steps.last().unwrap();
     assert_eq!((last.kind.clone(), last.time_ms, last.ok), (StepKind::Think, 1794586716911, None));
 }
+
+/// Real OpenCode 2.2.7 (2026-11-13): a `user` message carries its prompt in a top-level `text`, with no
+/// `content` parts. It must still give a `User` step (the map's You station).
+#[test]
+fn user_message_with_top_level_text() {
+    let json = r#"{"data": [{"id": "msg_u1", "time": {"created": 1794602985534}, "type": "user",
+      "text": "Devbox job #149 — autonomous work.\nTask: Execute tasks/T43-map-widget.md", "files": []}]}"#;
+    let steps = parse_steps(json, None).unwrap();
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0].kind, StepKind::User);
+    assert_eq!(steps[0].id, "msg_u1#text");
+    assert_eq!(steps[0].summary, "Devbox job #149 — autonomous work. Task: Execute tasks/T43-map-widget.md");
+    assert_eq!(steps[0].end_ms, Some(1794602985534));
+}

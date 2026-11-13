@@ -163,7 +163,8 @@ fn session_from(raw: RawSession) -> Session {
 }
 
 /// Parses `GET /api/session/<id>/message` into steps, oldest first (the API is newest first). `assistant`
-/// messages give steps, their parts in order; a `user` message gives one `User` step per text part; other
+/// messages give steps, their parts in order; a `user` message gives one `User` step for its top-level
+/// `text` (the real server's shape, id `<message id>#text`) and one per text part; other
 /// types (`idle`, …) give nothing. `directory` shortens paths and prefixes `cd <directory> && ` in shell
 /// summaries.
 pub fn parse_steps(json: &str, directory: Option<&str>) -> Result<Vec<Step>> {
@@ -175,6 +176,17 @@ pub fn parse_steps(json: &str, directory: Option<&str>) -> Result<Vec<Step>> {
         let message_completed = msg.time.as_ref().and_then(|t| t.completed);
         match msg.r#type.as_deref() {
             Some("user") => {
+                if let Some(text) = msg.text.as_deref() {
+                    steps.push(Step {
+                        time_ms: message_time,
+                        kind: StepKind::User,
+                        id: format!("{}#text", message_id.unwrap_or("")),
+                        end_ms: Some(message_time),
+                        summary: summary_text(Some(text)),
+                        ok: None,
+                        detail: None,
+                    });
+                }
                 for (pi, part) in msg.content.iter().enumerate() {
                     if part.r#type.as_deref() == Some("text") {
                         steps.push(Step {
