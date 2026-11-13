@@ -59,8 +59,8 @@ pub struct Cli {
     /// With `--snapshot`: keep the colours as ANSI escape sequences.
     #[arg(long)]
     pub ansi: bool,
-    /// With `--snapshot`: the screen to render, 1–4 (Overview, Models, Logs, System).
-    #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u8).range(1..=4))]
+    /// With `--snapshot`: the screen to render, 1–5 (Overview, Models, Logs, System, Agents).
+    #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u8).range(1..=5))]
     pub screen: u8,
     /// The key from the configuration file.
     #[arg(skip)]

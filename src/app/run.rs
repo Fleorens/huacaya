@@ -12,6 +12,7 @@ use anyhow::Result;
 
 use crate::app::clock;
 use crate::app::demo;
+use crate::app::demo_agents;
 use crate::app::threads::{agent_loop, opencode_loop};
 use crate::app::{App, Event};
 use crate::collect::llama_poll::Poller;
@@ -253,10 +254,13 @@ pub fn demo_events(t0: f64, t1: f64, interval_s: f64) -> Vec<Event> {
     events
 }
 
-/// The `--demo` thread: every 100 ms, emit the demo events since the previous instant of its own clock.
+/// The `--demo` thread: every 100 ms, emit the demo events since the previous instant of its own clock,
+/// plus one [`Event::OpenCode`] round per whole demo second for the Agents map (T46).
 fn demo_loop(tx: Sender<Event>, stop: Arc<AtomicBool>, interval: Arc<AtomicU64>) {
     let start = Instant::now();
+    let mut agents = demo_agents::DemoAgents::new(clock::now_ms());
     let mut prev = 0.0;
+    let mut first = true;
     while !stop.load(Ordering::Relaxed) {
         let now = start.elapsed().as_secs_f64();
         // The shared interval is in milliseconds, `demo_events` takes seconds.
@@ -266,7 +270,14 @@ fn demo_loop(tx: Sender<Event>, stop: Arc<AtomicBool>, interval: Arc<AtomicU64>)
                 return;
             }
         }
+        // The Agents map: one round at the very start, then whenever the demo clock crosses a second.
+        if (first || prev.floor() != now.floor())
+            && tx.send(Event::OpenCode(Box::new(agents.round(now)))).is_err()
+        {
+            return;
+        }
         prev = now;
+        first = false;
         sleep(&stop, 100);
     }
 }

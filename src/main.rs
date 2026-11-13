@@ -5,7 +5,7 @@ use anyhow::{Context, Result, anyhow};
 use clap::{CommandFactory, FromArgMatches, parser::ValueSource};
 
 use llamatop::app::run::run;
-use llamatop::app::{Screen, demo};
+use llamatop::app::{Screen, demo, demo_agents};
 use llamatop::config::{Cli, Command};
 use llamatop::settings::{self, Settings};
 use llamatop::setup;
@@ -72,6 +72,12 @@ fn main() -> Result<()> {
         let (w, h) = parse_size(size).ok_or_else(|| anyhow!("invalid --snapshot size, expected WxH"))?;
         let mut app = demo::app(cli.demo_state);
         app.screen = Screen::ALL[(cli.screen - 1) as usize];
+        // Screen 5 (Agents): a simulated OpenCode session, so the map comes alive in `--snapshot` too.
+        if app.screen == Screen::Agents {
+            app.opencode = Some(demo_agents::replay(demo_agents::DEMO_START_MS, demo_agents::SNAPSHOT_T));
+            app.now_ms = demo_agents::DEMO_START_MS + 24_300;
+            app.utc_offset_s = 0;
+        }
         print!("{}", snapshot::snapshot(&app, &Theme::new(ColorMode::detect()), w, h, cli.ansi));
         return Ok(());
     }
