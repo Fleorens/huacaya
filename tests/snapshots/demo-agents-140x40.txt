@@ -35,6 +35,6 @@
 │                                                  ││20:00:19 ✎ edit   src/ui/demo.rs  +12 −3                                            0s│
 │                                                  ││20:00:20 ✚ write  tests/demo.rs  24 lines                                           0s│
 │                                                  ││20:00:21 $ shell  cargo fmt                                                         2s│
-│                                                  ││20:00:24 $ shell  cargo test --test demo  test result: FAILED. 7 passed; 1 failed   0s│
+│                                                  ││20:00:24 $ shell  cargo test --test demo                                            0s│
 │3 sessions · 1 running                            ││◉ Checks  cargo test --test demo  0:00   in 61.9K  out 18.1K · 10m 24s   step 13      │
 ╰──────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────────────╯

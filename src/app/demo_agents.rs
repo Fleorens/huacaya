@@ -8,7 +8,7 @@ use crate::app::demo::LOADED_ID;
 use crate::collect::activity::Activity;
 use crate::collect::opencode::{OpenCodeSnapshot, SNAPSHOT_STEPS, Session, Step, StepKind};
 
-/// Fixed demo wall-clock start for tests and `--snapshot` (2026-11-13 ~21:20 UTC).
+/// Fixed demo wall-clock start for tests and `--snapshot` (2026-11-13 20:00:00 UTC).
 pub const DEMO_START_MS: i64 = 1_794_600_000_000;
 /// Length of one scripted cycle, seconds.
 pub const AGENT_CYCLE_S: f64 = 60.0;
@@ -262,7 +262,7 @@ fn steps_at(script: &[Script], start_ms: i64, t: f64) -> Vec<Step> {
                 end_ms: if ended { Some(time_ms + (s.dur * 1000.0).round() as i64) } else { None },
                 summary: s.summary.to_string(),
                 ok: if ended { s.ok } else { None },
-                detail: s.detail.map(str::to_string),
+                detail: if ended { s.detail.map(str::to_string) } else { None },
             });
         }
         c += 1;
