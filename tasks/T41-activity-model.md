@@ -237,8 +237,8 @@ changes on the screen.
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented; `parse_steps` gives ids, end times, user steps and short shell
+- [x] The contract above is implemented; `parse_steps` gives ids, end times, user steps and short shell
       summaries.
-- [ ] Every earlier test passes (`steps_fixture` updated as described, Agents golden regenerated); the tests
+- [x] Every earlier test passes (`steps_fixture` updated as described, Agents golden regenerated); the tests
       above pass.
-- [ ] `bash .devbox/check` is green.
+- [x] `bash .devbox/check` is green.
