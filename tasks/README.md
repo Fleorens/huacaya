@@ -110,8 +110,9 @@ Mockups: the design canvas "llamatop TUI" (Overview, Agents, 80×24, Models, Log
 
 T29–T35 reviewed by the orchestrator on 2026-11-13. Fixed in the review: rows cut mid-word in narrow columns
 (GPU temperature and power rows, the model band's prompt line, the key bar) now drop their last parts whole
-(`text::fit_groups`); the Agents queue header was one column off its rows. Not checked yet: the OpenCode
-parser against a real OpenCode server (the T34 fixtures were written from its documentation).
+(`text::fit_groups`); the Agents queue header was one column off its rows. Checked on 2026-11-13 against the live OpenCode 2.2.7 server (T40): the
+sessions and messages match the T34 fixtures, except the `compress` tool's list-valued input, which emptied
+the whole timeline (fixed).
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
@@ -124,3 +125,25 @@ parser against a real OpenCode server (the T34 fixtures were written from its do
 | [T37](T37-logs-v2.md) | Logs v2: levels, filter and tasks beside the log | T36 | livrée |
 | [T38](T38-system-v2.md) | System v2: core heatmap, grouped sensors, network graphs | T37 | livrée |
 | [T39](T39-dense-80x24.md) | 80×24 v2: the dense Overview of the Narrow tier | T38 | livrée |
+
+## Batch 8 — the Agents map (design validated by Florian on 2026-11-13)
+
+A live map of the followed OpenCode session on the Agents screen (`m`), in the spirit of the "lot-map" mod for
+Claude Code: the model in a thin context ring, eight stations (You, Model, Files, Shell, Checks, Web, Agents,
+Tools), a pulse on a spoke each time a step starts or ends. Florian validated the braille mockup "v2" after
+rejecting three others; T43 holds the rules that make it look clean.
+
+Measured on the real server (T40): `/api/event` (SSE) exists but could not be captured, so the map is fed by
+polling; `GET /api/session/<id>/message` takes `limit` (at most 200) and `cursor` (`cursor.next` = older
+page); the model prefixes every command with `cd <worktree> && `.
+
+| Sheet | Subject | Depends on | Status |
+|---|---|---|---|
+| T40 | Real OpenCode capture, `compress` fix, `messages-real.json` — by the orchestrator, no sheet | T34 | validée |
+| [T41](T41-activity-model.md) | Activity model: stations, command classification, ids and end times of steps (pure) | T40 | prête |
+| [T42](T42-live-poller.md) | Poller: whole history once, then a 12-message round every second | T41 | prête |
+| [T43](T43-map-widget.md) | The map widget: braille dots, stations, spokes, pulses, context ring | T42 | prête |
+| [T44](T44-agents-map-screen.md) | Agents screen: the map view (`m`), its feed and "now" line | T43 | prête |
+
+Later cleanup, no sheet yet: `src/ui/dense.rs` (T39) keeps private copies of `speed`, `ctx_used` and
+`ctx_ratio` from `src/ui/panels/model.rs`; once T44 makes the model helpers public, use them there.
