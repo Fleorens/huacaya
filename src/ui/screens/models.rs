@@ -2,10 +2,10 @@
 //! Read-only. See `docs/02-ui.md` § 2.
 
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Rect};
+use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Borders, Widget};
+use ratatui::widgets::Widget;
 
 use crate::app::App;
 use crate::collect::llama::{ModelInfo, ModelState};
@@ -173,13 +173,8 @@ fn render_table(
         right.push_str(&format!(" · VRAM {}", bytes_pair(used, total)));
     }
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(theme.fg(Role::BorderFocused))
-        .title(Span::styled(" Models ".to_string(), theme.fg(Role::Server).add_modifier(Modifier::BOLD)))
-        .title(Line::from(Span::styled(right, theme.fg(Role::Dim))).right_aligned())
-        .title_alignment(Alignment::Left);
+    let block = panel("Models", Role::Server, true, theme)
+        .title(Line::from(Span::styled(right, theme.fg(Role::Dim))).right_aligned());
     let inner = block.inner(area);
     block.render(area, buf);
     if inner.height < 2 || models.is_empty() {

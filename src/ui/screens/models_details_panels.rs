@@ -3,10 +3,10 @@
 //! padded to 8 then `Text` values, every row cut at the panel width. See `tasks/T36-models-v2.md`.
 
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Rect};
+use ratatui::layout::Rect;
 use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Borders, Widget};
+use ratatui::widgets::{Block, Widget};
 
 use crate::app::App;
 use crate::collect::llama::{Metrics, ModelInfo};
@@ -128,10 +128,9 @@ pub(crate) fn render_performance(
     buf: &mut Buffer,
     theme: &Theme,
 ) {
-    let block = styled_block(
-        Span::styled(" Performance ".to_string(), theme.fg(Role::Server).add_modifier(Modifier::BOLD)),
+    let block = with_right(
+        panel("Performance", Role::Server, false, theme),
         Some(Span::styled("since load", theme.fg(Role::Dim))),
-        theme,
     );
     let inner = block.inner(area);
     block.render(area, buf);
@@ -170,7 +169,7 @@ pub(crate) fn render_performance(
             reuse.unwrap_or(0.0) / 100.0,
             Role::Good,
             (101.0, 101.0),
-            &pct(reuse),
+            &format!("{} reused", pct(reuse)),
             theme,
         );
         y += 1;
@@ -187,7 +186,7 @@ pub(crate) fn render_performance(
             value / 100.0,
             Role::Server,
             (101.0, 101.0),
-            &pct(Some(value)),
+            &format!("{} accepted", pct(Some(value))),
             theme,
         );
         y += 1;
@@ -228,11 +227,7 @@ pub(crate) fn render_slot(
         Span::styled(text, theme.fg(role))
     });
 
-    let block = styled_block(
-        Span::styled(format!(" {title} "), theme.fg(Role::Server).add_modifier(Modifier::BOLD)),
-        right,
-        theme,
-    );
+    let block = with_right(panel(&title, Role::Server, false, theme), right);
     let inner = block.inner(area);
     block.render(area, buf);
     if inner.height < 1 || inner.width < 3 {
@@ -241,13 +236,12 @@ pub(crate) fn render_slot(
     let (x, w) = (inner.x, inner.width);
     let mut y = inner.y;
 
-    if slot.is_none() {
+    let Some(s) = slot else {
         if y < inner.y + inner.height {
             buf.set_line(x, y, &Line::from(Span::styled("no slot", theme.fg(Role::Dim))), w);
         }
         return;
-    }
-    let s = slot.unwrap();
+    };
 
     if y < inner.y + inner.height {
         let value = if s.id_task < 0 {
@@ -274,7 +268,7 @@ pub(crate) fn render_slot(
     if y < inner.y + inner.height {
         let mut v = format!("{} tok", group_thousands(s.n_decoded));
         if s.n_remain >= 0 {
-            v.push_str(&format!(" remain {}", group_thousands(s.n_remain as u64)));
+            v.push_str(&format!("   remain {}", group_thousands(s.n_remain as u64)));
         }
         value_row(buf, x, y, w, "decoded", &v, Role::Text, theme);
         y += 1;
@@ -299,7 +293,8 @@ fn draw_gen_row(app: &App, m: &Metrics, ctx: &Ctx, x: u16, y: u16, w: u16, buf: 
     let num_w = num.chars().count() as u16;
     let rest = " t/s avg";
     let rest_w = rest.chars().count() as u16;
-    let graph_w = w.saturating_sub(8).saturating_sub(num_w).saturating_sub(rest_w);
+    // Three spaces separate `t/s avg` from the graph.
+    let graph_w = w.saturating_sub(8).saturating_sub(num_w).saturating_sub(rest_w).saturating_sub(3);
     let draw_graph = ctx.graphs && graph_w >= 8;
     let spans = vec![
         Span::styled(format!("{:<8}", "gen"), theme.fg(Role::Dim)),
@@ -308,7 +303,7 @@ fn draw_gen_row(app: &App, m: &Metrics, ctx: &Ctx, x: u16, y: u16, w: u16, buf: 
     ];
     buf.set_line(x, y, &Line::from(spans), w);
     if draw_graph {
-        let gx = x + 8 + num_w + rest_w;
+        let gx = x + 8 + num_w + rest_w + 3;
         let max = app.gen_tps.max().map_or(1.0, |v| v.max(1.0));
         let values = app.gen_tps.tail(app.gen_tps.len());
         BrailleGraph { values: &values, max, accent: Role::Server, theme: ctx.theme }
@@ -329,17 +324,12 @@ fn tps_row(buf: &mut Buffer, x: u16, y: u16, w: u16, label: &str, tps_opt: Optio
     buf.set_line(x, y, &Line::from(spans), w);
 }
 
-/// A bordered panel with a bold left title and an optional right title (both on the top border).
-fn styled_block<'a>(left: Span<'a>, right: Option<Span<'a>>, theme: &Theme) -> Block<'a> {
-    let mut block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(theme.fg(Role::Border))
-        .title(left);
-    if let Some(right) = right {
-        block = block.title(Line::from(right).right_aligned());
+/// `block` with an optional right-aligned title on its top border.
+fn with_right<'a>(block: Block<'a>, right: Option<Span<'a>>) -> Block<'a> {
+    match right {
+        Some(right) => block.title(Line::from(right).right_aligned()),
+        None => block,
     }
-    block.title_alignment(Alignment::Left)
 }
 
 /// One `label value` row: `label` (`Dim`, padded to 8) then `value` (`style`), cut at `width`.

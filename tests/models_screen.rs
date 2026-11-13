@@ -105,27 +105,33 @@ fn details_of_loaded_model() {
     let rows = draw(
         |area, buf| models::render(&models_app(DemoState::Generating, 3), &make_ctx(&theme), area, buf),
         120,
-        26,
+        30,
     );
     let all: String = rows.join("\n");
+    // Table right title.
+    assert!(all.contains("5 known · 1 loaded · VRAM 15.9/16.0 G"));
     // Identity: id, file (cut), size line.
+    // The full id row is 64 columns; Identity's interior is 57 at 120 wide, so it is cut with `…`.
+    assert!(all.contains("id      peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q…"));
     assert!(all.contains("/srv/models/direct/Cyber-Tiel-Coder-35B-A3B"));
-    assert!(all.contains("21.0 G   params 35.5B   type Q4_K - Medium"));
+    assert!(all.contains("size    21.0 G   params 35.5B   type Q4_K - Medium"));
     // Runtime.
     assert!(all.contains("196.6K of 262.1K trained"));
-    assert!(all.contains("ngl 99   n-cpu-moe 21   threads 8"));
+    assert!(all.contains("offload ngl 99   n-cpu-moe 21   threads 8"));
     assert!(all.contains("spec    draft-mtp"));
     assert!(all.contains("port    35335   pid 6873   rss 19.2 G"));
     // Performance.
     assert!(all.contains("since load"));
     assert!(all.contains("gen     56.7 t/s avg"));
     assert!(all.contains("prompt  591 t/s avg"));
-    assert!(all.contains("98 %"));
-    assert!(all.contains("64 %"));
+    assert!(all.contains("98 % reused"));
+    assert!(all.contains("64 % accepted"));
     // Slot.
     assert!(all.contains("Slot 0"));
     assert!(all.contains("◉ generating"));
     assert!(all.contains("63.8K / 196.6K"));
+    // Hint row.
+    assert!(all.contains("↑↓ select · Home/End"));
 }
 
 #[test]
@@ -139,7 +145,9 @@ fn details_of_unloaded_model() {
     let all: String = rows.join("\n");
     assert!(all.contains("loaded models only"));
     // No live metrics when the selected model is not the active one.
-    assert!(!all.contains("speed"));
+    assert!(all.contains("not loaded"));
+    assert!(all.contains("no slot"));
+    assert!(!all.contains("tokens "));
 }
 
 #[test]

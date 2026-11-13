@@ -18,7 +18,7 @@ use crate::ui::text::fit_groups;
 use crate::ui::theme::{Role, Theme};
 
 /// The details of the selected model: the four panels side by side when the area is at least 80 wide,
-/// else stacked. A `Dim` hint line occupies its last row when the area is at least 12 rows high.
+/// else stacked. A `Dim` hint line takes its last row when the area is at least 12 rows high.
 pub(crate) fn render_details(app: &App, llama: &LlamaSnapshot, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     if area.width < 3 || area.height < 3 {
         return;
@@ -35,13 +35,16 @@ pub(crate) fn render_details(app: &App, llama: &LlamaSnapshot, ctx: &Ctx, area: 
     };
     let active = llama.active.iter().find(|a| a.id == model.id);
 
+    // The hint row is taken from the details area, so the panels stop one row above it.
+    let hint = area.height >= 12;
+    let body = Rect { height: inner.height - u16::from(hint), ..inner };
     if area.width >= 80 {
-        render_two_columns(app, model, active, ctx, inner, buf, theme);
+        render_two_columns(app, model, active, ctx, body, buf, theme);
     } else {
-        render_one_column(app, model, active, ctx, inner, buf, theme);
+        render_one_column(app, model, active, ctx, body, buf, theme);
     }
 
-    if area.height >= 12 {
+    if hint {
         render_hint(inner, buf, theme);
     }
 }
