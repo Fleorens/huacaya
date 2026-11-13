@@ -48,6 +48,8 @@ pub enum Role {
     Good,
     Warning,
     Critical,
+    /// The selected row band of the Models table.
+    Selection,
 }
 
 /// The true-colour palette of `docs/02-ui.md` § 4, independent of the mode (used for gradients).
@@ -64,6 +66,7 @@ pub fn rgb(role: Role) -> (u8, u8, u8) {
         Role::Good => (0x9e, 0xce, 0x6a),
         Role::Warning => (0xe0, 0xaf, 0x68),
         Role::Critical => (0xf7, 0x76, 0x8e),
+        Role::Selection => (0x28, 0x34, 0x57),
     }
 }
 
@@ -87,7 +90,7 @@ impl Theme {
                 let (r, g, b) = rgb(role);
                 Some(Color::Rgb(r, g, b))
             }
-            (ColorMode::Ansi16, Role::Border | Role::Dim) => Some(Color::DarkGray),
+            (ColorMode::Ansi16, Role::Border | Role::Dim | Role::Selection) => Some(Color::DarkGray),
             (ColorMode::Ansi16, Role::BorderFocused) => Some(Color::LightBlue),
             (ColorMode::Ansi16, Role::Text) => Some(Color::Gray),
             (ColorMode::Ansi16, Role::Server) => Some(Color::Yellow),

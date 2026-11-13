@@ -2,19 +2,20 @@
 //! Read-only. See `docs/02-ui.md` § 2.
 
 use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use ratatui::style::{Modifier, Style};
+use ratatui::layout::{Alignment, Rect};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::Widget;
+use ratatui::widgets::{Block, BorderType, Borders, Widget};
 
 use crate::app::App;
 use crate::collect::llama::{ModelInfo, ModelState};
-use crate::collect::llama_poll::{Health, LlamaSnapshot};
+use crate::collect::llama_poll::Health;
 use crate::ui::frame::panel;
 use crate::ui::panels::Ctx;
-use crate::ui::text::{fit, pct, tps};
-use crate::ui::theme::{Role, Theme};
-use crate::util::{bytes, count, short_model_name};
+use crate::ui::screens::models_details::render_details;
+use crate::ui::text::{bytes_pair, fit};
+use crate::ui::theme::{ColorMode, Role, Theme, rgb};
+use crate::util::{count, short_model_name};
 
 /// The Models screen in `area` (the body below the header): the table on top, the details below.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
@@ -46,13 +47,14 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let table_h = rows.min(area.height / 2).max(4).min(area.height);
     let details_h = area.height - table_h;
     render_table(
+        app,
         &llama.models,
         app.model_selected,
         theme,
         Rect::new(area.x, area.y, area.width, table_h),
         buf,
     );
-    render_details(app, llama, theme, Rect::new(area.x, area.y + table_h, area.width, details_h), buf);
+    render_details(app, llama, ctx, Rect::new(area.x, area.y + table_h, area.width, details_h), buf);
 }
 
 /// The "no model" case: the table panel over the whole area, a single `Dim` row with the reason.
@@ -70,11 +72,17 @@ fn render_no_model(theme: &Theme, area: Rect, buf: &mut Buffer, reason: &str) {
 
 /// The table's side columns, in display order (identity, header label, width). The name column sits
 /// between `state` and the first of these.
-const SIDE: [(&str, &str, usize); 5] =
-    [("quant", "quant", 8), ("ctx", "ctx", 8), ("moe", "moe", 5), ("spec", "spec", 13), ("vision", "img", 4)];
+const SIDE: [(&str, &str, usize); 6] = [
+    ("quant", "quant", 8),
+    ("ctx", "ctx", 8),
+    ("train", "train", 8),
+    ("moe", "moe", 5),
+    ("spec", "spec", 13),
+    ("vision", "img", 4),
+];
 
 /// The order in which side columns are dropped when the panel is narrow (contract order).
-const DROP_ORDER: [&str; 5] = ["vision", "spec", "moe", "quant", "ctx"];
+const DROP_ORDER: [&str; 6] = ["train", "vision", "spec", "moe", "quant", "ctx"];
 
 /// Widths of the marker and state columns.
 const MARKER_W: usize = 2;
@@ -145,11 +153,33 @@ fn place_row(
 }
 
 /// The table: a header row, then one row per model, the selected one bold, scrolled when it overflows.
-fn render_table(models: &[ModelInfo], selected: usize, theme: &Theme, area: Rect, buf: &mut Buffer) {
+fn render_table(
+    app: &App,
+    models: &[ModelInfo],
+    selected: usize,
+    theme: &Theme,
+    area: Rect,
+    buf: &mut Buffer,
+) {
     if area.width < 3 || area.height < 3 {
         return;
     }
-    let block = panel("Models", Role::Server, true, theme);
+
+    // The right title: how many models are known and loaded, plus VRAM when the first GPU reports it.
+    let known = models.len();
+    let loaded = models.iter().filter(|m| m.state == ModelState::Loaded).count();
+    let mut right = format!("{known} known · {loaded} loaded");
+    if let (Some(used), Some(total)) = (vram_used(app), vram_total(app)) {
+        right.push_str(&format!(" · VRAM {}", bytes_pair(used, total)));
+    }
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(theme.fg(Role::BorderFocused))
+        .title(Span::styled(" Models ".to_string(), theme.fg(Role::Server).add_modifier(Modifier::BOLD)))
+        .title(Line::from(Span::styled(right, theme.fg(Role::Dim))).right_aligned())
+        .title_alignment(Alignment::Left);
     let inner = block.inner(area);
     block.render(area, buf);
     if inner.height < 2 || models.is_empty() {
@@ -212,6 +242,7 @@ fn render_row(
         let value = match *id {
             "quant" => quant.clone().unwrap_or_default(),
             "ctx" => m.ctx_size.map(count).unwrap_or_else(|| "n/a".to_string()),
+            "train" => m.ctx_train.map(count).unwrap_or_else(|| "-".to_string()),
             "moe" => m.n_cpu_moe.map(|n| n.to_string()).unwrap_or_else(|| "-".to_string()),
             "spec" => m.spec_type.clone().unwrap_or_else(|| "-".to_string()),
             "vision" if m.vision => "img".to_string(),
@@ -220,118 +251,24 @@ fn render_row(
         cells.push((value, text_style));
     }
     place_row(buf, inner, y, &cells, widths, theme);
-}
-
-/// The details of the selected model: one `label value` row each, then the live metrics of the active
-/// model. Rows that do not fit are dropped from the bottom.
-fn render_details(app: &App, llama: &LlamaSnapshot, theme: &Theme, area: Rect, buf: &mut Buffer) {
-    if area.width < 3 || area.height < 3 {
-        return;
-    }
-    let block = panel("Details", Role::Server, false, theme);
-    let inner = block.inner(area);
-    block.render(area, buf);
-    if inner.height < 1 || inner.width < 3 {
-        return;
-    }
-
-    let Some(model) = llama.models.get(app.model_selected) else {
-        return;
-    };
-
-    let active = llama.active.iter().find(|a| a.id == model.id);
-    let metrics = active.and_then(|a| a.metrics.as_ref());
-    let label_w = 12usize.min(inner.width as usize);
-
-    let path = model.model_path.clone().unwrap_or_else(|| "n/a".to_string());
-    let context = match (model.ctx_size, model.ctx_train) {
-        (Some(c), Some(t)) => format!("{} of {} trained", count(c), count(t)),
-        (Some(c), None) => count(c),
-        _ => "n/a".to_string(),
-    };
-    let ngl = model.n_gpu_layers.map(|n| n.to_string()).unwrap_or_else(|| "-".to_string());
-    let npu = model.n_cpu_moe.map(|n| n.to_string()).unwrap_or_else(|| "-".to_string());
-    let thr = model.threads.map(|n| n.to_string()).unwrap_or_else(|| "-".to_string());
-    let speculative = model.spec_type.clone().unwrap_or_else(|| "none".to_string());
-    let size = match model.size_bytes {
-        Some(sz) => {
-            let p = model.n_params.map(params).unwrap_or_else(|| "n/a".to_string());
-            let ft = model.ftype.as_deref().unwrap_or("n/a");
-            format!("{}   {} params   {ft}", bytes(sz), p)
-        }
-        None => "loaded models only".to_string(),
-    };
-
-    let mut rows: Vec<(&str, String, Option<Role>)> = vec![
-        ("id", model.id.clone(), None),
-        ("state", state_text(model), None),
-        ("path", fit(&path, inner.width.saturating_sub(label_w as u16) as usize), None),
-        ("context", context, None),
-        ("offload", format!("ngl {ngl}   n-cpu-moe {npu}   threads {thr}"), None),
-        ("speculative", speculative, None),
-        ("size", size, if model.size_bytes.is_some() { None } else { Some(Role::Dim) }),
-    ];
-
-    if let Some(m) = metrics {
-        rows.push(("", String::new(), None)); // blank separator before the live metrics
-        rows.push((
-            "speed",
-            format!("gen {} t/s   prompt {} t/s", tps(m.avg_gen_tps()), tps(m.avg_prompt_tps())),
-            None,
-        ));
-        rows.push((
-            "cache",
-            format!("{} reused   draft {} accepted", pct(m.cache_reuse_pct()), pct(m.draft_acceptance_pct())),
-            None,
-        ));
-        rows.push((
-            "requests",
-            format!(
-                "{} processing   {} deferred",
-                fmt_int(m.requests_processing),
-                fmt_int(m.requests_deferred)
-            ),
-            None,
-        ));
-        rows.push((
-            "slot",
-            active
-                .and_then(|a| a.slots.first())
-                .map(|s| {
-                    format!(
-                        "{} / {} tokens",
-                        count(s.n_prompt_tokens.saturating_add(s.n_decoded)),
-                        count(s.n_ctx)
-                    )
-                })
-                .unwrap_or_else(|| "n/a".to_string()),
-            None,
-        ));
-    }
-
-    for (y, (label, value, style)) in (inner.y..).zip(rows) {
-        if y >= inner.y + inner.height {
-            break;
-        }
-        let label = format!("{:<label_w$}", label);
-        buf.set_line(
-            inner.x,
-            y,
-            &Line::from(vec![
-                Span::styled(label, theme.fg(Role::Dim)),
-                Span::styled(value, theme.fg(style.unwrap_or(Role::Text))),
-            ]),
-            inner.width,
-        );
+    if selected {
+        let (r, g, b) = rgb(Role::Selection);
+        let rect = Rect::new(inner.x, y, inner.width, 1);
+        let style = if theme.mode == ColorMode::TrueColor {
+            Style::default().bg(Color::Rgb(r, g, b))
+        } else {
+            Style::default().add_modifier(Modifier::REVERSED)
+        };
+        buf.set_style(rect, style);
     }
 }
 
-/// The state text of a model for the details (`● loaded`, `○ unloaded`, …), without its role.
-fn state_text(m: &ModelInfo) -> String {
-    state_cell(m).0
+/// VRAM used of the first GPU, for the table's right title (`None` on a machine without one).
+fn vram_used(app: &App) -> Option<u64> {
+    app.system.as_ref().and_then(|s| s.gpus.first()).and_then(|g| g.vram_used)
 }
 
-/// A float metric as an integer, rounded (`1.0` → `1`).
-fn fmt_int(v: f64) -> String {
-    format!("{:.0}", v)
+/// VRAM total of the first GPU, for the table's right title (`None` on a machine without one).
+fn vram_total(app: &App) -> Option<u64> {
+    app.system.as_ref().and_then(|s| s.gpus.first()).and_then(|g| g.vram_total)
 }
