@@ -1,0 +1,40 @@
+ llamatop  ?  up n/a  ○ waiting                   1 Overview   2 Models   3 Logs   4 System   5 Agents ●                    10:21:03  ? help
+╭ Queue ───────────────────────────────── opencode ╮╭ #131 · T24-setup-wizard ───────────────────────────────────────────────────── m list ╮
+│  #     state        age    task                  ││                                                                                      │
+│  136   ◉ running    11m 1s T30-nvidia            ││                                         You 0                                        │
+│▶ 131   ✓ done       4h 18m T24-setup-wizard      ││                                           ○                                          │
+│  -     ✖ failed     1d 7h  Refactor the parser   ││                                           ⠄                                          │
+│                                                  ││                                           ⠂                                          │
+│                                                  ││                Tools 1 ●⢀                 ⡁                ⢀ ● Model 14              │
+│                                                  ││                          ⠉⠢⣀            ⣀⣀⣀⣀⡀           ⢀⡠⠊⠁                         │
+│                                                  ││                             ⠉⠢⢄⡀    ⣠⠴⠚⠉⠁   ⠉⠙⠲⢤⡀    ⣀⠤⠊⠁                            │
+│                                                  ││                                ⠈⠒ ⢠⠞⠁           ⠙⢦ ⠐⠊                                │
+│                                                  ││                                  ⢠⠏              ⠈⢧                                  │
+│                                                  ││                                  ⡞  Coder-35B-A3B ⠘⡆                                 │
+│                                                  ││       Agents 0 ○ ⠐ ⠂⠐ ⠂⠐ ⠂⠐ ⠂⠐ ⠂ ⡇     n/a t/s     ⡇ ⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒ ● Files 5      │
+│                                                  ││                                  ⢳     ctx n/a    ⢰⠃                                 │
+│                                                  ││                                  ⠈⢧              ⢠⠏                                  │
+│                                                  ││                                ⡀⠐ ⠈⠳⣄          ⢀⡴⠋ ⠐ ⡀                               │
+│                                                  ││                             ⠄⠈      ⠈⠙⠲⠤⣄⣀⣀⣀⡤⠴⠚⠉      ⠈ ⠄                            │
+│                                                  ││                          ⠠⠈               ⡆              ⠈⠠                          │
+│                                                  ││                  Web 0 ○                  ⣧                  ○ Shell 0               │
+│                                                  ││                                           ⠃                                          │
+│                                                  ││                                           ◉                                          │
+│                                                  ││                                    Checks 2 ◷ 0:01                                   │
+│                                                  ││                                                                                      │
+│                                                  ││──────────────────────────────────────────────────────────────────────────────────────│
+│                                                  ││16:10:28 ✎ edit   src/app/state.rs  +0 −1                                           2s│
+│                                                  ││16:10:39 ◉ think  state.rs is now 400. But there's a compile error in my net_r…    31s│
+│                                                  ││16:10:38 » say    The `slot` is an `Option` and I can't use `.unwrap()` (AGENT…    32s│
+│                                                  ││16:11:04 ✚ write  src/app/net_rates.rs  7 lines                                     6s│
+│                                                  ││16:11:11 ◉ think  Now net_rates.rs is 22 lines. Let me run fmt + clippy + the …     1s│
+│                                                  ││16:11:12 $ shell  cargo fmt && cargo clippy --all-targets --locked -- -D warni…     2s│
+│                                                  ││16:11:35 ◉ think  All tests pass (all "ok"). But EXIT: 1. Let me see what fail…     2s│
+│                                                  ││16:11:32 » say    All tests pass. Let me see what caused exit 1 (likely the 40…     5s│
+│                                                  ││16:11:36 $ shell  tail -8 /tmp/check4.out                                           0s│
+│                                                  ││16:11:39 ◉ think  state.rs is now 400 (passes). Only system_left.rs (419) rema…     3m│
+│                                                  ││16:11:37 » say    state.rs is fixed (400). Now system_left.rs (419) needs -19.…     3m│
+│                                                  ││16:15:27 ▸ read   src/ui/screens/system_left.rs                                     1s│
+│                                                  ││16:18:36 ◉ think                                                                    5s│
+│3 sessions · 1 running                            ││◉ Checks  cargo test  0:01   in 145.0K  out 112.2K  · 46m 16s   step 22               │
+╰──────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────────────╯
