@@ -32,7 +32,7 @@ pub const REQUEST_HISTORY: usize = 50;
 pub enum Event {
     System(SystemSnapshot),
     Llama(LlamaSnapshot),
-    OpenCode(OpenCodeSnapshot),
+    OpenCode(Box<OpenCodeSnapshot>),
     Log(LogLine),
     Key(KeyEvent),
     /// The terminal changed size; the next frame is laid out again.
@@ -231,7 +231,7 @@ impl App {
                 if let Some(i) = shown.and_then(|id| s.sessions.iter().position(|x| x.id == id)) {
                     self.agent_selected = i;
                 }
-                self.opencode = Some(s);
+                self.opencode = Some(*s);
                 !self.paused
             }
             Event::Log(l) => {
