@@ -1,4 +1,4 @@
- llamatop  gpu-box  up 4d 3h  ● server ok  b12151      1 Overview   2 Models   3 Logs   4 System        10:21:03  ? help
+ llamatop  gpu-box  up 4d 3h  ● server ok  b12151     1 Overview 2 Models 3 Logs 4 System 5 Agents      10:21:03  ? help
 ╭ Activity ────────────────────────────────────────────────────────────────────────────────────────────────── follow ● ╮
 │10:00:08 #9000 processing task, is_child = 0                                                                          │
 │10:00:09 #9000 prompt 2048 tok  25 %  890 t/s                                                                         │

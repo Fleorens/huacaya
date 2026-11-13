@@ -40,17 +40,20 @@ pub enum Event {
     Tick,
 }
 
-/// The four screens, in tab order.
+/// The five screens, in tab order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
     Overview,
     Models,
     Logs,
     System,
+    /// The agents screen (T35): the OpenCode queue, the followed session, its timeline.
+    Agents,
 }
 
 impl Screen {
-    pub const ALL: [Screen; 4] = [Screen::Overview, Screen::Models, Screen::Logs, Screen::System];
+    pub const ALL: [Screen; 5] =
+        [Screen::Overview, Screen::Models, Screen::Logs, Screen::System, Screen::Agents];
 
     fn index(self) -> usize {
         match self {
@@ -58,26 +61,28 @@ impl Screen {
             Screen::Models => 1,
             Screen::Logs => 2,
             Screen::System => 3,
+            Screen::Agents => 4,
         }
     }
 
-    /// Next in tab order, wrapping (`System` → `Overview`).
+    /// Next in tab order, wrapping (`Agents` → `Overview`).
     pub fn next(self) -> Self {
         Screen::ALL[(self.index() + 1) % Self::ALL.len()]
     }
 
-    /// Previous in tab order, wrapping (`Overview` → `System`).
+    /// Previous in tab order, wrapping (`Overview` → `Agents`).
     pub fn prev(self) -> Self {
         Screen::ALL[(self.index() + Self::ALL.len() - 1) % Self::ALL.len()]
     }
 
-    /// `"Overview"`, `"Models"`, `"Logs"`, `"System"`.
+    /// `"Overview"`, `"Models"`, `"Logs"`, `"System"`, `"Agents"`.
     pub fn title(self) -> &'static str {
         match self {
             Screen::Overview => "Overview",
             Screen::Models => "Models",
             Screen::Logs => "Logs",
             Screen::System => "System",
+            Screen::Agents => "Agents",
         }
     }
 }
@@ -107,6 +112,10 @@ pub struct App {
     pub opencode: Option<OpenCodeSnapshot>,
     /// The session the Agents screen follows; set by T35.
     pub agent_focus: Option<String>,
+    /// Index into `opencode.sessions` on the Agents screen (T35).
+    pub agent_selected: usize,
+    /// Seconds east of UTC, for `HH:MM:SS` on the Agents timeline (T35).
+    pub utc_offset_s: i32,
     pub logs: VecDeque<LogLine>,
     /// `busy_pct` of the first GPU.
     pub gpu_load: History,
@@ -140,6 +149,8 @@ impl App {
             llama: None,
             opencode: None,
             agent_focus: None,
+            agent_selected: 0,
+            utc_offset_s: 0,
             logs: VecDeque::new(),
             gpu_load: History::new(HISTORY_CAPACITY),
             cpu_usage: History::new(HISTORY_CAPACITY),
@@ -201,6 +212,13 @@ impl App {
                 !self.paused
             }
             Event::OpenCode(s) => {
+                // Keep the queue selection valid and on the session shown: the followed one, else the
+                // fetched focus. The list may reorder or lose sessions between two fetches.
+                self.agent_selected = self.agent_selected.min(s.sessions.len().saturating_sub(1));
+                let shown = self.agent_focus.as_deref().or(s.focus.as_deref());
+                if let Some(i) = shown.and_then(|id| s.sessions.iter().position(|x| x.id == id)) {
+                    self.agent_selected = i;
+                }
                 self.opencode = Some(s);
                 !self.paused
             }

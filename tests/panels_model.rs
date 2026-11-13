@@ -67,7 +67,7 @@ fn header_generating() {
     assert!(rows[0].contains("4 System"), "{:?}", rows[0]);
     assert!(rows[0].contains("10:21:03"), "{:?}", rows[0]);
     assert!(rows[0].contains("? help"), "{:?}", rows[0]);
-    assert!(!rows[0].contains("5 Agents"), "{:?}", rows[0]);
+    assert!(rows[0].contains("5 Agents"), "{:?}", rows[0]);
 }
 
 #[test]

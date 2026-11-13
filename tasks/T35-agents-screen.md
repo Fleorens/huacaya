@@ -106,7 +106,7 @@ Layout: a **Queue** panel on the left (`min(52, area.width * 2 / 5)` columns), a
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented; with `--opencode`, screen 5 follows the running session live.
-- [ ] Every earlier test passes (updated for five screens); the 8 tests above pass.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented; with `--opencode`, screen 5 follows the running session live.
+- [x] Every earlier test passes (updated for five screens); the 8 tests above pass.
+- [x] `bash .devbox/check` is green.
 - [ ] (On screen, not by the model) the timeline of a running job moves on the real devbox.
