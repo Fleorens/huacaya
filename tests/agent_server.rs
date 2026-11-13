@@ -139,6 +139,7 @@ fn stops() {
     let client = agent();
 
     // Wait for the first sample so we know the server is answering.
+    system_ready(&client, port);
     let (status, _) = get(&client, port, "/v1/system", Some("t"));
     assert_eq!(status, 200);
 
