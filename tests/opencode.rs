@@ -69,8 +69,14 @@ fn sessions_fixture() {
 #[test]
 fn steps_fixture() {
     let steps = parse_steps(&fixture("messages.json"), Some("/work/.wt/demo-131")).unwrap();
-    assert_eq!(steps.len(), 10);
-    let s = |i: usize| &steps[i];
+    assert_eq!(steps.len(), 11);
+    let s = |i: usize| &steps[i + 1];
+
+    // The user message that now leads the timeline.
+    assert_eq!(steps[0].kind, StepKind::User);
+    assert_eq!(steps[0].summary, "Execute tasks/T24-setup-wizard.md");
+    assert_eq!(steps[0].ok, None);
+    assert_eq!(steps[0].end_ms, Some(1794500600000));
 
     assert_eq!(s(0).kind, StepKind::Think);
     assert_eq!(s(0).summary, "Read the sheet first, then the cited sections.");
@@ -144,7 +150,7 @@ fn poller_focus() {
     // An explicit focus that is one of the sessions: that one.
     let focused = poller.poll(Some("ses_done000000000000000000"));
     assert_eq!(focused.focus.as_deref(), Some("ses_done000000000000000000"));
-    assert_eq!(focused.steps.len(), 10);
+    assert_eq!(focused.steps.len(), 11);
 }
 
 #[test]

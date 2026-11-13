@@ -322,6 +322,7 @@ fn render_timeline_row(buf: &mut Buffer, inner: Rect, y: u16, step: &Step, utc_o
 /// `Memory`, Think / Say in `Server`, other tools in `Text`.
 pub(crate) fn step_glyph(step: &Step) -> (String, Role) {
     match &step.kind {
+        StepKind::User => ("❯ you".to_string(), Role::Text),
         StepKind::Read => ("▸ read".to_string(), Role::Cpu),
         StepKind::Search => ("⌕ grep".to_string(), Role::Cpu),
         StepKind::Edit => ("✎ edit".to_string(), Role::Gpu),

@@ -140,7 +140,7 @@ page); the model prefixes every command with `cd <worktree> && `.
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
 | T40 | Real OpenCode capture, `compress` fix, `messages-real.json` — by the orchestrator, no sheet | T34 | validée |
-| [T41](T41-activity-model.md) | Activity model: stations, command classification, ids and end times of steps (pure) | T40 | prête |
+| [T41](T41-activity-model.md) | Activity model: stations, command classification, ids and end times of steps (pure) | T40 | livrée |
 | [T42](T42-live-poller.md) | Poller: whole history once, then a 12-message round every second | T41 | prête |
 | [T43](T43-map-widget.md) | The map widget: braille dots, stations, spokes, pulses, context ring | T42 | prête |
 | [T44](T44-agents-map-screen.md) | Agents screen: the map view (`m`), its feed and "now" line | T43 | prête |

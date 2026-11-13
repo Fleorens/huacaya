@@ -36,6 +36,7 @@ pub struct Session {
 /// What a step did.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum StepKind {
+    User,
     Think,
     Say,
     Read,
@@ -51,6 +52,13 @@ pub struct Step {
     /// The tool part's `time.created`, else its message's `time.created`.
     pub time_ms: i64,
     pub kind: StepKind,
+    /// Stable across poll rounds: the tool part's `id`; for other parts `<message id>#<part index>`
+    /// (index in the message's `content`, from 0); `#<part index>` alone when the message has no `id`.
+    pub id: String,
+    /// When the step ended, Unix ms: the part's `time.completed` for tools and reasoning; for text and
+    /// user parts the message's `time.completed`, else `None`. `None` means the step still runs.
+    pub end_ms: Option<i64>,
+    /// The step's summary (see `StepKind`).
     pub summary: String,
     /// `Some(false)` for a tool whose `state.status` is `error`, or a shell whose `metadata.exit` is not 0;
     /// `Some(true)` for other completed tools; `None` for reasoning and text, and for a tool still running.
@@ -136,31 +144,72 @@ fn session_from(raw: RawSession) -> Session {
     }
 }
 
-/// Parses `GET /api/session/<id>/message` into steps, oldest first (the API is newest first). Only
-/// `assistant` messages give steps, their parts in order; `directory` shortens paths.
+/// Parses `GET /api/session/<id>/message` into steps, oldest first (the API is newest first). `assistant`
+/// messages give steps, their parts in order; a `user` message gives one `User` step per text part; other
+/// types (`idle`, …) give nothing. `directory` shortens paths and prefixes `cd <directory> && ` in shell
+/// summaries.
 pub fn parse_steps(json: &str, directory: Option<&str>) -> Result<Vec<Step>> {
     let messages: RawMessages = serde_json::from_str(json).context("parse messages")?;
     let mut steps: Vec<Step> = Vec::new();
     for msg in messages.data.iter().rev() {
-        if msg.r#type.as_deref() != Some("assistant") {
-            continue;
-        }
+        let message_id = msg.id.as_deref();
         let message_time = msg.time.as_ref().map(|t| t.created).unwrap_or(0);
-        for part in &msg.content {
-            if let Some(step) = part_step(part, message_time, directory) {
-                steps.push(step);
+        let message_completed = msg.time.as_ref().and_then(|t| t.completed);
+        match msg.r#type.as_deref() {
+            Some("user") => {
+                for (pi, part) in msg.content.iter().enumerate() {
+                    if part.r#type.as_deref() == Some("text") {
+                        steps.push(Step {
+                            time_ms: message_time,
+                            kind: StepKind::User,
+                            id: step_id(message_id, pi),
+                            end_ms: Some(message_time),
+                            summary: summary_text(part.text.as_deref()),
+                            ok: None,
+                            detail: None,
+                        });
+                    }
+                }
             }
+            Some("assistant") => {
+                for (pi, part) in msg.content.iter().enumerate() {
+                    if let Some(step) =
+                        part_step(part, message_id, pi, message_time, message_completed, directory)
+                    {
+                        steps.push(step);
+                    }
+                }
+            }
+            _ => {}
         }
     }
     Ok(steps)
 }
 
-fn part_step(part: &RawPart, message_time: i64, directory: Option<&str>) -> Option<Step> {
+fn step_id(message_id: Option<&str>, pi: usize) -> String {
+    format!("{}#{pi}", message_id.unwrap_or(""))
+}
+
+fn part_step(
+    part: &RawPart,
+    message_id: Option<&str>,
+    pi: usize,
+    message_time: i64,
+    message_completed: Option<i64>,
+    directory: Option<&str>,
+) -> Option<Step> {
     let time = part.time.as_ref().map(|t| t.created).unwrap_or(message_time);
+    let end_ms = match part.r#type.as_deref() {
+        // Tools and reasoning end with their part; text with its message.
+        Some("tool") | Some("reasoning") => part.time.as_ref().and_then(|t| t.completed),
+        _ => message_completed,
+    };
     match part.r#type.as_deref() {
         Some("reasoning") => Some(Step {
             time_ms: time,
             kind: StepKind::Think,
+            id: step_id(message_id, pi),
+            end_ms,
             summary: summary_text(part.text.as_deref()),
             ok: None,
             detail: None,
@@ -168,18 +217,32 @@ fn part_step(part: &RawPart, message_time: i64, directory: Option<&str>) -> Opti
         Some("text") => Some(Step {
             time_ms: time,
             kind: StepKind::Say,
+            id: step_id(message_id, pi),
+            end_ms,
             summary: summary_text(part.text.as_deref()),
             ok: None,
             detail: None,
         }),
-        Some("tool") => tool_step(part, time, directory),
+        Some("tool") => tool_step(
+            part,
+            time,
+            part.id.clone().unwrap_or_else(|| step_id(message_id, pi)),
+            end_ms,
+            directory,
+        ),
         _ => None,
     }
 }
 
 /// `status == "error"` is `ok: Some(false)`, a completed shell with `exit != 0` too; a tool that is
 /// neither completed nor in error (pending, running) is `None`, so it is not shown as a failure.
-fn tool_step(part: &RawPart, time: i64, directory: Option<&str>) -> Option<Step> {
+fn tool_step(
+    part: &RawPart,
+    time: i64,
+    id: String,
+    end_ms: Option<i64>,
+    directory: Option<&str>,
+) -> Option<Step> {
     let name = part.name.as_deref().unwrap_or("");
     let state = part.state.as_ref();
     let status = state.and_then(|s| s.status.as_deref());
@@ -205,7 +268,7 @@ fn tool_step(part: &RawPart, time: i64, directory: Option<&str>) -> Option<Step>
             } else {
                 None
             };
-            Some(step(time, StepKind::Read, path.unwrap_or_default(), ok, detail))
+            Some(step(time, StepKind::Read, path.unwrap_or_default(), ok, detail, id, end_ms))
         }
         "edit" => {
             let path =
@@ -215,7 +278,7 @@ fn tool_step(part: &RawPart, time: i64, directory: Option<&str>) -> Option<Step>
                 .and_then(|m| m.files.as_ref())
                 .filter(|files| files.iter().any(|f| f.patch.is_some()))
                 .map(|files| patch_delta(files.iter().filter_map(|f| f.patch.as_deref())));
-            Some(step(time, StepKind::Edit, path, ok, detail))
+            Some(step(time, StepKind::Edit, path, ok, detail, id, end_ms))
         }
         "write" => {
             let path =
@@ -226,15 +289,18 @@ fn tool_step(part: &RawPart, time: i64, directory: Option<&str>) -> Option<Step>
                 .map(str::lines)
                 .map(|l| l.count())
                 .unwrap_or(0);
-            Some(step(time, StepKind::Write, path, ok, Some(format!("{lines} lines"))))
+            Some(step(time, StepKind::Write, path, ok, Some(format!("{lines} lines")), id, end_ms))
         }
         "shell" => {
-            let command = input.and_then(|i| i.command.as_deref()).unwrap_or("");
+            let command = strip_cd_prefix(
+                first_line(input.and_then(|i| i.command.as_deref()).unwrap_or("")),
+                directory,
+            );
             let detail = content
                 .and_then(|c| c.first())
                 .and_then(|c| c.text.as_deref())
                 .map(|s| first_line(s).to_string());
-            Some(step(time, StepKind::Shell, first_line(command).to_string(), ok, detail))
+            Some(step(time, StepKind::Shell, command, ok, detail, id, end_ms))
         }
         "grep" => {
             let path = input.and_then(|i| i.path.as_deref()).unwrap_or("");
@@ -243,14 +309,34 @@ fn tool_step(part: &RawPart, time: i64, directory: Option<&str>) -> Option<Step>
                 input.and_then(|i| i.pattern.as_deref()).unwrap_or(""),
                 shorten(path, directory)
             );
-            Some(step(time, StepKind::Search, summary, ok, None))
+            Some(step(time, StepKind::Search, summary, ok, None, id, end_ms))
         }
-        other => Some(step(time, StepKind::Other(other.to_string()), name.to_string(), ok, None)),
+        other => Some(step(time, StepKind::Other(other.to_string()), name.to_string(), ok, None, id, end_ms)),
     }
 }
 
-fn step(time_ms: i64, kind: StepKind, summary: String, ok: Option<bool>, detail: Option<String>) -> Step {
-    Step { time_ms, kind, summary, ok, detail }
+/// Drops a leading `cd <directory> && ` when `<directory>` is exactly `directory` (the model prefixes
+/// every command with it); any other `cd` stays.
+fn strip_cd_prefix(command: &str, directory: Option<&str>) -> String {
+    match directory {
+        Some(dir) => command
+            .strip_prefix(&format!("cd {} && ", dir.trim_end_matches('/')))
+            .unwrap_or(command)
+            .to_string(),
+        None => command.to_string(),
+    }
+}
+
+fn step(
+    time_ms: i64,
+    kind: StepKind,
+    summary: String,
+    ok: Option<bool>,
+    detail: Option<String>,
+    id: String,
+    end_ms: Option<i64>,
+) -> Step {
+    Step { time_ms, kind, id, end_ms, summary, ok, detail }
 }
 
 /// Polls OpenCode through any `llama_poll::Fetch`.

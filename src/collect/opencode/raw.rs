@@ -48,6 +48,8 @@ pub(super) struct RawTime {
     #[serde(default)]
     pub(super) created: i64,
     #[serde(default)]
+    pub(super) completed: Option<i64>,
+    #[serde(default)]
     pub(super) idle: Option<i64>,
 }
 #[derive(Deserialize)]
@@ -64,6 +66,8 @@ pub(super) struct RawMessage {
     #[serde(rename = "type", default)]
     pub(super) r#type: Option<String>,
     #[serde(default)]
+    pub(super) id: Option<String>,
+    #[serde(default)]
     pub(super) time: Option<RawTime>,
     #[serde(default)]
     pub(super) content: Vec<RawPart>,
@@ -72,6 +76,8 @@ pub(super) struct RawMessage {
 pub(super) struct RawPart {
     #[serde(rename = "type", default)]
     pub(super) r#type: Option<String>,
+    #[serde(default)]
+    pub(super) id: Option<String>,
     #[serde(default)]
     pub(super) name: Option<String>,
     #[serde(default)]

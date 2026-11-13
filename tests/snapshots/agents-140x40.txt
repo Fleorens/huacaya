@@ -7,6 +7,7 @@
 │                                                  ││                                                                                      │
 │                                                  │╰──────────────────────────────────────────────────────────────────────────────────────╯
 │                                                  │╭ Timeline ────────────────────────────────────────────────────────────────── follow ● ╮
+│                                                  ││16:23:20 ❯ you    Execute tasks/T24-setup-wizard.md                                   │
 │                                                  ││16:25:00 ◉ think  Read the sheet first, then the cited sections.                      │
 │                                                  ││16:25:01 ▸ read   tasks/T24-setup-wizard.md                                           │
 │                                                  ││16:26:41 ⌕ grep   pub fn in src                                                       │
@@ -17,7 +18,6 @@
 │                                                  ││16:33:21 $ shell  bash .devbox/check  test result: ok. 9 passed                       │
 │                                                  ││16:33:51 ◉ think  All tests pass and the check is green. Now tick the acceptance cr…  │
 │                                                  ││16:33:51 » say    Rapport : la fiche est livrée, les 9 tests passent.                 │
-│                                                  ││                                                                                      │
 │                                                  ││                                                                                      │
 │                                                  ││                                                                                      │
 │                                                  ││                                                                                      │
