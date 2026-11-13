@@ -14,6 +14,7 @@ use crate::util::History;
 use crossterm::event::KeyEvent;
 
 use super::log_view::{LevelFilter, LogView};
+use super::net_rates::update_net_rates;
 
 /// Log lines kept in memory; the oldest is dropped beyond.
 pub const LOG_CAPACITY: usize = 2000;
@@ -123,6 +124,10 @@ pub struct App {
     pub cpu_usage: History,
     /// `live_gen_tps` of the first active model (0 when it is not generating).
     pub gen_tps: History,
+    /// Per interface, the receive and transmit rates (bytes/s), in the snapshot's order.
+    pub net_rates: Vec<(String, History, History)>,
+    /// Every sensor shown instead of the grouped summary, on the System screen (T38).
+    pub all_sensors: bool,
     pub last_request: Option<LastRequest>,
     /// Every request seen in the log, oldest first, at most REQUEST_HISTORY; the last one is last_request.
     pub requests: VecDeque<LastRequest>,
@@ -156,6 +161,8 @@ impl App {
             gpu_load: History::new(HISTORY_CAPACITY),
             cpu_usage: History::new(HISTORY_CAPACITY),
             gen_tps: History::new(HISTORY_CAPACITY),
+            net_rates: Vec::new(),
+            all_sensors: false,
             last_request: None,
             requests: VecDeque::new(),
             task_started: None,
@@ -191,6 +198,7 @@ impl App {
                 if let Some(cpu) = s.cpu.usage_pct {
                     self.cpu_usage.push(cpu);
                 }
+                update_net_rates(&mut self.net_rates, &s.nets);
                 self.system = Some(s);
                 !self.paused
             }
@@ -270,9 +278,7 @@ impl App {
         true
     }
 
-    /// The log lines the log view shows, oldest first: level accepted, not a hidden `Proxy` line, and
-    /// containing `log_view.filter` (ASCII case-insensitive) when it is not empty; when `log_view.task`
-    /// is set, only the lines of that task.
+    /// The log lines the log view shows, oldest first: accepted level, not a hidden `Proxy`, filtered by text or task.
     pub fn visible_logs(&self) -> Vec<&LogLine> {
         let filter_lower = self.log_view.filter.to_ascii_lowercase();
         self.logs.iter().filter(|l| self.line_visible(l, &filter_lower)).collect()

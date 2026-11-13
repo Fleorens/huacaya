@@ -102,7 +102,7 @@ golden file). `cores_one_per_row` and `cores_two_per_row` are replaced by:
 
 ## Acceptance criteria
 
-- [ ] The contract above is implemented.
-- [ ] The new and updated tests pass; golden files regenerated and read.
-- [ ] `bash .devbox/check` is green.
+- [x] The contract above is implemented.
+- [x] The new and updated tests pass; golden files regenerated and read.
+- [x] `bash .devbox/check` is green.
 - [ ] On screen (Florian): the System screen looks like the validated mockup at 140 × 40.

@@ -141,15 +141,16 @@ fn help_overlay() {
     let mut app = demo_app(DemoState::Generating);
     app.help = true;
     let rows = frame(&app, 100, 30);
-    // The box is centred: top-left corner `╭` at ((100 - 56) / 2, (30 - 15) / 2) = (22, 7).
-    let corner: String = rows[7].chars().nth(22).map(|c| c.to_string()).unwrap_or_default();
-    assert_eq!(corner, "╭", "{:?}", rows[7]);
+    // The box (17 rows since T38's `s` row) is centred: top-left corner `╭` at (22, 6).
+    let corner: String = rows[6].chars().nth(22).map(|c| c.to_string()).unwrap_or_default();
+    assert_eq!(corner, "╭", "{:?}", rows[6]);
     let all: String = rows.join("\n");
     assert!(all.contains("Help"), "{:?}", all);
     assert!(all.contains("switch screen"), "{:?}", all);
     assert!(all.contains("faster / slower refresh (now 1.0 s)"), "{:?}", all);
     assert!(all.contains("Logs: tasks list, Enter shows one task"), "{:?}", all);
     assert!(all.contains("show / hide the router's proxy lines"), "{:?}", all);
+    assert!(all.contains("System: every sensor, or the summary"), "{:?}", all);
 
     let mut fast = demo_app(DemoState::Generating);
     fast.help = true;

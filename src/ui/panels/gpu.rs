@@ -21,6 +21,14 @@ use crate::util::bytes;
 /// Height needed, borders included (4 rows inside).
 pub const MIN_HEIGHT: u16 = 6;
 
+/// The GPU name without its vendor prefix (`NVIDIA GeForce `, `NVIDIA `, `Radeon `), or the name as-is.
+pub(crate) fn short_gpu_name(name: &str) -> &str {
+    name.strip_prefix("NVIDIA GeForce ")
+        .or_else(|| name.strip_prefix("NVIDIA "))
+        .or_else(|| name.strip_prefix("Radeon "))
+        .unwrap_or(name)
+}
+
 /// The GPU panel of `system.gpus[0]`: `frame::panel` with a `"GPU  <name>"` title (leading `Radeon `,
 /// `NVIDIA ` or `NVIDIA GeForce ` removed), the load and VRAM gauges, the temperature (junction marked
 /// when hot, and edge; the edge alone when junction is absent, as NVIDIA reports it), the power and fan,
@@ -34,15 +42,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let theme = ctx.theme;
     let gpu = app.system.as_ref().and_then(|s| s.gpus.first());
     let title = match &gpu {
-        Some(g) => {
-            let name = g.name.as_str();
-            let name = name
-                .strip_prefix("NVIDIA GeForce ")
-                .or_else(|| name.strip_prefix("NVIDIA "))
-                .or_else(|| name.strip_prefix("Radeon "))
-                .unwrap_or(name);
-            format!("GPU  {name}")
-        }
+        Some(g) => format!("GPU  {}", short_gpu_name(&g.name)),
         None => "GPU".to_string(),
     };
     let block = panel(&title, Role::Gpu, false, theme);

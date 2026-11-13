@@ -1,5 +1,6 @@
-//! The System screen: per-core CPU bars, every temperature sensor, the disks, the network and the
-//! `llama-server` processes. Read-only. See `docs/02-ui.md` § 2.
+//! The System screen: the CPU panel (per-core heatmap, usage graph, load) and the sensors on the left,
+//! the disks, the network and the `llama-server` processes (plus the GPU summary) on the right.
+//! Read-only. See `tasks/T38-system-v2.md`.
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -9,25 +10,26 @@ use ratatui::widgets::Widget;
 
 use crate::app::App;
 use crate::collect::disk::DiskSample;
+use crate::collect::gpu::GpuSample;
 use crate::collect::net::NetSample;
 use crate::collect::process::{ProcSample, ServerRole};
-use crate::collect::sampler::SystemSnapshot;
-use crate::collect::sensors::TempReading;
 use crate::ui::frame::panel;
+use crate::ui::graph::BrailleGraph;
+use crate::ui::panels::gpu::short_gpu_name;
 use crate::ui::panels::{Ctx, gauge_row};
-use crate::ui::text::{bytes_pair, fit, pct, temp};
-use crate::ui::theme::{
-    CPU_TEMP_THRESHOLDS, GPU_JUNCTION_THRESHOLDS, PCT_THRESHOLDS, Role, Severity, Theme, hot_mark, severity,
-};
-use crate::util::{bytes, duration, short_model_name};
+use crate::ui::screens::system_left::{cpu_needed_height, render_cpu, render_sensors};
+use crate::ui::text::{bytes_pair, fit, fit_groups};
+use crate::ui::theme::{PCT_THRESHOLDS, Role, Theme};
+use crate::util::History;
+use crate::util::{bytes, short_model_name};
 
 /// The System screen in `area` (the body below the header).
 ///
-/// A left column of `area.width / 2` columns holds the Cores panel over the whole height; a right
-/// column stacks Sensors, Disks, Network and Processes top to bottom. A right panel that does not fit
-/// in the rows left is cut to them when it keeps at least 3 rows, else dropped with everything under
-/// it. Without a system snapshot one `System` panel over the whole area shows a `Dim` `no data yet`
-/// row.
+/// A left column of `area.width / 2` columns holds the CPU panel at its own height over the Sensors
+/// panel; a right column stacks Disks, Network and Processes top to bottom. A right panel that does
+/// not fit in the rows left is cut to them when it keeps at least 3 rows, else dropped with everything
+/// under it. Without a system snapshot one `System` panel over the whole area shows a `Dim` `no data
+/// yet` row. The last row of the area carries a `Dim` hint.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     let theme = ctx.theme;
     let Some(sys) = &app.system else {
@@ -36,32 +38,55 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     };
 
     let left_w = area.width / 2;
-    render_cores(buf, sys, theme, Rect::new(area.x, area.y, left_w, area.height));
-
     let right_x = area.x + left_w;
     let right_w = area.width - left_w;
-    let mut y = area.y;
-    let bottom = area.y + area.height;
+
+    // Left column: the CPU panel at its own height, the Sensors panel on the rest; the hint row, when
+    // shown, is kept out of both columns so it does not overwrite their bottom borders.
+    let hint_rows = u16::from(area.height >= 12);
+    let left_h = area.height - hint_rows;
+    let cpu_h = cpu_needed_height(sys, ctx).min(left_h);
+    render_cpu(app, ctx, Rect::new(area.x, area.y, left_w, cpu_h), buf);
+    render_sensors(app, ctx, Rect::new(area.x, area.y + cpu_h, left_w, left_h - cpu_h), buf);
+
+    // The last row of the whole area: a `Dim` hint, fit at ` · `.
+    if area.height >= 12 {
+        let y = area.y + area.height - 1;
+        let hint = "cores: brighter = busier · sensors grouped by chip · s: all sensors";
+        let groups: Vec<Vec<Span>> = hint
+            .split(" · ")
+            .enumerate()
+            .map(|(i, g)| {
+                let text = if i == 0 { g.to_string() } else { format!(" · {g}") };
+                vec![Span::styled(text, theme.fg(Role::Dim))]
+            })
+            .collect();
+        buf.set_line(area.x, y, &fit_groups(groups, area.width as usize), area.width);
+    }
 
     // Right column: stack the panels, cutting or dropping the ones that do not fit.
-    let r = slot(sys.temps.len() as u16 + 2, bottom - y, y, right_x, right_w);
-    let Some(rect) = r else { return };
-    draw_sensors(buf, rect, &sys.temps, theme);
-    y = rect.bottom();
+    let mut y = area.y;
+    let bottom = area.y + left_h;
 
     let r = slot(sys.disks.len() as u16 + 2, bottom - y, y, right_x, right_w);
     let Some(rect) = r else { return };
     draw_disks(buf, rect, &sys.disks, theme);
     y = rect.bottom();
 
-    let r = slot(sys.nets.len() as u16 + 2, bottom - y, y, right_x, right_w);
+    let r = slot(sys.nets.len() as u16 * 2 + 2, bottom - y, y, right_x, right_w);
     let Some(rect) = r else { return };
-    draw_network(buf, rect, &sys.nets, theme);
+    draw_network(buf, app, rect, &sys.nets, ctx);
     y = rect.bottom();
 
-    let r = slot(sys.procs.len() as u16 + 3, bottom - y, y, right_x, right_w);
+    let r = slot(
+        sys.procs.len() as u16 + 3 + if sys.gpus.is_empty() { 0 } else { 2 },
+        bottom - y,
+        y,
+        right_x,
+        right_w,
+    );
     let Some(rect) = r else { return };
-    draw_processes(buf, rect, &sys.procs, theme);
+    draw_processes(buf, rect, &sys.procs, ctx, &sys.gpus);
 }
 
 /// The "no snapshot" case: one `System` panel over the whole area with a single `Dim` row.
@@ -94,100 +119,16 @@ fn slot(needed: u16, avail: u16, y: u16, right_x: u16, right_w: u16) -> Option<R
 /// and `k10temp` → `CPU_TEMP_THRESHOLDS`; `nvme` → `(70.0, 80.0)`; any other chip → `(80.0, 95.0)`.
 pub fn sensor_thresholds(chip: &str) -> (f32, f32) {
     match chip {
-        "amdgpu" => GPU_JUNCTION_THRESHOLDS,
-        "coretemp" | "k10temp" => CPU_TEMP_THRESHOLDS,
+        "amdgpu" => crate::ui::theme::GPU_JUNCTION_THRESHOLDS,
+        "coretemp" | "k10temp" => crate::ui::theme::CPU_TEMP_THRESHOLDS,
         "nvme" => (70.0, 80.0),
         _ => (80.0, 95.0),
     }
 }
 
-/// The Cores panel: one core per row when they fit with the summary, otherwise two per row, then the
-/// average frequency, load averages and uptime.
-fn render_cores(buf: &mut Buffer, sys: &SystemSnapshot, theme: &Theme, area: Rect) {
-    let block = panel("Cores", Role::Cpu, false, theme);
-    let inner = block.inner(area);
-    block.render(area, buf);
-    if inner.height < 1 || inner.width < 2 {
-        return;
-    }
-    let cores = &sys.cpu.per_core_pct;
-    let n = cores.len();
-    let core_row = |buf: &mut Buffer, i: usize, v: f32, x: u16, y: u16, w: u16| {
-        let label = format!("{:<6}", format!("cpu{i}"));
-        let value = pct(Some(v as f64));
-        gauge_row(buf, x, y, w, &label, v as f64 / 100.0, Role::Cpu, PCT_THRESHOLDS, &value, theme);
-    };
-
-    // Rows used by the cores; the summary starts one blank row below.
-    let used: u16 = if n == 0 {
-        // First sample: no per-core delta yet.
-        write_dim(buf, inner.x, inner.y, inner.width, "waiting for a second sample", theme);
-        1
-    } else if inner.height as usize >= n + 3 {
-        for ((i, v), y) in cores.iter().enumerate().zip(inner.y..inner.bottom()) {
-            core_row(buf, i, *v, inner.x, y, inner.width);
-        }
-        n.min(inner.height as usize) as u16
-    } else {
-        // Two per row: core `i` on row `i / 2`, even `i` on the left half.
-        let half = inner.width / 2;
-        for (i, v) in cores.iter().enumerate() {
-            let y = inner.y.saturating_add((i / 2) as u16);
-            if y >= inner.bottom() {
-                break;
-            }
-            let (x, w) = if i % 2 == 0 { (inner.x, half) } else { (inner.x + half, inner.width - half) };
-            core_row(buf, i, *v, x, y, w);
-        }
-        n.div_ceil(2).min(inner.height as usize) as u16
-    };
-
-    let mut rows: Vec<String> = Vec::new();
-    if let Some(freq) = &sys.cpu.freq {
-        rows.push(format!(
-            "freq   {:.1} GHz avg   {:.1} GHz max",
-            freq.avg_mhz / 1000.0,
-            freq.max_mhz / 1000.0
-        ));
-    }
-    if let Some(load) = &sys.cpu.load {
-        rows.push(format!("load   {:.2} {:.2} {:.2}", load.one, load.five, load.fifteen));
-    }
-    if let Some(uptime) = sys.uptime_s {
-        rows.push(format!("uptime {}", duration(uptime)));
-    }
-    let first = inner.y.saturating_add(used).saturating_add(1);
-    for (line, y) in rows.iter().zip(first..inner.bottom()) {
-        write_row(buf, inner.x, y, inner.width, line, theme);
-    }
-}
-
-/// The Sensors panel: one `<chip>/<label>  <temp><mark>` row per reading.
-fn draw_sensors(buf: &mut Buffer, rect: Rect, temps: &[TempReading], theme: &Theme) {
-    let block = panel("Sensors", Role::Gpu, false, theme);
-    let inner = block.inner(rect);
-    block.render(rect, buf);
-    if inner.height < 1 || inner.width < 1 {
-        return;
-    }
-    for (t, y) in temps.iter().zip(inner.y..inner.bottom()) {
-        let name = format!("{}/{}", t.chip, t.label);
-        let label = format!("{:<23} ", fit(&name, 23));
-        let (warning, critical) = sensor_thresholds(&t.chip);
-        let sev = severity(t.celsius, warning, critical);
-        let style = match sev {
-            Severity::Normal => theme.fg(Role::Text),
-            Severity::Warning => theme.fg(Role::Warning),
-            Severity::Critical => theme.fg(Role::Critical),
-        };
-        let value = format!("{}{}", temp(Some(t.celsius)), hot_mark(sev));
-        buf.set_line(
-            inner.x,
-            y,
-            &Line::from(vec![Span::styled(label, theme.fg(Role::Dim)), Span::styled(value, style)]),
-            inner.width,
-        );
-    }
+/// The rx/tx rate histories of one interface, from `app.net_rates`.
+fn rates_for<'a>(app: &'a App, iface: &str) -> Option<&'a (String, History, History)> {
+    app.net_rates.iter().find(|(i, _, _)| i == iface)
 }
 
 /// The Disks panel: one `mount  <gauge>  used/total` row per disk.
@@ -199,7 +140,7 @@ fn draw_disks(buf: &mut Buffer, rect: Rect, disks: &[DiskSample], theme: &Theme)
         return;
     }
     for (d, y) in disks.iter().zip(inner.y..inner.bottom()) {
-        let label = format!("{:<12} ", fit(&d.mount, 12));
+        let label = format!("{:<15} ", fit(&d.mount, 15));
         let ratio = if d.total > 0 { d.used as f64 / d.total as f64 } else { 0.0 };
         gauge_row(
             buf,
@@ -216,43 +157,95 @@ fn draw_disks(buf: &mut Buffer, rect: Rect, disks: &[DiskSample], theme: &Theme)
     }
 }
 
-/// The Network panel: one row per interface with its live rates and cumulative totals.
-fn draw_network(buf: &mut Buffer, rect: Rect, nets: &[NetSample], theme: &Theme) {
+/// The Network panel: two rows per interface, one for the down rates and one for the up rates.
+fn draw_network(buf: &mut Buffer, app: &App, rect: Rect, nets: &[NetSample], ctx: &Ctx) {
+    let theme = ctx.theme;
     let block = panel("Network", Role::Memory, false, theme);
     let inner = block.inner(rect);
     block.render(rect, buf);
     if inner.height < 1 || inner.width < 1 {
         return;
     }
-    for (n, y) in nets.iter().zip(inner.y..inner.bottom()) {
-        let rate = |x: Option<f64>| match x {
-            Some(v) => format!("{}/s", bytes(v as u64)),
-            None => "n/a".to_string(),
-        };
-        let line = format!(
-            "{:<10}↓ {}  ↑ {}   total ↓ {}  ↑ {}",
-            n.iface,
-            rate(n.rx_bps),
-            rate(n.tx_bps),
-            bytes(n.rx_total),
-            bytes(n.tx_total)
-        );
-        write_row(buf, inner.x, y, inner.width, &line, theme);
+    for (n, y) in nets.iter().zip((inner.y..inner.bottom()).step_by(2)) {
+        draw_net_row(buf, app, inner.x, y, inner.width, n, ctx, true);
+        if y + 1 < inner.bottom() {
+            draw_net_row(buf, app, inner.x, y + 1, inner.width, n, ctx, false);
+        }
     }
 }
 
-/// The Processes panel: a header row, then one row per `llama-server` process.
-fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], theme: &Theme) {
+/// One network row: `<iface pad8>↓ <rate>  <graph>   total <bytes>`, the down row (`down = true`) or
+/// the up row (`down = false`, blank interface column). The 22-col graph is omitted when graphs are off
+/// or fewer than 22 columns remain after the rest of the row.
+#[allow(clippy::too_many_arguments)] // the panel contract; callers pass one row's worth
+fn draw_net_row(
+    buf: &mut Buffer,
+    app: &App,
+    x: u16,
+    y: u16,
+    width: u16,
+    n: &NetSample,
+    ctx: &Ctx,
+    down: bool,
+) {
+    let theme = ctx.theme;
+    let rate = match (down, n.rx_bps, n.tx_bps) {
+        (true, Some(v), _) => format!("{}/s", bytes(v as u64)),
+        (false, _, Some(v)) => format!("{}/s", bytes(v as u64)),
+        _ => "n/a".to_string(),
+    };
+    let rate = format!("{:>10}", rate);
+    let arrow = if down { "↓" } else { "↑" };
+    let iface = if down { format!("{:<8}", fit(&n.iface, 8)) } else { "        ".to_string() };
+    // `iface(8) ↓ 1 rate(10) 2`, then the 22-col graph, then `   total <bytes>`.
+    let prefix = format!("{iface}{arrow} {rate}  ");
+    let total = if down { n.rx_total } else { n.tx_total };
+    let suffix = format!("   total {}", bytes(total));
+    let rest = prefix.chars().count() as u16 + suffix.chars().count() as u16;
+    let graph_present = ctx.graphs && width.saturating_sub(rest) >= 22;
+    let graph_w = if graph_present { 22 } else { 0 };
+
+    let prefix_w = prefix.chars().count().min(width as usize) as u16;
+    buf.set_span(x, y, &Span::styled(prefix, theme.fg(Role::Text)), prefix_w);
+    if graph_present {
+        let accent = if down { Role::Memory } else { Role::Gpu };
+        // One scale for both rows of the interface: the larger of the rx and tx maxima.
+        let (values, max) = match rates_for(app, &n.iface) {
+            Some((_, r, t)) => {
+                let (rx, tx) = (r.tail(usize::MAX), t.tail(usize::MAX));
+                let max = graph_max(&rx).max(graph_max(&tx));
+                (if down { rx } else { tx }, max)
+            }
+            None => (Vec::new(), 1.0),
+        };
+        BrailleGraph { values: &values, max, accent, theme }.render(Rect::new(x + prefix_w, y, 22, 1), buf);
+    }
+    let suffix_x = prefix_w + graph_w;
+    let suffix_w = width.saturating_sub(suffix_x);
+    if suffix_w > 0 {
+        buf.set_span(x + suffix_x, y, &Span::styled(suffix, theme.fg(Role::Text)), suffix_w);
+    }
+}
+
+/// The maximum of one rate history, at least 1 (NaN becomes 1).
+fn graph_max(values: &[f32]) -> f32 {
+    let max = values.iter().copied().fold(0.0, f32::max);
+    if max.is_nan() || max <= 0.0 { 1.0 } else { max }
+}
+
+/// The Processes panel: a header row, then one row per `llama-server` process, and when a GPU is known
+/// and a row is left, a blank row followed by the GPU summary line.
+fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], ctx: &Ctx, gpus: &[GpuSample]) {
+    let theme = ctx.theme;
     let block = panel("Processes", Role::Server, false, theme);
     let inner = block.inner(rect);
     block.render(rect, buf);
     if inner.height < 2 || inner.width < 1 {
         return;
     }
-    // rss is 9 wide, not the sheet's 10: at 140 columns the model column then holds the full
-    // 24-character demo name (`Cyber-Tiel-Coder-35B-A3B`) that the sheet's test expects.
-    let header = format!("{:<9}{:<10}{:<7}{:<9}{:<9}model", "pid", "role", "port", "rss", "threads");
-    let fixed: u16 = 9 + 10 + 7 + 9 + 9;
+    // The sheet's header `pid     role      port    rss      thr  model`: columns 8, 10, 8, 9, 5.
+    let header = format!("{:<8}{:<10}{:<8}{:<9}{:<5}model", "pid", "role", "port", "rss", "thr");
+    let fixed: u16 = 8 + 10 + 8 + 9 + 5;
     let model_w = inner.width.saturating_sub(fixed);
     buf.set_line(
         inner.x,
@@ -261,7 +254,11 @@ fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], theme: &Th
         inner.width,
     );
 
-    for (p, y) in procs.iter().zip(inner.y + 1..inner.bottom()) {
+    let mut y = inner.y + 1;
+    for p in procs.iter() {
+        if y >= inner.bottom() {
+            break;
+        }
         let role = match p.role {
             ServerRole::Router => "router",
             ServerRole::Instance => "instance",
@@ -272,7 +269,7 @@ fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], theme: &Th
             None => "-".to_string(),
         };
         let line = format!(
-            "{:<9}{:<10}{:<7}{:<9}{:<9}{}",
+            "{:<8}{:<10}{:<8}{:<9}{:<5}{}",
             p.pid,
             role,
             port,
@@ -280,16 +277,42 @@ fn draw_processes(buf: &mut Buffer, rect: Rect, procs: &[ProcSample], theme: &Th
             p.threads,
             fit(&model, model_w as usize)
         );
-        write_row(buf, inner.x, y, inner.width, &line, theme);
+        buf.set_line(inner.x, y, &Line::from(Span::styled(line, theme.fg(Role::Text))), inner.width);
+        y += 1;
+    }
+
+    // The GPU summary line: a blank row, then `GPU  <name>  <link> · <sclk> MHz · <vddgfx> mV · fan <fan_pct> · GTT <bytes(gtt)>`.
+    if let Some(g) = gpus.first()
+        && y + 2 <= inner.bottom()
+    {
+        buf.set_line(inner.x, y, &Line::raw(""), inner.width);
+        y += 1;
+        buf.set_line(inner.x, y, &fit_groups(gpu_summary_line(g, theme), inner.width as usize), inner.width);
     }
 }
 
-/// A plain `<value>` row in `Role::Text`, cut to `width`.
-fn write_row(buf: &mut Buffer, x: u16, y: u16, width: u16, value: &str, theme: &Theme) {
-    buf.set_line(x, y, &Line::from(Span::styled(value.to_string(), theme.fg(Role::Text))), width);
-}
-
-/// A plain `<value>` row in `Role::Dim`, cut to `width`.
-fn write_dim(buf: &mut Buffer, x: u16, y: u16, width: u16, value: &str, theme: &Theme) {
-    buf.set_line(x, y, &Line::from(Span::styled(value.to_string(), theme.fg(Role::Dim))), width);
+/// The GPU summary line, as groups for `fit_groups` split at ` · `: `GPU  <name>` in `Gpu`, the rest in
+/// `Dim`, only the parts that exist.
+fn gpu_summary_line(g: &GpuSample, theme: &Theme) -> Vec<Vec<Span<'static>>> {
+    let mut first = vec![
+        Span::styled("GPU  ", theme.fg(Role::Gpu)),
+        Span::styled(short_gpu_name(&g.name).to_string(), theme.fg(Role::Gpu)),
+    ];
+    if let Some(link) = &g.link {
+        first.push(Span::styled(format!("  {link}"), theme.fg(Role::Dim)));
+    }
+    let mut groups: Vec<Vec<Span>> = vec![first];
+    if let Some(sclk) = g.sclk_mhz {
+        groups.push(vec![Span::styled(format!(" · {sclk:.0} MHz"), theme.fg(Role::Dim))]);
+    }
+    if let Some(vdd) = g.vddgfx_mv {
+        groups.push(vec![Span::styled(format!(" · {vdd} mV"), theme.fg(Role::Dim))]);
+    }
+    if let Some(fan) = g.fan_pct {
+        groups.push(vec![Span::styled(format!(" · fan {fan:.0}"), theme.fg(Role::Dim))]);
+    }
+    if let Some(gtt) = g.gtt_used {
+        groups.push(vec![Span::styled(format!(" · GTT {}", bytes(gtt)), theme.fg(Role::Dim))]);
+    }
+    groups
 }

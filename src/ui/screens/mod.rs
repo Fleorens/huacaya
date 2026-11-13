@@ -8,3 +8,4 @@ pub mod models;
 pub mod models_details;
 pub mod models_details_panels;
 pub mod system;
+pub mod system_left;
