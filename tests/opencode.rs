@@ -160,8 +160,7 @@ fn poller_error_hides_the_password() {
 
 #[test]
 fn settings_and_password() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join(format!("tests/tmp/opencode-settings-{}.toml", std::process::id()));
+    let path = std::env::temp_dir().join(format!("llamatop-opencode-settings-{}.toml", std::process::id()));
     let settings = Settings {
         opencode: llamatop::settings::OpenCodeSettings {
             url: Some("http://127.0.0.1:8080".to_string()),
@@ -176,8 +175,7 @@ fn settings_and_password() {
     let _ = std::fs::remove_file(&path);
 
     // `opencode_password()` reads a temp file `  pw \n` as `pw`.
-    let file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join(format!("tests/tmp/opencode-pw-{}.txt", std::process::id()));
+    let file = std::env::temp_dir().join(format!("llamatop-opencode-pw-{}.txt", std::process::id()));
     std::fs::write(&file, "  pw \n").unwrap();
     let cli =
         llamatop::config::Cli::parse_from(["llamatop", "--opencode-password-file", file.to_str().unwrap()]);
@@ -206,7 +204,7 @@ impl llamatop::setup::Probe for FakeProbe {
     }
     fn opencode(&self, _url: &str, _user: &str, password: Option<&str>) -> anyhow::Result<usize> {
         if password == Some("bad") {
-            anyhow::bail!("the server refused the password");
+            anyhow::bail!("GET /api/session: HTTP 401");
         }
         Ok(3)
     }
@@ -235,4 +233,39 @@ fn setup_asks_for_opencode() {
     let out = String::from_utf8(out).unwrap();
     assert!(out.contains("ok, 3 sessions"));
     assert!(!out.contains("pw-SECRET"), "the password must not reach the output: {out:?}");
+}
+
+#[test]
+fn setup_asks_again_after_a_refused_password() {
+    // A refused password is asked again; the next one is accepted.
+    let mut input = std::io::Cursor::new("\n\n\nhttp://opencode:8080\ndev\n".to_string());
+    let mut out = Vec::new();
+    let mut idx = 0usize;
+    let mut secret = move |_: &str| -> anyhow::Result<String> {
+        let k = match idx {
+            1 => "bad".to_string(),
+            2 => "pw-SECRET".to_string(),
+            _ => String::new(),
+        };
+        idx += 1;
+        Ok(k)
+    };
+    let settings =
+        llamatop::setup::wizard(&mut input, &mut out, &mut secret, &FakeProbe, &Settings::default()).unwrap();
+    assert_eq!(settings.opencode.password.as_deref(), Some("pw-SECRET"));
+    let out = String::from_utf8(out).unwrap();
+    assert_eq!(out.matches("the server refused the password").count(), 1);
+    assert!(out.contains("ok, 3 sessions"));
+
+    // Three refusals abort the setup.
+    let mut input = std::io::Cursor::new("\n\n\nhttp://opencode:8080\ndev\n".to_string());
+    let mut idx = 0usize;
+    let mut secret = move |_: &str| -> anyhow::Result<String> {
+        let k = if idx == 0 { String::new() } else { "bad".to_string() };
+        idx += 1;
+        Ok(k)
+    };
+    let result =
+        llamatop::setup::wizard(&mut input, &mut Vec::new(), &mut secret, &FakeProbe, &Settings::default());
+    assert!(result.is_err());
 }

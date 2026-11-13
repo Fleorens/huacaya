@@ -282,10 +282,10 @@ fn dialogue(
             token_file: current.agent.token_file.clone(),
         },
         opencode: crate::settings::OpenCodeSettings {
-            url: opencode_url,
+            url: opencode_url.clone(),
             user: opencode_user,
             password: opencode_password,
-            password_file: current.opencode.password_file.clone(),
+            password_file: opencode_url.as_ref().and(current.opencode.password_file.clone()),
         },
     })
 }

@@ -13,10 +13,10 @@ use anyhow::Result;
 use crate::agent::client::AgentClient;
 use crate::app::clock;
 use crate::app::demo;
+use crate::app::threads::opencode_loop;
 use crate::app::{App, Event};
 use crate::collect::llama_poll::Poller;
 use crate::collect::logs::{self, Level, LogLine};
-use crate::collect::opencode::OpenCodePoller;
 use crate::collect::sampler::Sampler;
 use crate::config::Cli;
 use crate::http::{Client, is_loopback_url};
@@ -30,7 +30,8 @@ pub fn run(cli: &Cli) -> Result<()> {
     let offset = clock::local_utc_offset();
     let mut app = App::new(cli.interval_ms);
 
-    // `agent_focus` (what the Agents screen follows): read by the opencode poller, mirrored from `app.agent_focus` by the main loop after each batch.
+    // What the Agents screen follows: read by the opencode poller, mirrored from `app.agent_focus` by
+    // the main loop after each batch.
     let opencode_focus: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(app.agent_focus.clone()));
 
     // One channel, one stop flag, one interval shared with the data threads so `+`/`-` take effect
@@ -48,7 +49,9 @@ pub fn run(cli: &Cli) -> Result<()> {
         let demo_interval = interval.clone();
         thread::spawn(move || demo_loop(demo_tx, demo_stop, demo_interval));
     } else {
-        // The sampler and poller loops run here (interval fixed, read live) so `+`/`-` take effect without a restart; `cli` values are hoisted so the threads own them.
+        // The sampler and poller loops are written here (not with `sampler::spawn` / `llama_poll::spawn`)
+        // because their interval is fixed and read live from `interval`. Hoist the `cli` values so the
+        // threads own them and do not borrow `cli` (which is not `'static`).
         let sysroot = cli.sysroot.clone();
         let mounts = cli.mounts.clone();
         let url = cli.url.clone();
@@ -57,12 +60,14 @@ pub fn run(cli: &Cli) -> Result<()> {
         let agent_url = cli.agent.clone();
         let agent_token = cli.agent_token();
 
-        // The poller: unchanged (direct-instance mode needs a loopback URL, which a remote dashboard lacks).
+        // The poller: unchanged (direct-instance mode needs a loopback URL, which a remote dashboard does
+        // not have). It runs with or without an agent.
         let poller_stop = stop.clone();
         let poller_tx = tx.clone();
         let poller_interval = interval.clone();
         // On a loopback URL, ask the loaded instance directly; from another machine, only the router.
         let client = Client::new(&url, api_key, Duration::from_secs(2));
+        // Only on the real machine: a test sysroot's ports belong to nothing, and the key must not go there.
         let poller = if is_loopback_url(&url) && cli.sysroot == std::path::Path::new("/") {
             Poller::new(client).with_local_instances(cli.sysroot.clone())
         } else {
@@ -80,7 +85,9 @@ pub fn run(cli: &Cli) -> Result<()> {
                 sleep(&poller_stop, poller_interval.load(Ordering::Relaxed));
             }
         });
-        // With an agent: one thread reads the server's machine panels and log (no sampler, no follower); without it, the sampler and the log follower run as before.
+
+        // With an agent: one thread reads the server's machine panels and log (no sampler, no follower).
+        // Without it: the sampler and the log follower, as before.
         if let Some(agent_url) = agent_url {
             let agent_tx = tx.clone();
             let agent_stop = stop.clone();
@@ -102,7 +109,9 @@ pub fn run(cli: &Cli) -> Result<()> {
                     sleep(&sampler_stop, sampler_interval.load(Ordering::Relaxed));
                 }
             });
-            // The log follower: keep it alive until `run` returns (dropping it kills the command); report once and keep going when it cannot start.
+
+            // The log follower: keep it alive until `run` returns, so dropping it at the end kills the
+            // command. When the command cannot start, report once and keep going.
             let log_tx = tx.clone();
             _follower = match logs::follow(&log_cmd, move |line| log_tx.send(Event::Log(line)).is_ok()) {
                 Ok(follower) => Some(follower),
@@ -120,28 +129,14 @@ pub fn run(cli: &Cli) -> Result<()> {
                 }
             };
         }
-        // The opencode poller: watch the server's sessions and the followed session's steps; runs only when configured, and not in the demo (which has no server).
+
+        // The opencode poller: only when configured, and not in the demo (which has no server).
         if let Some(url) = cli.opencode.clone() {
-            let opencode_tx = tx.clone();
-            let opencode_stop = stop.clone();
-            let opencode_user = cli.opencode_user.clone().unwrap_or_else(|| "opencode".to_string());
-            let opencode_password = cli.opencode_password().unwrap_or_default();
-            let opencode_focus = opencode_focus.clone();
-            thread::spawn(move || {
-                let client =
-                    Client::new_basic(&url, &opencode_user, &opencode_password, Duration::from_secs(3));
-                let mut poller = OpenCodePoller::new(client);
-                loop {
-                    if opencode_stop.load(Ordering::Relaxed) {
-                        break;
-                    }
-                    let focus = opencode_focus.lock().unwrap().clone();
-                    if opencode_tx.send(Event::OpenCode(poller.poll(focus.as_deref()))).is_err() {
-                        break;
-                    }
-                    sleep(&opencode_stop, 2000);
-                }
-            });
+            let user = cli.opencode_user.clone().unwrap_or_else(|| "opencode".to_string());
+            let password = cli.opencode_password().unwrap_or_default();
+            let client = Client::new_basic(&url, &user, &password, Duration::from_secs(3));
+            let (opencode_tx, opencode_stop, focus) = (tx.clone(), stop.clone(), opencode_focus.clone());
+            thread::spawn(move || opencode_loop(client, opencode_tx, opencode_stop, focus));
         }
     }
 
@@ -164,7 +159,8 @@ pub fn run(cli: &Cli) -> Result<()> {
     let loop_result =
         dashboard_loop(&mut terminal, &mut app, &theme, offset, &interval, &rx, &opencode_focus);
 
-    // Stop the threads, restore the terminal, return its result; the poller isn't joined (an HTTP request may still await its 2 s timeout).
+    // Whatever happened in the loop: stop the threads, restore the terminal, then return its result.
+    // The poller is not joined: an HTTP request may still be waiting for its 2 s timeout.
     stop.store(true, Ordering::Relaxed);
     ratatui::restore();
     loop_result
@@ -179,7 +175,7 @@ fn dashboard_loop(
     offset: i32,
     interval: &Arc<AtomicU64>,
     rx: &Receiver<Event>,
-    opencode_focus: &Arc<Mutex<Option<String>>>,
+    opencode_focus: &Mutex<Option<String>>,
 ) -> Result<()> {
     let mut shown_clock = draw_frame(terminal, app, theme, offset)?;
     loop {
@@ -193,7 +189,7 @@ fn dashboard_loop(
         while let Ok(event) = rx.try_recv() {
             drew |= apply_event(app, event, interval);
         }
-        // Mirror `app.agent_focus` into the poller's focus: selecting a session takes effect next round.
+        // Selecting a session takes effect at the poller's next round.
         if let Ok(mut guard) = opencode_focus.lock() {
             *guard = app.agent_focus.clone();
         }
@@ -238,9 +234,11 @@ fn wall_clock(offset: i32) -> String {
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
     clock::hms(now, offset)
 }
+
 /// The events of the live demo between two instants of the demo clock `t0 < t1` (seconds since start):
-/// `Event::System` and `Event::Llama` when a data period of `interval_s` was crossed, then `Event::Log`
-/// per line of `demo::log_lines(t0, t1)`; `state = demo::state_at(t1)`.
+/// `Event::System(demo::system(t1, state))` and `Event::Llama(demo::llama(t1, state))` when a data
+/// period of `interval_s` was crossed (`(t0 / interval_s).floor() != (t1 / interval_s).floor()`), then
+/// one `Event::Log` per line of `demo::log_lines(t0, t1)`; `state = demo::state_at(t1)`.
 pub fn demo_events(t0: f64, t1: f64, interval_s: f64) -> Vec<Event> {
     let mut events = Vec::new();
     if (t0 / interval_s).floor() != (t1 / interval_s).floor() {
@@ -309,7 +307,7 @@ fn tick_loop(stop: Arc<AtomicBool>, tx: Sender<Event>) {
 }
 
 /// Sleeps `interval_ms` in slices of at most 100 ms, waking early when `stop` is set.
-fn sleep(stop: &Arc<AtomicBool>, interval_ms: u64) {
+pub(super) fn sleep(stop: &Arc<AtomicBool>, interval_ms: u64) {
     let interval = Duration::from_millis(interval_ms);
     let mut slept = Duration::ZERO;
     while slept < interval {
@@ -322,7 +320,8 @@ fn sleep(stop: &Arc<AtomicBool>, interval_ms: u64) {
     }
 }
 
-/// The agent thread: every shared interval, `system()` → `Event::System`, then `log(since)` → one `Event::Log` per line; warns once on unreachable, says once on return; never floods.
+/// The agent thread: every shared interval, `system()` → `Event::System`, then `log(since)` → one
+/// `Event::Log` per line. Warns once on the transition to unreachable, says once on the return; never floods.
 fn agent_loop(
     tx: Sender<Event>,
     stop: Arc<AtomicBool>,
@@ -377,7 +376,8 @@ fn agent_loop(
     }
 }
 
-/// The reachability transition line, if the state changed this round: `agent back` (Info) on return, `agent unreachable: <error>` (Warn) on the way down; never more than one per change.
+/// The reachability transition line, if the state changed this round: `agent back` (Info) on return,
+/// `agent unreachable: <error>` (Warn) on the way down. Never more than one per change.
 fn reachability_line(reachable: &mut Option<bool>, error: Option<String>) -> Option<LogLine> {
     let prev = reachable.replace(error.is_none());
     match (prev, error) {

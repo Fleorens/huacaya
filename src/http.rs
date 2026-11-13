@@ -97,7 +97,7 @@ pub fn base64(bytes: &[u8]) -> String {
             out.push(b'=');
         }
     }
-    String::from_utf8(out).expect("base64 is ASCII")
+    out.into_iter().map(char::from).collect()
 }
 
 /// `true` when the URL's host is `127.0.0.1`, `localhost` or `[::1]` (scheme and port ignored, ASCII
