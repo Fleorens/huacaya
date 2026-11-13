@@ -63,7 +63,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 /// The top-border indicators: ` /<filter> ` (Warning) when the filter is not empty, then ` follow ● `
 /// (Good) when following, else ` scroll −<scroll> ` (Warning). Placed right-aligned, leaving the title
 /// readable (`╭ <title> ` = `title.len() + 3` columns).
-fn render_indicators(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer, title: &str) {
+pub(crate) fn render_indicators(app: &App, area: Rect, theme: &Theme, buf: &mut Buffer, title: &str) {
     let state = if app.log_view.follow {
         (" follow ● ".to_string(), Role::Good)
     } else {

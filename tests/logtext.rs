@@ -157,14 +157,16 @@ fn logs_status_raw() {
     let ctx = make_ctx(&theme);
     let app = demo::app(DemoState::Generating);
     // The status row + its right-aligned key hint need >= 139 columns to show the hint; 140 keeps
-    // `r raw` visible (the sheet's 130 is too narrow for the now-longer row).
-    let rows = draw(|area, buf| logs::render(&app, &ctx, area, buf), 140, 20);
+    // `r raw` visible (the sheet's 130 is too narrow for the now-longer row). Height < 12 forces the
+    // v1 layout, where the status row is the last line (at 90+ cols the screen is v2 and the hint row
+    // is last instead).
+    let rows = draw(|area, buf| logs::render(&app, &ctx, area, buf), 140, 11);
     let last = rows.last().unwrap();
     assert!(last.contains("lines compact"), "{:?}", last);
     assert!(last.contains("r raw"), "{:?}", last);
 
     let mut raw = demo::app(DemoState::Generating);
     raw.log_view.raw = true;
-    let rows = draw(|area, buf| logs::render(&raw, &ctx, area, buf), 140, 20);
+    let rows = draw(|area, buf| logs::render(&raw, &ctx, area, buf), 140, 11);
     assert!(rows.last().unwrap().contains("lines raw"), "{:?}", rows.last());
 }
