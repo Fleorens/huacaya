@@ -78,7 +78,7 @@ pub(super) struct RawMessage {
     pub(super) id: Option<String>,
     #[serde(default)]
     pub(super) time: Option<RawTime>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "lenient_parts")]
     pub(super) content: Vec<RawPart>,
     /// A real `user` message carries its prompt here, not in `content`.
     #[serde(default)]
@@ -103,7 +103,7 @@ pub(super) struct RawPart {
 pub(super) struct RawPartState {
     #[serde(default)]
     pub(super) status: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "object_or_none")]
     pub(super) input: Option<RawToolInput>,
     #[serde(default)]
     pub(super) content: Option<Vec<RawPartContent>>,
@@ -137,4 +137,18 @@ pub(super) struct RawMetadata {
 pub(super) struct RawFile {
     #[serde(default)]
     pub(super) patch: Option<String>,
+}
+
+/// A message's parts, keeping those that parse: one part of an unexpected shape must not empty the whole
+/// timeline (the dashboard shows what it can read).
+fn lenient_parts<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<RawPart>, D::Error> {
+    let values: Vec<serde_json::Value> = Deserialize::deserialize(d)?;
+    Ok(values.into_iter().filter_map(|v| serde_json::from_value(v).ok()).collect())
+}
+
+/// A tool's input when it is an object; `None` otherwise. While OpenCode streams a tool call's arguments
+/// (`"status": "streaming"`), `input` is the raw text so far, often `""`.
+fn object_or_none<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<RawToolInput>, D::Error> {
+    let value: serde_json::Value = Deserialize::deserialize(d)?;
+    Ok(if value.is_object() { serde_json::from_value(value).ok() } else { None })
 }

@@ -329,3 +329,18 @@ fn user_message_with_top_level_text() {
     assert_eq!(steps[0].summary, "Devbox job #149 — autonomous work. Task: Execute tasks/T43-map-widget.md");
     assert_eq!(steps[0].end_ms, Some(1794602985534));
 }
+
+/// Real OpenCode 2.2.7 (2026-11-14): while a tool call's arguments stream, its `state.input` is the raw text
+/// so far (`""`), not an object. The round must not fail: the tool shows as a running step.
+#[test]
+fn streaming_tool_input_is_a_string() {
+    let json = r#"{"data": [{"id": "msg_s1", "time": {"created": 1794611405412}, "type": "assistant", "content": [
+      {"type": "tool", "id": "muRK", "name": "edit", "state": {"status": "streaming", "input": ""},
+       "time": {"created": 1794611409166}},
+      {"type": "tool", "id": "bad", "name": 42}]}]}"#;
+    let steps = parse_steps(json, None).unwrap();
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0].kind, StepKind::Edit);
+    assert_eq!(steps[0].id, "muRK");
+    assert_eq!((steps[0].ok, steps[0].end_ms), (None, None));
+}
