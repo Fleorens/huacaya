@@ -270,13 +270,13 @@ fn unit(cx: f64, cy: f64, x: f64, y: f64) -> (f64, f64) {
     if dist == 0.0 { (0.0, 0.0) } else { (dx / dist, dy / dist) }
 }
 
-/// The model name as it fits inside the ring: leading `-` segments dropped while too long
-/// (`Cyber-Tiel-Coder-35B-A3B` → `Coder-35B-A3B`, keeping the size), then cut with `…`.
+/// The model name as it fits inside the ring: trailing `-` segments dropped while too long, so the family
+/// name stays (`Cyber-Tiel-Coder-35B-A3B` → `Cyber-Tiel-Coder`, then `Cyber-Tiel`), then cut with `…`.
 fn ring_name(name: &str, max: usize) -> String {
     let mut rest = name;
     while rest.chars().count() > max {
-        match rest.split_once('-') {
-            Some((_, tail)) if !tail.is_empty() => rest = tail,
+        match rest.rsplit_once('-') {
+            Some((head, _)) if !head.is_empty() => rest = head,
             _ => break,
         }
     }
