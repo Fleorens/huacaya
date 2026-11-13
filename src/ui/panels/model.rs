@@ -242,7 +242,6 @@ fn render_small(app: &App, m: &ActiveModel, theme: &Theme, inner: Rect, buf: &mu
     }
 }
 
-/// Render the band with no active model: the Loading name (if any), the badge and a message.
 /// Message shown on the model panel without an active model.
 pub(crate) fn no_model_message(app: &App) -> String {
     match app.llama.as_ref() {
@@ -258,6 +257,7 @@ pub(crate) fn no_model_message(app: &App) -> String {
     }
 }
 
+/// Render the band with no active model: the Loading name (if any), the badge and a message.
 fn render_without_active(app: &App, theme: &Theme, inner: Rect, buf: &mut Buffer) {
     let llama = &app.llama;
 
