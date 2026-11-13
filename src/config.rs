@@ -78,6 +78,22 @@ pub struct Cli {
     #[arg(skip)]
     pub agent_token_inline: Option<String>,
 
+    /// URL of an OpenCode server to watch (`LLAMATOP_OPENCODE`).
+    #[arg(long, env = "LLAMATOP_OPENCODE")]
+    pub opencode: Option<String>,
+
+    /// The HTTP Basic user for the OpenCode server.
+    #[arg(long, env = "LLAMATOP_OPENCODE_USER")]
+    pub opencode_user: Option<String>,
+
+    /// File holding the OpenCode password (first line), like `--api-key-file`.
+    #[arg(long, env = "LLAMATOP_OPENCODE_PASSWORD_FILE")]
+    pub opencode_password_file: Option<PathBuf>,
+
+    /// The OpenCode password from the configuration file.
+    #[arg(skip)]
+    pub opencode_password_inline: Option<String>,
+
     /// Subcommand: the first-run setup dialogue.
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -139,6 +155,23 @@ impl Cli {
             .map(str::to_string)
     }
 
+    /// The OpenCode password: the first line of `--opencode-password-file`, else `opencode_password_inline`,
+    /// else none. Trimmed; an empty value is none. Never printed, logged, or put in an error message.
+    pub fn opencode_password(&self) -> Option<String> {
+        if let Some(path) = self.opencode_password_file.as_ref()
+            && let Ok(text) = std::fs::read_to_string(path)
+            && let Some(password) = text.lines().next()
+            && !password.trim().is_empty()
+        {
+            return Some(password.trim().to_string());
+        }
+        self.opencode_password_inline
+            .as_deref()
+            .map(str::trim)
+            .filter(|password| !password.is_empty())
+            .map(str::to_string)
+    }
+
     /// Fills, from `settings`, every value the user did not give by flag or environment variable: `url` and
     /// `log_cmd` when `matches.value_source(id)` is `Some(ValueSource::DefaultValue)`; `api_key_file` when it is
     /// `None`; `api_key_inline` always (it is only used last). Values given by flag or environment win.
@@ -172,6 +205,22 @@ impl Cli {
             self.agent_token_file = Some(token_file);
         }
         self.agent_token_inline = settings.agent.token.clone();
+        if matches.value_source("opencode").is_none()
+            && let Some(url) = settings.opencode.url.clone()
+        {
+            self.opencode = Some(url);
+        }
+        if matches.value_source("opencode_user").is_none()
+            && let Some(user) = settings.opencode.user.clone()
+        {
+            self.opencode_user = Some(user);
+        }
+        if matches.value_source("opencode_password_file").is_none()
+            && let Some(password_file) = settings.opencode.password_file.clone()
+        {
+            self.opencode_password_file = Some(password_file);
+        }
+        self.opencode_password_inline = settings.opencode.password.clone();
     }
 }
 

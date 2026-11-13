@@ -82,6 +82,9 @@ systemd unit named `llama-server` (the user needs the `systemd-journal` group). 
 | `--interval-ms` | `1000` | refresh period, 200–10000 (`+` / `-` change it live) |
 | `--mount` | every real disk | a mount point to show, repeatable |
 | `--agent` | — | URL of a llamatop agent on the server (`LLAMATOP_AGENT`), see below |
+| `--opencode` | — | URL of an OpenCode server to watch its sessions and steps (`LLAMATOP_OPENCODE`), see below |
+| `--opencode-user` | `opencode` | OpenCode user (`LLAMATOP_OPENCODE_USER`) |
+| `--opencode-password-file` | — | file holding the OpenCode password (`LLAMATOP_OPENCODE_PASSWORD_FILE`) |
 | `--config` | `~/.config/llamatop/config.toml` | the configuration file (`LLAMATOP_CONFIG`) |
 | `--demo` | | generated data, no server needed |
 | `--dump` | | one JSON report of every data source, then exit |
@@ -99,6 +102,11 @@ log_cmd = "ssh 192.168.1.10 journalctl -u llama-server -f -n 2000 --no-pager -q 
 [agent]
 url = "http://192.168.1.10:9099"
 token = "..."
+
+[opencode]
+url = "http://192.168.1.10:8080"
+user = "opencode"             # or --opencode-user / LLAMATOP_OPENCODE_USER
+password = "..."              # or password_file = "/path/to/pw"
 ```
 
 ## Keys

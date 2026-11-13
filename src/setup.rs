@@ -27,6 +27,8 @@ pub trait Probe {
     /// `GET <url>/v1/system` with `key`: the agent's hostname (or an error carrying `HTTP 401` for a
     /// refused token).
     fn agent(&self, url: &str, token: Option<&str>) -> Result<String>;
+    /// `GET <url>/api/session` with HTTP Basic (`user`, `password`): the session count, or the refusal.
+    fn opencode(&self, url: &str, user: &str, password: Option<&str>) -> Result<usize>;
 }
 
 /// `Probe` over `http::Client`, 3 s timeout.
@@ -49,6 +51,13 @@ impl Probe for HttpProbe {
         let body = client.get("/v1/system", &[])?;
         let snapshot: SystemSnapshot = serde_json::from_str(&body).context("parse /v1/system")?;
         snapshot.hostname.ok_or_else(|| anyhow!("no hostname in /v1/system"))
+    }
+
+    fn opencode(&self, url: &str, user: &str, password: Option<&str>) -> Result<usize> {
+        let password = password.unwrap_or("").to_string();
+        let client = Client::new_basic(url, user, &password, Duration::from_secs(3));
+        let body = client.get("/api/session", &[])?;
+        Ok(crate::collect::opencode::parse_sessions(&body)?.len())
     }
 }
 
@@ -212,6 +221,54 @@ fn dialogue(
         (Some(url), agent_token)
     };
 
+    // 5. The OpenCode server: URL, user, password checked against `/api/session`; Enter keeps brackets.
+    let default_opencode_url = current.opencode.url.clone().unwrap_or_default();
+    write!(out, "OpenCode server URL (empty: keep, -: none) [{}]: ", default_opencode_url)?;
+    out.flush()?;
+    let answered = input.answer()?;
+    let entered_opencode = if answered.is_empty() { default_opencode_url } else { answered };
+    let (opencode_url, opencode_user, opencode_password) =
+        if entered_opencode.is_empty() || entered_opencode == "-" {
+            (None, None, None)
+        } else {
+            let url = normalize_url(&entered_opencode);
+            let default_user = current.opencode.user.clone().unwrap_or_else(|| "opencode".to_string());
+            write!(out, "OpenCode user [{}]: ", default_user)?;
+            out.flush()?;
+            let answered_user = input.answer()?;
+            let user = if answered_user.is_empty() { default_user } else { answered_user };
+            let mut refused = 0usize;
+            let password = loop {
+                let entered_password = secret("OpenCode password (empty: keep the current one | none): ")?;
+                let password = if entered_password.is_empty() {
+                    current.opencode.password.clone()
+                } else {
+                    Some(entered_password)
+                };
+                write!(out, "checking OpenCode … ")?;
+                out.flush()?;
+                match probe.opencode(&url, &user, password.as_deref()) {
+                    Ok(n) => {
+                        writeln!(out, "ok, {n} sessions")?;
+                        break password;
+                    }
+                    Err(err) => {
+                        if format!("{err}").contains("HTTP 401") {
+                            writeln!(out, "the server refused the password")?;
+                            refused += 1;
+                            if refused >= 3 {
+                                return Err(anyhow!("setup aborted"));
+                            }
+                            continue;
+                        }
+                        writeln!(out, "unreachable: {}", err)?;
+                        break password;
+                    }
+                }
+            };
+            (Some(url), Some(user), password)
+        };
+
     Ok(Settings {
         llama: crate::settings::LlamaSettings {
             url: Some(url),
@@ -223,6 +280,12 @@ fn dialogue(
             url: agent_url,
             token: agent_token,
             token_file: current.agent.token_file.clone(),
+        },
+        opencode: crate::settings::OpenCodeSettings {
+            url: opencode_url,
+            user: opencode_user,
+            password: opencode_password,
+            password_file: current.opencode.password_file.clone(),
         },
     })
 }

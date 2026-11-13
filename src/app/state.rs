@@ -1,13 +1,12 @@
 //! The dashboard's pure state machine: what the UI reads and never changes.
-//!
-//! `App` is fed `Event`s (snapshots, log lines, keys, ticks) by `apply`; the UI only reads it.
-//! Nothing here draws or starts a thread, so every behaviour is exercised by `tests/app_state.rs`.
+//! `App` is fed `Event`s by `apply`; the UI only reads it, so every behaviour is tested by `tests/app_state.rs`.
 
 use std::collections::VecDeque;
 
 use crate::collect::llama::ModelState;
 use crate::collect::llama_poll::LlamaSnapshot;
 use crate::collect::logs::{Level, LogEvent, LogLine};
+use crate::collect::opencode::OpenCodeSnapshot;
 use crate::collect::sampler::SystemSnapshot;
 use crate::util::History;
 use crossterm::event::KeyEvent;
@@ -28,6 +27,7 @@ pub const REQUEST_HISTORY: usize = 50;
 pub enum Event {
     System(SystemSnapshot),
     Llama(LlamaSnapshot),
+    OpenCode(OpenCodeSnapshot),
     Log(LogLine),
     Key(KeyEvent),
     /// The terminal changed size; the next frame is laid out again.
@@ -121,8 +121,7 @@ pub struct LogView {
     /// `true`: log lines are shown as printed; `false`: in compact form.
     pub raw: bool,
     pub level: LevelFilter,
-    /// `false`: lines whose event is `LogEvent::Proxy` are hidden. The router prints two of them for
-    /// every polling round of llamatop itself, so they are noise by default.
+    /// `false`: `Proxy` lines are hidden (the router prints two per round of llamatop itself, so they are noise by default).
     pub show_proxy: bool,
 }
 
@@ -147,12 +146,13 @@ pub struct LastRequest {
 pub struct App {
     pub system: Option<SystemSnapshot>,
     pub llama: Option<LlamaSnapshot>,
+    /// The OpenCode sessions and steps, or `None` until the first round.
+    pub opencode: Option<OpenCodeSnapshot>,
+    /// The session the Agents screen follows; set by T35.
+    pub agent_focus: Option<String>,
     pub logs: VecDeque<LogLine>,
-    /// `busy_pct` of the first GPU.
     pub gpu_load: History,
-    /// `cpu.usage_pct`.
     pub cpu_usage: History,
-    /// `live_gen_tps` of the first active model (0 when it is not generating).
     pub gen_tps: History,
     pub last_request: Option<LastRequest>,
     /// Every request seen in the log, oldest first, at most REQUEST_HISTORY; the last one is last_request.
@@ -164,20 +164,19 @@ pub struct App {
     pub paused: bool,
     pub interval_ms: u64,
     pub log_view: LogView,
-    /// Index into `llama.models` on the Models screen.
     pub model_selected: usize,
-    /// Number of `Tick`s received, drives the animations.
     pub frame: u64,
     pub quit: bool,
 }
 
 impl App {
-    /// Empty state: no snapshot, no line, `Screen::Overview`, follow on, filter empty, level `All`,
-    /// `show_proxy` false, `raw` off, histories of `HISTORY_CAPACITY`, `frame` 0, everything else false / 0.
+    /// Empty state: no snapshot, `Screen::Overview`, follow on, filter empty, level `All`, show_proxy off, raw off, histories at capacity, frame 0, everything else false / 0.
     pub fn new(interval_ms: u64) -> Self {
         App {
             system: None,
             llama: None,
+            opencode: None,
+            agent_focus: None,
             logs: VecDeque::new(),
             gpu_load: History::new(HISTORY_CAPACITY),
             cpu_usage: History::new(HISTORY_CAPACITY),
@@ -238,6 +237,10 @@ impl App {
                 self.llama = Some(s);
                 !self.paused
             }
+            Event::OpenCode(s) => {
+                self.opencode = Some(s);
+                !self.paused
+            }
             Event::Log(l) => {
                 let visible = self.line_visible(&l, &self.log_view.filter.to_ascii_lowercase());
                 self.update_last_request(&l);
@@ -262,8 +265,7 @@ impl App {
         }
     }
 
-    /// Whether a single line passes the current log view (level, hidden `Proxy`, text filter).
-    /// `filter_lower` is `log_view.filter` already lower-cased, so a whole list costs one allocation.
+    /// Whether a single line passes the current log view (level, hidden `Proxy`, text filter); `filter_lower` is `log_view.filter` already lower-cased so a whole list costs one allocation.
     fn line_visible(&self, line: &LogLine, filter_lower: &str) -> bool {
         if !self.log_view.level.accepts(line.level) {
             return false;
@@ -277,15 +279,13 @@ impl App {
         true
     }
 
-    /// The log lines the log view shows, oldest first: level accepted, not a hidden `Proxy` line, and
-    /// containing `log_view.filter` (ASCII case-insensitive) when it is not empty.
+    /// The log lines the log view shows, oldest first: level accepted, not a hidden `Proxy` line, and containing `log_view.filter` (ASCII case-insensitive) when not empty.
     pub fn visible_logs(&self) -> Vec<&LogLine> {
         let filter_lower = self.log_view.filter.to_ascii_lowercase();
         self.logs.iter().filter(|l| self.line_visible(l, &filter_lower)).collect()
     }
 
-    /// `true` when something on screen moves by itself: a slot of an active model `is_processing`, or a
-    /// model in state `Loading`. `false` without a llama snapshot.
+    /// `true` when something on screen moves by itself: a slot of an active model `is_processing`, or a model in state `Loading`; `false` without a llama snapshot.
     pub fn animating(&self) -> bool {
         let Some(llama) = &self.llama else {
             return false;

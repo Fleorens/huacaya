@@ -19,7 +19,21 @@ impl Client {
             .http_status_as_error(false)
             .build()
             .into();
+        // Store the whole header value (`Bearer …`), so `send` writes it verbatim; the key itself never
+        // reaches a log or an error.
+        let api_key = api_key.map(|key| format!("Bearer {key}"));
         Self { agent, base: base_url.trim_end_matches('/').to_string(), api_key }
+    }
+
+    /// Like `new`, but authenticates with HTTP Basic (`Authorization: Basic base64(user:password)`).
+    pub fn new_basic(base_url: &str, user: &str, password: &str, timeout: Duration) -> Self {
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .timeout_global(Some(timeout))
+            .http_status_as_error(false)
+            .build()
+            .into();
+        let value = format!("Basic {}", base64(format!("{user}:{password}").as_bytes()));
+        Self { agent, base: base_url.trim_end_matches('/').to_string(), api_key: Some(value) }
     }
 
     /// GET `path` (starting with `/`), with `query` pairs percent-encoded by `ureq`.
@@ -39,15 +53,15 @@ impl Client {
         self.send(self.agent.get(local_url(port, path)), &format!(":{port}{path}"))
     }
 
-    /// Adds the bearer key, sends, and returns the body of a 2xx answer. `label` names the request in
-    /// errors; it never contains the key.
+    /// Adds the stored `Authorization` header (`Bearer …` or `Basic …`), sends, and returns the body of
+    /// a 2xx answer. `label` names the request in errors; it never contains the header value.
     fn send(
         &self,
         mut request: ureq::RequestBuilder<ureq::typestate::WithoutBody>,
         label: &str,
     ) -> Result<String> {
-        if let Some(key) = &self.api_key {
-            request = request.header("Authorization", format!("Bearer {key}"));
+        if let Some(value) = &self.api_key {
+            request = request.header("Authorization", value.clone());
         }
         let mut response = request.call().with_context(|| format!("GET {label}"))?;
         let status = response.status();
@@ -61,6 +75,29 @@ impl Client {
 /// The URL of `path` on the local instance at `port`; exactly one `/` between port and path.
 fn local_url(port: u16, path: &str) -> String {
     format!("http://127.0.0.1:{port}/{}", path.trim_start_matches('/'))
+}
+
+/// Standard base64 (RFC 4648 alphabet, `=` padding) of `bytes`.
+pub fn base64(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = Vec::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        out.push(TABLE[(b[0] >> 2) as usize]);
+        out.push(TABLE[(((b[0] & 0x03) << 4) | (b[1] >> 4)) as usize]);
+        // The third and fourth chars exist only when the chunk has enough bytes; otherwise `=`.
+        if chunk.len() > 1 {
+            out.push(TABLE[(((b[1] & 0x0f) << 2) | (b[2] >> 6)) as usize]);
+        } else {
+            out.push(b'=');
+        }
+        if chunk.len() > 2 {
+            out.push(TABLE[(b[2] & 0x3f) as usize]);
+        } else {
+            out.push(b'=');
+        }
+    }
+    String::from_utf8(out).expect("base64 is ASCII")
 }
 
 /// `true` when the URL's host is `127.0.0.1`, `localhost` or `[::1]` (scheme and port ignored, ASCII

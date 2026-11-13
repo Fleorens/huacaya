@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use clap::{CommandFactory, FromArgMatches};
 
 use llamatop::config::Cli;
-use llamatop::settings::{self, AgentSettings, LlamaSettings, Settings};
+use llamatop::settings::{self, AgentSettings, LlamaSettings, OpenCodeSettings, Settings};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -31,6 +31,12 @@ fn all_fields() -> Settings {
             url: Some("http://10.0.0.2:9099".to_string()),
             token: Some("tok-TEST".to_string()),
             token_file: Some(PathBuf::from("/etc/llamatop/agent-token")),
+        },
+        opencode: OpenCodeSettings {
+            url: Some("http://10.0.0.3:8080".to_string()),
+            user: Some("dev".to_string()),
+            password: Some("pw-TEST".to_string()),
+            password_file: Some(PathBuf::from("/etc/llamatop/opencode-password")),
         },
     }
 }
