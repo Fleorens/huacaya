@@ -65,6 +65,22 @@ fn round_trip() {
 }
 
 #[test]
+fn save_replaces_whole_file() {
+    use std::os::unix::fs::PermissionsExt;
+
+    // An older, world-readable file is replaced by a 600 one, and no temp file is left beside it.
+    let path = temp_path();
+    fs::write(&path, "[llama]\nurl = \"http://old\"\n").unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+    settings::save(&path, &all_fields()).unwrap();
+    assert_eq!(path.metadata().unwrap().permissions().mode() & 0o777, 0o600);
+    assert_eq!(settings::load(&path).unwrap().unwrap(), all_fields());
+    let name = path.file_name().unwrap().to_string_lossy().into_owned();
+    assert!(!path.with_file_name(format!(".{name}.tmp")).exists());
+    let _ = fs::remove_file(&path);
+}
+
+#[test]
 fn missing_file_is_none() {
     let path = temp_path();
     assert_eq!(settings::load(&path).unwrap(), None);

@@ -140,23 +140,34 @@ pub fn load(path: &Path) -> Result<Option<Settings>> {
 }
 
 /// Writes `settings` as TOML to `path`, creating the parent directories (mode 700 for a directory it
-/// creates) and the file with mode 600 **from the start** (`OpenOptionsExt::mode`, then `set_permissions`
-/// to 600 again in case the file already existed with wider rights). Replaces the whole file.
+/// creates). The file is written whole to a sibling `.<name>.tmp` created with mode 600 **from the start**
+/// (`OpenOptionsExt::mode`, then `set_permissions` to 600 again in case a stale one had wider rights), then
+/// renamed over `path`: a crash mid-write leaves the old file intact, never a truncated one.
 pub fn save(path: &Path, settings: &Settings) -> Result<()> {
     if let Some(parent) = path.parent() {
         ensure_dir(parent)?;
     }
-    let mut file = OpenOptions::new()
-        .write(true)
-        .read(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(path)
-        .context(format!("configuration file {}", path.display()))?;
-    file.set_permissions(Permissions::from_mode(0o600))?;
     let body = toml::to_string_pretty(settings).context("serialize settings")?;
-    file.write_all(body.as_bytes())?;
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let tmp = path.with_file_name(format!(".{name}.tmp"));
+    let write = || -> Result<()> {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(&tmp)
+            .context(format!("configuration file {}", tmp.display()))?;
+        file.set_permissions(Permissions::from_mode(0o600))?;
+        file.write_all(body.as_bytes())?;
+        file.sync_all()?;
+        Ok(())
+    };
+    if let Err(err) = write() {
+        let _ = fs::remove_file(&tmp);
+        return Err(err);
+    }
+    fs::rename(&tmp, path).with_context(|| format!("configuration file {}", path.display()))?;
     Ok(())
 }
 
