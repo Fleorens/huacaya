@@ -107,19 +107,26 @@ src/util/                history ring, rates, formatting    — T01
 src/collect/system.rs    CPU, RAM, load                     — T02
 src/collect/sensors.rs   hwmon scan                         — T03
 src/collect/gpu.rs       amdgpu                             — T03
+src/collect/nvidia.rs    NVIDIA through nvidia-smi          — T30
 src/collect/disk.rs  net.rs  process.rs                     — T04
 src/collect/llama.rs     parsing of the server answers      — T05
 src/collect/llama_poll.rs  one polling round + thread       — T06
 src/collect/logs.rs      log follower + line classifier     — T07
 src/collect/sampler.rs   SystemSnapshot + thread            — T08
 src/dump.rs              --dump                             — T08
-src/app/  src/ui/        state, screens                     — batch 2
+src/settings.rs          config.toml, read and written      — T23
+src/setup.rs             the first-run / `setup` dialogue   — T24
+src/agent/               `huacaya agent`: protocol, server, client — T26–T28
+src/collect/opencode*    OpenCode sessions and steps        — T34, T42
+src/collect/activity*    the Agents map's activity model    — T41
+src/app/  src/ui/        state, screens                     — batch 2 and later
 ```
 
 ## 6. What is deliberately out
 
 - No control of the server (load / unload / restart): the dashboard cannot break a running job.
-- No TLS, no remote agent, no daemon; one optional configuration file (`~/.config/huacaya/config.toml`, mode
-  600) — flags and environment win over it.
-- No NVIDIA / Intel GPU support: the GPU panel is written for amdgpu sysfs and shows "n/a" elsewhere.
+- No TLS: the agent (`huacaya agent`, plain HTTP with a bearer token) is meant for a trusted LAN. One optional
+  configuration file (`~/.config/huacaya/config.toml`, mode 600) — flags and environment win over it.
+- No Intel GPU support: the GPU panel reads amdgpu sysfs and NVIDIA through `nvidia-smi`, and shows "n/a"
+  elsewhere.
 - No history on disk: the graphs cover the last minutes, kept in memory.

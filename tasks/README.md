@@ -121,10 +121,10 @@ the whole timeline (fixed).
 | [T33](T33-tui2-panels.md) | Model band (big digits) and GPU / CPU / Memory panels v2 | T32 | validée |
 | [T34](T34-opencode-client.md) | OpenCode client, `[opencode]` settings, setup question | T33 | validée |
 | [T35](T35-agents-screen.md) | Agents screen (5) | T34 | validée |
-| [T36](T36-models-v2.md) | Models v2: table summary, four detail panels | T35 | livrée |
-| [T37](T37-logs-v2.md) | Logs v2: levels, filter and tasks beside the log | T36 | livrée |
-| [T38](T38-system-v2.md) | System v2: core heatmap, grouped sensors, network graphs | T37 | livrée |
-| [T39](T39-dense-80x24.md) | 80×24 v2: the dense Overview of the Narrow tier | T38 | livrée |
+| [T36](T36-models-v2.md) | Models v2: table summary, four detail panels | T35 | validée |
+| [T37](T37-logs-v2.md) | Logs v2: levels, filter and tasks beside the log | T36 | validée |
+| [T38](T38-system-v2.md) | System v2: core heatmap, grouped sensors, network graphs | T37 | validée |
+| [T39](T39-dense-80x24.md) | 80×24 v2: the dense Overview of the Narrow tier | T38 | validée |
 
 ## Batch 8 — the Agents map (design validated by Florian on 2026-11-13)
 
