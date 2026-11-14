@@ -6,9 +6,9 @@
 use std::io::Cursor;
 
 use anyhow::Result;
-use llamatop::collect::llama::{ModelInfo, parse_models};
-use llamatop::settings::{LlamaSettings, Settings};
-use llamatop::setup::{self, Probe};
+use huacaya::collect::llama::{ModelInfo, parse_models};
+use huacaya::settings::{LlamaSettings, Settings};
+use huacaya::setup::{self, Probe};
 
 /// The log command the flag defaults to, when the URL is on loopback.
 const LOG_CMD: &str = "journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise";

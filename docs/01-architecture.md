@@ -1,4 +1,4 @@
-# llamatop — architecture
+# huacaya — architecture
 
 ## 1. What it is
 
@@ -54,7 +54,7 @@ progress on the single GPU killed. `/metrics` and `/slots` are therefore polled 
 test in T06 and must survive every refactoring.
 
 On the server's own machine, when `--url` is a loopback address (`127.0.0.1`, `localhost` or `[::1]`),
-llamatop silences the journal as well. Each round, after `/v1/models`, it reads the `llama-server` processes
+huacaya silences the journal as well. Each round, after `/v1/models`, it reads the `llama-server` processes
 under `--sysroot` (`collect::process::read_server_procs`); the instance that serves a loaded model listens on
 `127.0.0.1:<port>` (the port read from its `--port`, its `--alias` being the model id), and answering
 `/metrics` and `/slots` directly on that port — with the same API key — prints **nothing** in the journal,
@@ -116,7 +116,7 @@ src/app/  src/ui/        state, screens                     — batch 2
 ## 6. What is deliberately out
 
 - No control of the server (load / unload / restart): the dashboard cannot break a running job.
-- No TLS, no remote agent, no daemon; one optional configuration file (`~/.config/llamatop/config.toml`, mode
+- No TLS, no remote agent, no daemon; one optional configuration file (`~/.config/huacaya/config.toml`, mode
   600) — flags and environment win over it.
 - No NVIDIA / Intel GPU support: the GPU panel is written for amdgpu sysfs and shows "n/a" elsewhere.
 - No history on disk: the graphs cover the last minutes, kept in memory.

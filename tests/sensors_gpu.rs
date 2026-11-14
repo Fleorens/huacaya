@@ -4,8 +4,8 @@
 
 use std::path::PathBuf;
 
-use llamatop::collect::gpu::read_gpus;
-use llamatop::collect::sensors::{TempReading, cpu_temp, nvme_temp, read_temps};
+use huacaya::collect::gpu::read_gpus;
+use huacaya::collect::sensors::{TempReading, cpu_temp, nvme_temp, read_temps};
 
 fn sysroot() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sysroot")
@@ -93,7 +93,7 @@ fn gpu_values() {
 
 #[test]
 fn no_gpu_on_empty_root() {
-    let bad = PathBuf::from("/nonexistent-llamatop");
+    let bad = PathBuf::from("/nonexistent-huacaya");
     assert!(read_gpus(&bad).is_empty());
     assert!(read_temps(&bad).is_empty());
 }
@@ -101,7 +101,7 @@ fn no_gpu_on_empty_root() {
 #[test]
 fn partial_card() {
     // A root unique to this test, removed at the end.
-    let root = std::env::temp_dir().join(format!("llamatop-partial-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("huacaya-partial-{}", std::process::id()));
     let device = root.join("sys/class/drm/card0/device");
     std::fs::create_dir_all(&device).expect("create device dir");
     std::fs::write(device.join("vendor"), "0x1002\n").expect("write vendor");

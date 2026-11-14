@@ -4,18 +4,25 @@ use std::time::Duration;
 use anyhow::{Context, Result, anyhow};
 use clap::{CommandFactory, FromArgMatches, parser::ValueSource};
 
-use llamatop::app::run::run;
-use llamatop::app::{Screen, demo, demo_agents};
-use llamatop::config::{Cli, Command};
-use llamatop::settings::{self, Settings};
-use llamatop::setup;
-use llamatop::ui::snapshot::{self, parse_size};
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::run::run;
+use huacaya::app::{Screen, demo, demo_agents};
+use huacaya::config::{Cli, Command};
+use huacaya::settings::{self, Settings};
+use huacaya::setup;
+use huacaya::ui::snapshot::{self, parse_size};
+use huacaya::ui::theme::{ColorMode, Theme};
 
 fn main() -> Result<()> {
     let matches = Cli::command().get_matches();
     let mut cli = Cli::from_arg_matches(&matches)?;
     let path = cli.config.clone().or_else(settings::default_path);
+    // The project was called llamatop until 0.4: its configuration file is taken over once.
+    if cli.config.is_none()
+        && let Some(path) = path.as_deref()
+        && let Some(legacy) = settings::migrate_legacy(path)?
+    {
+        eprintln!("huacaya: configuration copied from {} to {}", legacy.display(), path.display());
+    }
     let current = match path.as_deref() {
         Some(path) => match settings::load(path) {
             Ok(Some(settings)) => {
@@ -31,14 +38,14 @@ fn main() -> Result<()> {
     cli.agent = cli.agent.as_deref().map(setup::normalize_url);
     cli.url = setup::normalize_url(&cli.url);
 
-    // `llamatop setup`: run the dialogue and save, then exit.
+    // `huacaya setup`: run the dialogue and save, then exit.
     if let Some(Command::Setup) = cli.command {
         let path = path.as_deref().ok_or_else(|| anyhow!("no configuration file path"))?;
         setup::run_with_key(path, &current.unwrap_or_default(), cli.api_key())?;
         return Ok(());
     }
 
-    // `llamatop agent`: publish this machine's panels over HTTP.
+    // `huacaya agent`: publish this machine's panels over HTTP.
     if let Some(Command::Agent { listen, token_file, no_auth }) = cli.command {
         let token = match token_file {
             Some(path) => {
@@ -51,8 +58,8 @@ fn main() -> Result<()> {
             }
             None => None,
         };
-        llamatop::agent::server::check_token_policy(&listen, token.as_deref(), no_auth)?;
-        let config = llamatop::agent::server::AgentConfig {
+        huacaya::agent::server::check_token_policy(&listen, token.as_deref(), no_auth)?;
+        let config = huacaya::agent::server::AgentConfig {
             listen,
             token,
             sysroot: cli.sysroot.clone(),
@@ -60,12 +67,12 @@ fn main() -> Result<()> {
             log_cmd: cli.log_cmd.clone(),
             interval: Duration::from_millis(cli.interval_ms),
         };
-        llamatop::agent::server::run(config)?;
+        huacaya::agent::server::run(config)?;
         return Ok(());
     }
 
     if cli.dump {
-        println!("{}", llamatop::dump::run(&cli)?);
+        println!("{}", huacaya::dump::run(&cli)?);
         return Ok(());
     }
     if let Some(size) = &cli.snapshot {

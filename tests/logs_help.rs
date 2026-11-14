@@ -6,16 +6,16 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Modifier;
 
-use llamatop::app::demo::{DemoState, app as demo_app};
-use llamatop::app::keys::handle;
-use llamatop::app::{App, LevelFilter, Screen};
-use llamatop::collect::logs::Level;
-use llamatop::ui::draw;
-use llamatop::ui::panels::Ctx;
-use llamatop::ui::screens::logs;
-use llamatop::ui::snapshot::snapshot;
-use llamatop::ui::text;
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::demo::{DemoState, app as demo_app};
+use huacaya::app::keys::handle;
+use huacaya::app::{App, LevelFilter, Screen};
+use huacaya::collect::logs::Level;
+use huacaya::ui::draw;
+use huacaya::ui::panels::Ctx;
+use huacaya::ui::screens::logs;
+use huacaya::ui::snapshot::snapshot;
+use huacaya::ui::text;
+use huacaya::ui::theme::{ColorMode, Theme};
 
 /// One key press, as `keys::handle` expects.
 fn key(code: KeyCode) -> KeyEvent {

@@ -1,4 +1,4 @@
-//! The Overview header, one line: `llamatop`, host/uptime, server status and build on the left, the
+//! The Overview header, one line: `huacaya`, host/uptime, server status and build on the left, the
 //! shortcuts on the right, the screen tabs centred between. See `docs/02-ui.md` § 2.2 (T32).
 
 use ratatui::buffer::Buffer;
@@ -28,7 +28,7 @@ pub(crate) fn status(app: &App) -> (&'static str, Role) {
     }
 }
 
-/// The header: on the first row of `area`, no frame. `llamatop` then host, uptime, status and build on the
+/// The header: on the first row of `area`, no frame. `huacaya` then host, uptime, status and build on the
 /// left; `PAUSED` (when paused) then clock and `? help` on the right; the screen tabs centred in the space
 /// between, shrunk then dropped (with the right part) when the space is too small.
 pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
@@ -84,7 +84,7 @@ enum TabStyle {
     Compact,
 }
 
-/// The left part: ` llamatop ` (reversed + bold) then host, `up …`, status and build.
+/// The left part: ` huacaya ` (reversed + bold) then host, `up …`, status and build.
 fn left_spans(app: &App, theme: &Theme) -> Vec<Span<'static>> {
     let hostname = app.system.as_ref().and_then(|s| s.hostname.clone()).unwrap_or_else(|| "?".to_string());
     let uptime =
@@ -98,7 +98,7 @@ fn left_spans(app: &App, theme: &Theme) -> Vec<Span<'static>> {
 
     let mut spans = vec![
         Span::styled(
-            " llamatop ",
+            " huacaya ",
             theme.fg(Role::BorderFocused).add_modifier(Modifier::REVERSED | Modifier::BOLD),
         ),
         Span::styled(" ", theme.fg(Role::Text)),

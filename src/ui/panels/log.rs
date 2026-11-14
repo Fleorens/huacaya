@@ -34,7 +34,7 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
 
     let v = app.visible_logs();
     if v.is_empty() {
-        // Lines that exist but are all filtered out (typically llamatop's own proxy lines) must not look
+        // Lines that exist but are all filtered out (typically huacaya's own proxy lines) must not look
         // like an empty log.
         let text = if app.logs.is_empty() {
             "no log line yet".to_string()

@@ -1,4 +1,4 @@
-# llamatop
+# huacaya
 
 A terminal dashboard for a [llama.cpp](https://github.com/ggml-org/llama.cpp) server and the machine that
 runs it: the loaded model and its state, live generation and prompt speed, context fill, prompt-cache reuse,
@@ -9,7 +9,7 @@ machine. It is **read-only**: it never loads, unloads or configures a model. A v
 `n/a`, so it runs without a GPU, without `journalctl`, or with the server down.
 
 ```
-╭ llamatop ─ gpu-box ─ up 4d 3h ─────────────────────────────────── ● server ok  b12151 ─ 10:21:03 ╮
+╭ huacaya ── gpu-box ─ up 4d 3h ─────────────────────────────────── ● server ok  b12151 ─ 10:21:03 ╮
 │ 1 Overview   2 Models   3 Logs   4 System                                              ? help  q │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭ Model ─────────────────────────────────────────╮╭ GPU  RX 7800 XT ───────────────────────────────╮
@@ -23,36 +23,47 @@ machine. It is **read-only**: it never loads, unloads or configures a model. A v
 ╭ CPU ───────────────────────────────────────────╮╭ Memory ────────────────────────────────────────╮
 ```
 
-(`llamatop --snapshot 100x30`, demo data — try `llamatop --demo`.)
+(`huacaya --snapshot 100x30`, demo data — try `huacaya --demo`.)
 
 ## Install
 
 Linux x86_64, any distribution (a static binary, no dependency):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Fleorens/llamatop/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Fleorens/huacaya/main/install.sh | sh
 ```
 
-It installs `llamatop` into `/usr/local/bin` (with `sudo` when needed) or `~/.local/bin` (`--user`).
-Debian and Ubuntu can use the package of the [latest release](https://github.com/Fleorens/llamatop/releases/latest)
+It installs `huacaya` into `/usr/local/bin` (with `sudo` when needed) or `~/.local/bin` (`--user`).
+Debian and Ubuntu can use the package of the [latest release](https://github.com/Fleorens/huacaya/releases/latest)
 instead:
 
 ```sh
-curl -fsSLO https://github.com/Fleorens/llamatop/releases/latest/download/llamatop_amd64.deb
-sudo apt install ./llamatop_amd64.deb
+curl -fsSLO https://github.com/Fleorens/huacaya/releases/latest/download/huacaya_amd64.deb
+sudo apt install ./huacaya_amd64.deb
 ```
 
-From source (Rust 1.88+): `cargo install --git https://github.com/Fleorens/llamatop`.
+From source (Rust 1.88+): `cargo install --git https://github.com/Fleorens/huacaya`.
+
+**Formerly llamatop.** The project was renamed huacaya in 0.5 (other projects already used the name). The
+first run copies `~/.config/llamatop/config.toml` to `~/.config/huacaya/`; the variables are now `HUACAYA_*`.
+The Debian package replaces the `llamatop` one. If its agent ran on this machine:
+
+```sh
+sudo systemctl disable --now llamatop-agent
+sudo apt install ./huacaya_amd64.deb                  # removes the llamatop package
+sudo mv /etc/llamatop /etc/huacaya
+sudo systemctl daemon-reload && sudo systemctl enable --now huacaya-agent
+```
 
 ## First run
 
 ```sh
-llamatop
+huacaya
 ```
 
-With no configuration yet, llamatop asks where the server is (`http://127.0.0.1:8080` by default), its API
+With no configuration yet, huacaya asks where the server is (`http://127.0.0.1:8080` by default), its API
 key if it has one (typed without echo, checked against the server), and how to read its log, then saves the
-answers to `~/.config/llamatop/config.toml` (mode 600) and starts. `llamatop setup` asks again anytime.
+answers to `~/.config/huacaya/config.toml` (mode 600) and starts. `huacaya setup` asks again anytime.
 
 ## What it shows
 
@@ -63,7 +74,7 @@ answers to `~/.config/llamatop/config.toml` (mode 600) and starts. `llamatop set
 | `3` Logs | the server log, full screen: follow, scroll, text and level filters |
 | `4` System | per-core usage, every temperature sensor, disks, network, `llama-server` processes |
 
-The machine panels describe the machine llamatop runs on. To see the server's machine from elsewhere, run the
+The machine panels describe the machine huacaya runs on. To see the server's machine from elsewhere, run the
 [agent](#agent) on the server. GPU support: AMD (amdgpu sysfs) and NVIDIA (`nvidia-smi`, shipped with the
 driver).
 
@@ -76,16 +87,16 @@ systemd unit named `llama-server` (the user needs the `systemd-journal` group). 
 
 | Flag | Default | |
 |---|---|---|
-| `--url` | `http://127.0.0.1:8080` | the server, router or single model (`LLAMATOP_URL`) |
-| `--api-key-file` | — | file holding the key (`LLAMATOP_API_KEY_FILE`); `LLAMA_API_KEY` also works |
-| `--log-cmd` | `journalctl -u llama-server -f …` | the command whose output is the log (`LLAMATOP_LOG_CMD`) |
+| `--url` | `http://127.0.0.1:8080` | the server, router or single model (`HUACAYA_URL`) |
+| `--api-key-file` | — | file holding the key (`HUACAYA_API_KEY_FILE`); `LLAMA_API_KEY` also works |
+| `--log-cmd` | `journalctl -u llama-server -f …` | the command whose output is the log (`HUACAYA_LOG_CMD`) |
 | `--interval-ms` | `1000` | refresh period, 200–10000 (`+` / `-` change it live) |
 | `--mount` | every real disk | a mount point to show, repeatable |
-| `--agent` | — | URL of a llamatop agent on the server (`LLAMATOP_AGENT`), see below |
-| `--opencode` | — | URL of an OpenCode server to watch its sessions and steps (`LLAMATOP_OPENCODE`), see below |
-| `--opencode-user` | `opencode` | OpenCode user (`LLAMATOP_OPENCODE_USER`) |
-| `--opencode-password-file` | — | file holding the OpenCode password (`LLAMATOP_OPENCODE_PASSWORD_FILE`) |
-| `--config` | `~/.config/llamatop/config.toml` | the configuration file (`LLAMATOP_CONFIG`) |
+| `--agent` | — | URL of a huacaya agent on the server (`HUACAYA_AGENT`), see below |
+| `--opencode` | — | URL of an OpenCode server to watch its sessions and steps (`HUACAYA_OPENCODE`), see below |
+| `--opencode-user` | `opencode` | OpenCode user (`HUACAYA_OPENCODE_USER`) |
+| `--opencode-password-file` | — | file holding the OpenCode password (`HUACAYA_OPENCODE_PASSWORD_FILE`) |
+| `--config` | `~/.config/huacaya/config.toml` | the configuration file (`HUACAYA_CONFIG`) |
 | `--demo` | | generated data, no server needed; the Agents screen (5) shows a simulated OpenCode session |
 | `--dump` | | one JSON report of every data source, then exit |
 | `--snapshot WxH` | | one frame of the demo on stdout (`--demo-state`, `--screen`, `--ansi`) |
@@ -93,7 +104,7 @@ systemd unit named `llama-server` (the user needs the `systemd-journal` group). 
 Order of precedence: flag, then environment variable, then configuration file, then default.
 
 ```toml
-# ~/.config/llamatop/config.toml
+# ~/.config/huacaya/config.toml
 [llama]
 url = "http://192.168.1.10:8080"
 api_key = "sk-..."              # or api_key_file = "/path/to/key"
@@ -105,7 +116,7 @@ token = "..."
 
 [opencode]
 url = "http://192.168.1.10:8080"
-user = "opencode"             # or --opencode-user / LLAMATOP_OPENCODE_USER
+user = "opencode"             # or --opencode-user / HUACAYA_OPENCODE_USER
 password = "..."              # or password_file = "/path/to/pw"
 ```
 
@@ -127,28 +138,28 @@ password = "..."              # or password_file = "/path/to/pw"
 
 ## Agent
 
-To watch the server's GPU, sensors and log from another machine, run `llamatop agent` on the server. It
+To watch the server's GPU, sensors and log from another machine, run `huacaya agent` on the server. It
 samples that machine and follows its log like the dashboard does, and serves them over HTTP to remote
 dashboards (`/v1/health`, `/v1/system`, `/v1/log`). A token is required as soon as it listens beyond loopback.
 
 With the Debian package, the agent is a systemd service, shipped disabled:
 
 ```sh
-sudo install -d -m 700 /etc/llamatop
-head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' | sudo tee /etc/llamatop/agent-token >/dev/null
-sudo chmod 600 /etc/llamatop/agent-token
-sudo systemctl enable --now llamatop-agent          # listens on 0.0.0.0:9099; open the port if a firewall filters it
+sudo install -d -m 700 /etc/huacaya
+head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' | sudo tee /etc/huacaya/agent-token >/dev/null
+sudo chmod 600 /etc/huacaya/agent-token
+sudo systemctl enable --now huacaya-agent          # listens on 0.0.0.0:9099; open the port if a firewall filters it
 ```
 
-Without the package: `llamatop agent --token-file /path/to/token` (`--listen 0.0.0.0:9099` by default).
-Then, on the other machine, `llamatop setup` asks for the agent's URL (`http://<server>:9099`) and the token.
+Without the package: `huacaya agent --token-file /path/to/token` (`--listen 0.0.0.0:9099` by default).
+Then, on the other machine, `huacaya setup` asks for the agent's URL (`http://<server>:9099`) and the token.
 
 ## The safety rule
 
 On a llama.cpp router with autoload, a request naming a model that is not loaded **loads it**: tens of GB read,
-the running model evicted. llamatop therefore asks `/metrics` and `/slots` only about models that the same
+the running model evicted. huacaya therefore asks `/metrics` and `/slots` only about models that the same
 polling round's `/v1/models` lists as `loaded`, and, on the server itself, asks the loaded instance directly
-(which also keeps llamatop out of the server's log). A test guards the rule.
+(which also keeps huacaya out of the server's log). A test guards the rule.
 
 ## Development
 

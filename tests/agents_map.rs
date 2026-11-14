@@ -5,14 +5,14 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use llamatop::app::{App, Event, Screen};
-use llamatop::collect::activity::Activity;
-use llamatop::collect::llama_poll::{Health, LlamaSnapshot};
-use llamatop::collect::opencode::{OpenCodeSnapshot, Step, StepKind, parse_sessions, parse_steps};
-use llamatop::ui::panels::Ctx;
-use llamatop::ui::screens::agents;
-use llamatop::ui::snapshot::snapshot;
-use llamatop::ui::theme::{ColorMode, Role, Theme};
+use huacaya::app::{App, Event, Screen};
+use huacaya::collect::activity::Activity;
+use huacaya::collect::llama_poll::{Health, LlamaSnapshot};
+use huacaya::collect::opencode::{OpenCodeSnapshot, Step, StepKind, parse_sessions, parse_steps};
+use huacaya::ui::panels::Ctx;
+use huacaya::ui::screens::agents;
+use huacaya::ui::snapshot::snapshot;
+use huacaya::ui::theme::{ColorMode, Role, Theme};
 
 // --- Key + snapshot builders (the sheet forbids these in `src/`) -------------------------------
 fn key(c: char) -> KeyEvent {

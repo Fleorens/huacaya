@@ -4,12 +4,12 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use llamatop::app::demo::{DemoState, app as demo_app};
-use llamatop::app::{App, Screen};
-use llamatop::collect::opencode::{OpenCodeSnapshot, parse_sessions, parse_steps};
-use llamatop::ui::draw::draw;
-use llamatop::ui::panels::Ctx;
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::demo::{DemoState, app as demo_app};
+use huacaya::app::{App, Screen};
+use huacaya::collect::opencode::{OpenCodeSnapshot, parse_sessions, parse_steps};
+use huacaya::ui::draw::draw;
+use huacaya::ui::panels::Ctx;
+use huacaya::ui::theme::{ColorMode, Theme};
 
 /// Render `f` into a `w × h` buffer, return each row's symbols with trailing spaces removed.
 fn rows<F>(f: F, w: u16, h: u16) -> Vec<String>
@@ -62,15 +62,15 @@ fn running_app() -> App {
 
 #[test]
 fn short_badges() {
-    assert_eq!(llamatop::ui::dense::short_badge("GENERATING"), "◉ GEN");
-    assert_eq!(llamatop::ui::dense::short_badge("PROMPT"), "◉ PROMPT");
-    assert_eq!(llamatop::ui::dense::short_badge("IDLE"), "○ IDLE");
-    assert_eq!(llamatop::ui::dense::short_badge("LOADING"), "◐ LOAD");
-    assert_eq!(llamatop::ui::dense::short_badge("NO MODEL"), "○ NO MODEL");
-    assert_eq!(llamatop::ui::dense::short_badge("SERVER DOWN"), "✖ DOWN");
-    assert_eq!(llamatop::ui::dense::short_badge("UNAUTHORIZED"), "✖ AUTH");
-    assert_eq!(llamatop::ui::dense::short_badge("WAITING"), "○ WAIT");
-    assert_eq!(llamatop::ui::dense::short_badge("FOO"), "FOO");
+    assert_eq!(huacaya::ui::dense::short_badge("GENERATING"), "◉ GEN");
+    assert_eq!(huacaya::ui::dense::short_badge("PROMPT"), "◉ PROMPT");
+    assert_eq!(huacaya::ui::dense::short_badge("IDLE"), "○ IDLE");
+    assert_eq!(huacaya::ui::dense::short_badge("LOADING"), "◐ LOAD");
+    assert_eq!(huacaya::ui::dense::short_badge("NO MODEL"), "○ NO MODEL");
+    assert_eq!(huacaya::ui::dense::short_badge("SERVER DOWN"), "✖ DOWN");
+    assert_eq!(huacaya::ui::dense::short_badge("UNAUTHORIZED"), "✖ AUTH");
+    assert_eq!(huacaya::ui::dense::short_badge("WAITING"), "○ WAIT");
+    assert_eq!(huacaya::ui::dense::short_badge("FOO"), "FOO");
 }
 
 // --------------------------------------------------------------------------- The dense rows

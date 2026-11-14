@@ -1,4 +1,4 @@
-llamatop · gpu-box · ● server ok
+huacaya · gpu-box · ● server ok
 ◉ GENERATING Cyber-Tiel-Coder-35B-A3B 49.3 t/s
 GPU 95% 73°C 15.9 G │ CPU 50% │ RAM 21.6 G
 10:00:15 #9000 n_gen 156  tg 52.1 t/s  3s 53.0 t/s

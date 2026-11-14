@@ -7,11 +7,11 @@ use std::path::Path;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use llamatop::app::{App, Event};
-use llamatop::ui::keybar;
-use llamatop::ui::panels::{Ctx, request};
-use llamatop::ui::text::group_thousands;
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::{App, Event};
+use huacaya::ui::keybar;
+use huacaya::ui::panels::{Ctx, request};
+use huacaya::ui::text::group_thousands;
+use huacaya::ui::theme::{ColorMode, Theme};
 
 /// Render `f` into a `w × h` buffer and return each row's symbols concatenated.
 fn draw<F>(f: F, w: u16, h: u16) -> Vec<String>
@@ -64,7 +64,7 @@ fn journal_app() -> App {
         if line.is_empty() {
             continue;
         }
-        let log_line = llamatop::collect::logs::parse_line(line);
+        let log_line = huacaya::collect::logs::parse_line(line);
         app.apply(Event::Log(log_line));
     }
     app

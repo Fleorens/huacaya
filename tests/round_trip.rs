@@ -1,10 +1,10 @@
-//! The snapshots cross the network between `llamatop agent` and its clients as JSON: they must come back
+//! The snapshots cross the network between `huacaya agent` and its clients as JSON: they must come back
 //! equal to what was sent.
 
-use llamatop::app::demo::{self, DemoState};
-use llamatop::collect::llama_poll::LlamaSnapshot;
-use llamatop::collect::logs::LogLine;
-use llamatop::collect::sampler::SystemSnapshot;
+use huacaya::app::demo::{self, DemoState};
+use huacaya::collect::llama_poll::LlamaSnapshot;
+use huacaya::collect::logs::LogLine;
+use huacaya::collect::sampler::SystemSnapshot;
 
 #[test]
 fn snapshots_survive_json() {

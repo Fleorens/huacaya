@@ -1,7 +1,7 @@
-//! The optional configuration file (`~/.config/llamatop/config.toml`, mode 600; tasks/T23).
+//! The optional configuration file (`~/.config/huacaya/config.toml`, mode 600; tasks/T23).
 //!
 //! Flags and environment variables keep priority over the file. The file is written by the first-run
-//! setup of T24 and read here so llamatop can run from any Linux machine, not only the server.
+//! setup of T24 and read here so huacaya can run from any Linux machine, not only the server.
 
 use std::fs::{self, OpenOptions, Permissions};
 use std::io::Write;
@@ -71,8 +71,8 @@ pub struct OpenCodeSettings {
     pub password_file: Option<PathBuf>,
 }
 
-/// `$XDG_CONFIG_HOME/llamatop/config.toml` when `XDG_CONFIG_HOME` is set and not empty, else
-/// `$HOME/.config/llamatop/config.toml`; `None` without either variable.
+/// `$XDG_CONFIG_HOME/huacaya/config.toml` when `XDG_CONFIG_HOME` is set and not empty, else
+/// `$HOME/.config/huacaya/config.toml`; `None` without either variable.
 pub fn default_path() -> Option<PathBuf> {
     path_from(
         std::env::var("XDG_CONFIG_HOME").ok().filter(|value| !value.is_empty()).as_deref(),
@@ -90,7 +90,34 @@ pub fn path_from(xdg_config_home: Option<&str>, home: Option<&str>) -> Option<Pa
             Path::new(dir).join(".config")
         }
     };
-    Some(base.join("llamatop").join("config.toml"))
+    Some(base.join("huacaya").join("config.toml"))
+}
+
+/// Copies the configuration of the project's former name (`<config dir>/llamatop/config.toml`, a sibling of
+/// `path`'s directory) to `path`, mode 600, when `path` does not exist yet. Returns the file copied from, if
+/// any. The old file is left in place.
+pub fn migrate_legacy(path: &Path) -> Result<Option<PathBuf>> {
+    let Some(legacy) =
+        path.parent().and_then(Path::parent).map(|dir| dir.join("llamatop").join("config.toml"))
+    else {
+        return Ok(None);
+    };
+    if path.exists() || !legacy.is_file() {
+        return Ok(None);
+    }
+    let text =
+        fs::read_to_string(&legacy).with_context(|| format!("configuration file {}", legacy.display()))?;
+    if let Some(parent) = path.parent() {
+        ensure_dir(parent)?;
+    }
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+        .with_context(|| format!("configuration file {}", path.display()))?;
+    file.write_all(text.as_bytes())?;
+    Ok(Some(legacy))
 }
 
 /// Reads and parses `path`. A missing file is `Ok(None)`; an unreadable file or invalid TOML is an error

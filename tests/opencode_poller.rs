@@ -5,9 +5,9 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-use llamatop::collect::activity::Station;
-use llamatop::collect::llama_poll::Fetch;
-use llamatop::collect::opencode::*;
+use huacaya::collect::activity::Station;
+use huacaya::collect::llama_poll::Fetch;
+use huacaya::collect::opencode::*;
 
 /// One recorded request: the path and the owned `(key, value)` query pairs.
 type Record = (String, Vec<(String, String)>);

@@ -1,4 +1,4 @@
- llamatop  ?  up n/a  ○ waiting                   1 Overview   2 Models   3 Logs   4 System   5 Agents ●                    10:21:03  ? help
+ huacaya  ?  up n/a  ○ waiting                   1 Overview   2 Models   3 Logs   4 System   5 Agents ●                     10:21:03  ? help
 ╭ Queue ───────────────────────────────── opencode ╮╭ #131 · T24-setup-wizard ───────────────────────────────────────────────────── m list ╮
 │  #     state        age    task                  ││                                                                                      │
 │  136   ◉ running    11m 1s T30-nvidia            ││                                         You 0                                        │

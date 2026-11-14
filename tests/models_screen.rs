@@ -5,12 +5,12 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier};
 
-use llamatop::app::demo::{DemoState, app as demo_app};
-use llamatop::app::{App, Screen};
-use llamatop::ui::panels::Ctx;
-use llamatop::ui::screens::models;
-use llamatop::ui::snapshot::snapshot;
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::demo::{DemoState, app as demo_app};
+use huacaya::app::{App, Screen};
+use huacaya::ui::panels::Ctx;
+use huacaya::ui::screens::models;
+use huacaya::ui::snapshot::snapshot;
+use huacaya::ui::theme::{ColorMode, Theme};
 
 /// Render `models::render` over a `w × h` area and return each row's symbols concatenated.
 fn draw<F>(f: F, w: u16, h: u16) -> Vec<String>
@@ -202,7 +202,7 @@ fn details_one_column() {
 
 #[test]
 fn tokens_row() {
-    use llamatop::util::count;
+    use huacaya::util::count;
     let theme = true_color();
     let app = models_app(DemoState::Generating, 3);
     let llama = app.llama.as_ref().unwrap();

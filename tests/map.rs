@@ -5,11 +5,11 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 
-use llamatop::collect::activity::Activity;
-use llamatop::collect::opencode::{Step, StepKind, parse_steps};
-use llamatop::ui::dots::Dots;
-use llamatop::ui::map::{Core, render, station_cells};
-use llamatop::ui::theme::{ColorMode, PCT_THRESHOLDS, Role, Theme, gauge_color, lerp_rgb, rgb};
+use huacaya::collect::activity::Activity;
+use huacaya::collect::opencode::{Step, StepKind, parse_steps};
+use huacaya::ui::dots::Dots;
+use huacaya::ui::map::{Core, render, station_cells};
+use huacaya::ui::theme::{ColorMode, PCT_THRESHOLDS, Role, Theme, gauge_color, lerp_rgb, rgb};
 
 // --- Builders (the sheet forbids these in `src/`) -----------------------------------------------
 

@@ -3,9 +3,9 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use llamatop::collect::disk::{disk_usage, read_disks};
-use llamatop::collect::net::{NetCounters, NetReader};
-use llamatop::collect::process::{ProcSample, ServerRole, read_server_procs};
+use huacaya::collect::disk::{disk_usage, read_disks};
+use huacaya::collect::net::{NetCounters, NetReader};
+use huacaya::collect::process::{ProcSample, ServerRole, read_server_procs};
 
 fn sysroot() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sysroot")
@@ -23,15 +23,15 @@ fn disk_usage_of_root() {
 
 #[test]
 fn disk_usage_of_missing_path() {
-    assert!(disk_usage(Path::new("/nonexistent-llamatop")).is_none());
-    let mounts = [PathBuf::from("/"), PathBuf::from("/nonexistent-llamatop")];
+    assert!(disk_usage(Path::new("/nonexistent-huacaya")).is_none());
+    let mounts = [PathBuf::from("/"), PathBuf::from("/nonexistent-huacaya")];
     assert_eq!(read_disks(&mounts).len(), 1);
 }
 
 #[test]
 fn net_dev_parsing() {
     let text = std::fs::read_to_string(sysroot().join("proc/net/dev")).unwrap();
-    let counters = llamatop::collect::net::parse_net_dev(&text);
+    let counters = huacaya::collect::net::parse_net_dev(&text);
     assert_eq!(counters.len(), 2);
     assert_eq!(
         counters[0],
@@ -43,7 +43,7 @@ fn net_dev_parsing() {
 #[test]
 fn net_dev_without_space_after_colon() {
     let text = "h1\nh2\neth0:100 0 0 0 0 0 0 0 200 0 0 0 0 0 0 0\n";
-    let counters = llamatop::collect::net::parse_net_dev(text);
+    let counters = huacaya::collect::net::parse_net_dev(text);
     assert_eq!(counters.len(), 1);
     assert_eq!(counters[0].rx_bytes, 100);
     assert_eq!(counters[0].tx_bytes, 200);
@@ -105,6 +105,6 @@ fn server_processes() {
 
 #[test]
 fn no_processes_on_empty_root() {
-    let procs = read_server_procs(Path::new("/nonexistent-llamatop"));
+    let procs = read_server_procs(Path::new("/nonexistent-huacaya"));
     assert!(procs.is_empty());
 }

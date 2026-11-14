@@ -1,11 +1,11 @@
 [package]
-name = "llamatop"
-version = "0.4.1"
+name = "huacaya"
+version = "0.5.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Terminal dashboard for a llama.cpp server and the machine that runs it"
 license = "MIT"
-repository = "https://github.com/Fleorens/llamatop"
+repository = "https://github.com/Fleorens/huacaya"
 readme = "README.md"
 keywords = ["llama-cpp", "tui", "dashboard", "llm", "monitoring"]
 categories = ["command-line-utilities"]

@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use llamatop::collect::llama_poll::*;
+use huacaya::collect::llama_poll::*;
 
 const TIEL: &str = "peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M";
 

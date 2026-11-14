@@ -1,6 +1,6 @@
 [Unit]
-Description=llamatop agent: this machine's panels for remote llamatop dashboards
-Documentation=file:///usr/share/doc/llamatop/README.md
+Description=huacaya agent: this machine's panels for remote huacaya dashboards
+Documentation=file:///usr/share/doc/huacaya/README.md
 After=network-online.target
 Wants=network-online.target
 
@@ -9,8 +9,8 @@ Wants=network-online.target
 DynamicUser=yes
 SupplementaryGroups=systemd-journal
 # The token clients must send; the file stays root-only, the service reads a private copy.
-LoadCredential=token:/etc/llamatop/agent-token
-ExecStart=/usr/bin/llamatop agent --listen 0.0.0.0:9099 --token-file ${CREDENTIALS_DIRECTORY}/token
+LoadCredential=token:/etc/huacaya/agent-token
+ExecStart=/usr/bin/huacaya agent --listen 0.0.0.0:9099 --token-file ${CREDENTIALS_DIRECTORY}/token
 Restart=on-failure
 RestartSec=5
 # Read-only by nature: it only reads /proc, /sys, the journal and statvfs.

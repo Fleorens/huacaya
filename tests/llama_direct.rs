@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use anyhow::Result;
-use llamatop::collect::llama_poll::*;
-use llamatop::http::is_loopback_url;
+use huacaya::collect::llama_poll::*;
+use huacaya::http::is_loopback_url;
 
 const TIEL: &str = "peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF:Q4_K_M";
 const INSTANCE_PORT: u16 = 35335;
@@ -167,7 +167,7 @@ fn no_instance_uses_the_router() {
     router_setup(&fetch);
 
     // An empty temp dir as sysroot: no `llama-server` processes.
-    let dir = std::env::temp_dir().join(format!("llamatop-direct-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("huacaya-direct-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
 
     let mut poller = Poller::new(fetch).with_local_instances(dir.clone());

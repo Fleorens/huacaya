@@ -8,12 +8,12 @@ use std::time::{Duration, Instant};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use llamatop::app::App;
-use llamatop::collect::nvidia::{BACKOFF_PERIOD, SmiBackoff, parse_smi};
-use llamatop::collect::sampler::{Sampler, SystemSnapshot};
-use llamatop::collect::system::{CpuInfo, CpuSample};
-use llamatop::ui::panels::{Ctx, gpu};
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::App;
+use huacaya::collect::nvidia::{BACKOFF_PERIOD, SmiBackoff, parse_smi};
+use huacaya::collect::sampler::{Sampler, SystemSnapshot};
+use huacaya::collect::system::{CpuInfo, CpuSample};
+use huacaya::ui::panels::{Ctx, gpu};
+use huacaya::ui::theme::{ColorMode, Theme};
 
 const MIB: u64 = 1_048_576;
 

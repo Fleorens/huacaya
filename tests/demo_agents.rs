@@ -2,14 +2,14 @@
 // (T46): the pure `replay`, and the `--snapshot --screen 5` golden built the same way `main.rs` does.
 
 use clap::Parser;
-use llamatop::app::Screen;
-use llamatop::app::demo::{DemoState, app as demo_app};
-use llamatop::app::demo_agents::{DEMO_START_MS, SNAPSHOT_T, replay};
-use llamatop::collect::activity::Station;
-use llamatop::collect::opencode::StepKind;
-use llamatop::config::Cli;
-use llamatop::ui::snapshot::snapshot;
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::Screen;
+use huacaya::app::demo::{DemoState, app as demo_app};
+use huacaya::app::demo_agents::{DEMO_START_MS, SNAPSHOT_T, replay};
+use huacaya::collect::activity::Station;
+use huacaya::collect::opencode::StepKind;
+use huacaya::config::Cli;
+use huacaya::ui::snapshot::snapshot;
+use huacaya::ui::theme::{ColorMode, Theme};
 
 #[test]
 fn steps_at_12() {
@@ -107,11 +107,11 @@ fn deterministic() {
 #[test]
 fn screen_five() {
     assert!(
-        Cli::try_parse_from(["llamatop", "--snapshot", "140x40", "--screen", "5"]).is_ok(),
+        Cli::try_parse_from(["huacaya", "--snapshot", "140x40", "--screen", "5"]).is_ok(),
         "--screen 5 must be accepted"
     );
     assert!(
-        Cli::try_parse_from(["llamatop", "--snapshot", "140x40", "--screen", "6"]).is_err(),
+        Cli::try_parse_from(["huacaya", "--snapshot", "140x40", "--screen", "6"]).is_err(),
         "--screen 6 must be rejected"
     );
 }
@@ -140,7 +140,7 @@ fn demo_agents_golden() {
 fn long_run_keeps_newest_steps() {
     // Past SNAPSHOT_STEPS steps the snapshot keeps the newest ones, so the map keeps cycling.
     let snap = replay(DEMO_START_MS, 720.0);
-    assert_eq!(snap.steps.len(), llamatop::collect::opencode::SNAPSHOT_STEPS);
+    assert_eq!(snap.steps.len(), huacaya::collect::opencode::SNAPSHOT_STEPS);
     assert!(snap.steps.last().is_some_and(|s| s.id.starts_with("demo-12-")));
     assert!(snap.steps.windows(2).all(|w| w[0].time_ms <= w[1].time_ms));
 }

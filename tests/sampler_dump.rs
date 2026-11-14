@@ -10,9 +10,9 @@ use std::time::{Duration, Instant};
 
 use clap::Parser;
 
-use llamatop::collect::sampler::{Sampler, spawn};
-use llamatop::config::Cli;
-use llamatop::dump;
+use huacaya::collect::sampler::{Sampler, spawn};
+use huacaya::config::Cli;
+use huacaya::dump;
 
 fn sysroot() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sysroot")
@@ -73,7 +73,7 @@ fn second_sample_keeps_references() {
 
 #[test]
 fn empty_machine() {
-    let mut sampler = Sampler::new(PathBuf::from("/nonexistent-llamatop"), vec![]);
+    let mut sampler = Sampler::new(PathBuf::from("/nonexistent-huacaya"), vec![]);
     let snap = sampler.sample(Instant::now());
 
     assert_eq!(snap.hostname, None);
@@ -111,7 +111,7 @@ fn spawn_delivers_and_stops() {
 /// Builds a `--dump` Cli pointing at the fixture machine, a down server and a given log command.
 fn dump_cli(log_cmd: &str) -> Cli {
     Cli::parse_from([
-        "llamatop",
+        "huacaya",
         "--dump",
         "--url",
         "http://127.0.0.1:9",
@@ -163,7 +163,7 @@ fn dump_with_silent_live_log() {
 
 #[test]
 fn dump_with_missing_log_program() {
-    let cli = dump_cli("llamatop-no-such-program");
+    let cli = dump_cli("huacaya-no-such-program");
     let text = dump::run(&cli).expect("run is Ok");
     let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
 
@@ -175,10 +175,10 @@ fn dump_with_missing_log_program() {
 #[test]
 fn dump_never_shows_the_key() {
     // Write the key to a temp file and point `--api-key-file` at it.
-    let key_path = std::env::temp_dir().join(format!("llamatop-test-key-{}.txt", std::process::id()));
+    let key_path = std::env::temp_dir().join(format!("huacaya-test-key-{}.txt", std::process::id()));
     std::fs::write(&key_path, "sk-test-SECRET-123").expect("write key file");
     let cli = Cli::parse_from([
-        "llamatop",
+        "huacaya",
         "--dump",
         "--url",
         "http://127.0.0.1:9",

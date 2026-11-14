@@ -6,14 +6,14 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier};
 
-use llamatop::app::demo::{self, DemoState, app as demo_app};
-use llamatop::app::keys::handle;
-use llamatop::app::{App, Event, Screen};
-use llamatop::collect::net::NetSample;
-use llamatop::ui::panels::Ctx;
-use llamatop::ui::screens::system;
-use llamatop::ui::snapshot::snapshot;
-use llamatop::ui::theme::{ColorMode, Role, Theme, rgb};
+use huacaya::app::demo::{self, DemoState, app as demo_app};
+use huacaya::app::keys::handle;
+use huacaya::app::{App, Event, Screen};
+use huacaya::collect::net::NetSample;
+use huacaya::ui::panels::Ctx;
+use huacaya::ui::screens::system;
+use huacaya::ui::snapshot::snapshot;
+use huacaya::ui::theme::{ColorMode, Role, Theme, rgb};
 
 /// Render `system::render` over a `w × h` area and return each row's symbols concatenated.
 fn draw<F>(f: F, w: u16, h: u16) -> Vec<String>

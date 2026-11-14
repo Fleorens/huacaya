@@ -15,12 +15,12 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use clap::{CommandFactory, FromArgMatches, Parser};
-use llamatop::agent::client::AgentClient;
-use llamatop::agent::server::{self, AgentConfig};
-use llamatop::collect::llama::{ModelInfo, parse_models};
-use llamatop::config::Cli;
-use llamatop::settings::{self, AgentSettings, LlamaSettings, OpenCodeSettings, Settings};
-use llamatop::setup::{self, Probe};
+use huacaya::agent::client::AgentClient;
+use huacaya::agent::server::{self, AgentConfig};
+use huacaya::collect::llama::{ModelInfo, parse_models};
+use huacaya::config::Cli;
+use huacaya::settings::{self, AgentSettings, LlamaSettings, OpenCodeSettings, Settings};
+use huacaya::setup::{self, Probe};
 
 /// The agent config pointed at the fixture machine and log, listening on an OS-assigned port.
 fn config() -> AgentConfig {
@@ -39,7 +39,7 @@ static COUNTER: AtomicU64 = AtomicU64::new(0);
 /// A unique temp path under the system temp dir, so parallel tests do not clash.
 fn temp_path() -> PathBuf {
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    std::env::temp_dir().join(format!("llamatop-agent-test-{}-{}", std::process::id(), n))
+    std::env::temp_dir().join(format!("huacaya-agent-test-{}-{}", std::process::id(), n))
 }
 
 #[test]
@@ -103,13 +103,13 @@ fn agent_token_order() {
     // The file's first line wins, trimmed.
     let path = temp_path();
     fs::write(&path, "  tok \n").unwrap();
-    let mut cli = Cli::parse_from(["llamatop"]);
+    let mut cli = Cli::parse_from(["huacaya"]);
     cli.agent_token_file = Some(path.clone());
     assert_eq!(cli.agent_token(), Some("tok".to_string()));
     let _ = fs::remove_file(&path);
 
     // No file: the inline token is used, trimmed.
-    let mut cli = Cli::parse_from(["llamatop"]);
+    let mut cli = Cli::parse_from(["huacaya"]);
     cli.agent_token_inline = Some("  inline  ".to_string());
     assert_eq!(cli.agent_token(), Some("inline".to_string()));
 }
@@ -121,7 +121,7 @@ fn settings_agent_round_trip() {
         agent: AgentSettings {
             url: Some("http://a:9099".to_string()),
             token: Some("tok".to_string()),
-            token_file: Some(PathBuf::from("/etc/llamatop/agent-token")),
+            token_file: Some(PathBuf::from("/etc/huacaya/agent-token")),
         },
         opencode: OpenCodeSettings {
             url: Some("http://a:8080".to_string()),
@@ -136,7 +136,7 @@ fn settings_agent_round_trip() {
     let _ = fs::remove_file(&path);
 
     // `apply_settings` from the default fills `cli.agent` from the file.
-    let matches = Cli::command().try_get_matches_from(["llamatop"]).unwrap();
+    let matches = Cli::command().try_get_matches_from(["huacaya"]).unwrap();
     let mut cli = Cli::from_arg_matches(&matches).unwrap();
     cli.apply_settings(&matches, &settings);
     assert_eq!(cli.agent, Some("http://a:9099".to_string()));

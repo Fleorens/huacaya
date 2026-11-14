@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use llamatop::collect::system::*;
+use huacaya::collect::system::*;
 
 fn sysroot() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sysroot")
@@ -108,7 +108,7 @@ fn uptime_and_hostname() {
 
 #[test]
 fn missing_sysroot_gives_none() {
-    let bad = PathBuf::from("/nonexistent-llamatop");
+    let bad = PathBuf::from("/nonexistent-huacaya");
     assert_eq!(read_mem(&bad), None);
     assert_eq!(read_uptime(&bad), None);
     assert_eq!(read_hostname(&bad), None);
@@ -158,7 +158,7 @@ fn idle_going_backwards_does_not_panic() {
 
 #[test]
 fn cpu_freq_skips_core_without_cpufreq() {
-    let root = std::env::temp_dir().join(format!("llamatop-freq-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("huacaya-freq-{}", std::process::id()));
     let cpu = root.join("sys/devices/system/cpu");
     std::fs::create_dir_all(cpu.join("cpu0/cpufreq")).expect("create cpu0");
     std::fs::create_dir_all(cpu.join("cpu1")).expect("create cpu1"); // offline: no cpufreq/

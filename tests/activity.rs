@@ -1,7 +1,7 @@
 //! Integration tests for `collect::activity`: station classification and the `Activity` fold (T41).
 
-use llamatop::collect::activity::{Activity, PULSE_MS, Station, command_station, station};
-use llamatop::collect::opencode::{Step, StepKind, parse_steps};
+use huacaya::collect::activity::{Activity, PULSE_MS, Station, command_station, station};
+use huacaya::collect::opencode::{Step, StepKind, parse_steps};
 
 /// The `tests/fixtures/opencode` directory.
 fn fixture(name: &str) -> String {

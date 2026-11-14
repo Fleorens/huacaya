@@ -4,13 +4,13 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use llamatop::app::demo::{self, DemoState};
-use llamatop::app::{App, Event, Screen};
-use llamatop::collect::logs::{LogEvent, LogLine, parse_line};
-use llamatop::ui::logtext::{compact, strip_prefix};
-use llamatop::ui::panels::{Ctx, log};
-use llamatop::ui::screens::logs;
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::demo::{self, DemoState};
+use huacaya::app::{App, Event, Screen};
+use huacaya::collect::logs::{LogEvent, LogLine, parse_line};
+use huacaya::ui::logtext::{compact, strip_prefix};
+use huacaya::ui::panels::{Ctx, log};
+use huacaya::ui::screens::logs;
+use huacaya::ui::theme::{ColorMode, Theme};
 
 const FIXTURE: &str = include_str!("fixtures/journal/llama-server.txt");
 

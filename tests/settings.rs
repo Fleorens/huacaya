@@ -8,15 +8,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use clap::{CommandFactory, FromArgMatches};
 
-use llamatop::config::Cli;
-use llamatop::settings::{self, AgentSettings, LlamaSettings, OpenCodeSettings, Settings};
+use huacaya::config::Cli;
+use huacaya::settings::{self, AgentSettings, LlamaSettings, OpenCodeSettings, Settings};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// A unique temp path under the system temp dir, so parallel tests do not clash.
 fn temp_path() -> PathBuf {
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    std::env::temp_dir().join(format!("llamatop-test-{}-{}", std::process::id(), n))
+    std::env::temp_dir().join(format!("huacaya-test-{}-{}", std::process::id(), n))
 }
 
 fn all_fields() -> Settings {
@@ -24,29 +24,29 @@ fn all_fields() -> Settings {
         llama: LlamaSettings {
             url: Some("http://10.0.0.1:8080".to_string()),
             api_key: Some("sk-TEST".to_string()),
-            api_key_file: Some(PathBuf::from("/etc/llamatop/key")),
+            api_key_file: Some(PathBuf::from("/etc/huacaya/key")),
             log_cmd: Some("cat /tmp/log".to_string()),
         },
         agent: AgentSettings {
             url: Some("http://10.0.0.2:9099".to_string()),
             token: Some("tok-TEST".to_string()),
-            token_file: Some(PathBuf::from("/etc/llamatop/agent-token")),
+            token_file: Some(PathBuf::from("/etc/huacaya/agent-token")),
         },
         opencode: OpenCodeSettings {
             url: Some("http://10.0.0.3:8080".to_string()),
             user: Some("dev".to_string()),
             password: Some("pw-TEST".to_string()),
-            password_file: Some(PathBuf::from("/etc/llamatop/opencode-password")),
+            password_file: Some(PathBuf::from("/etc/huacaya/opencode-password")),
         },
     }
 }
 
 #[test]
 fn paths() {
-    assert_eq!(settings::path_from(Some("/x"), Some("/h")), Some(PathBuf::from("/x/llamatop/config.toml")));
+    assert_eq!(settings::path_from(Some("/x"), Some("/h")), Some(PathBuf::from("/x/huacaya/config.toml")));
     assert_eq!(
         settings::path_from(Some(""), Some("/h")),
-        Some(PathBuf::from("/h/.config/llamatop/config.toml"))
+        Some(PathBuf::from("/h/.config/huacaya/config.toml"))
     );
     assert_eq!(settings::path_from(None, None), None);
     assert_eq!(settings::path_from(None, Some("")), None, "an empty HOME gives no default");
@@ -82,7 +82,7 @@ fn invalid_file_is_an_error() {
 
 #[test]
 fn settings_fill_defaults() {
-    let matches = Cli::command().try_get_matches_from(["llamatop"]).unwrap();
+    let matches = Cli::command().try_get_matches_from(["huacaya"]).unwrap();
     let mut cli = Cli::from_arg_matches(&matches).unwrap();
     let settings = Settings {
         llama: LlamaSettings {
@@ -102,7 +102,7 @@ fn settings_fill_defaults() {
 #[test]
 fn flags_win() {
     let matches = Cli::command()
-        .try_get_matches_from(["llamatop", "--url", "http://127.0.0.1:8080", "--log-cmd", "true"])
+        .try_get_matches_from(["huacaya", "--url", "http://127.0.0.1:8080", "--log-cmd", "true"])
         .unwrap();
     let mut cli = Cli::from_arg_matches(&matches).unwrap();
     let settings = Settings {
@@ -124,8 +124,31 @@ fn api_key_order() {
     if std::env::var_os("LLAMA_API_KEY").is_some() {
         return;
     }
-    let matches = Cli::command().try_get_matches_from(["llamatop"]).unwrap();
+    let matches = Cli::command().try_get_matches_from(["huacaya"]).unwrap();
     let mut cli = Cli::from_arg_matches(&matches).unwrap();
     cli.api_key_inline = Some("inline".to_string());
     assert_eq!(cli.api_key(), Some("inline".to_string()));
+}
+
+/// The project was renamed from llamatop to huacaya (0.5): its configuration file is copied once, mode 600,
+/// and the old one is left in place; an existing new file is never overwritten.
+#[test]
+fn legacy_configuration_is_taken_over() {
+    use std::os::unix::fs::PermissionsExt;
+    let base = temp_path();
+    let legacy = base.join("llamatop").join("config.toml");
+    let new = base.join("huacaya").join("config.toml");
+    fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+    fs::write(&legacy, "[llama]\nurl = \"http://aibox:8080\"\n").unwrap();
+
+    assert_eq!(settings::migrate_legacy(&new).unwrap(), Some(legacy.clone()));
+    assert_eq!(fs::read_to_string(&new).unwrap(), "[llama]\nurl = \"http://aibox:8080\"\n");
+    assert_eq!(fs::metadata(&new).unwrap().permissions().mode() & 0o777, 0o600);
+    assert!(legacy.exists());
+
+    // Once the new file exists, nothing happens.
+    fs::write(&legacy, "changed").unwrap();
+    assert_eq!(settings::migrate_legacy(&new).unwrap(), None);
+    assert_ne!(fs::read_to_string(&new).unwrap(), "changed");
+    let _ = fs::remove_dir_all(&base);
 }

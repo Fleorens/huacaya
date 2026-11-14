@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use llamatop::collect::llama::*;
+use huacaya::collect::llama::*;
 
 /// Reads a fixture directly under `tests/fixtures/llama/`.
 fn fixture(name: &str) -> String {

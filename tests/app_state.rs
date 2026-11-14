@@ -1,12 +1,12 @@
 //! Tests for the pure state machine (`src/app`), per `tasks/T09-app-state.md`.
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use llamatop::app::{App, Event, Screen};
-use llamatop::collect::gpu::GpuSample;
-use llamatop::collect::llama::{ModelInfo, ModelState, SlotInfo};
-use llamatop::collect::llama_poll::{ActiveModel, Health, LlamaSnapshot};
-use llamatop::collect::logs::{Level, LogEvent, LogLine, parse_line};
-use llamatop::collect::sampler::SystemSnapshot;
-use llamatop::collect::system::{CpuInfo, CpuSample};
+use huacaya::app::{App, Event, Screen};
+use huacaya::collect::gpu::GpuSample;
+use huacaya::collect::llama::{ModelInfo, ModelState, SlotInfo};
+use huacaya::collect::llama_poll::{ActiveModel, Health, LlamaSnapshot};
+use huacaya::collect::logs::{Level, LogEvent, LogLine, parse_line};
+use huacaya::collect::sampler::SystemSnapshot;
+use huacaya::collect::system::{CpuInfo, CpuSample};
 // --- Key + snapshot builders (the sheet forbids these in `src/`) -------------------------------
 fn key(c: char) -> KeyEvent {
     KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE)
@@ -384,7 +384,7 @@ fn model_selection() {
 
 #[test]
 fn first_models_list_selects_the_loaded_model() {
-    use llamatop::app::demo::{DemoState, llama as demo_llama};
+    use huacaya::app::demo::{DemoState, llama as demo_llama};
     let mut app = App::new(1000);
     app.apply(Event::Llama(demo_llama(0.0, DemoState::Idle)));
     assert_eq!(app.model_selected, 3, "the demo's loaded model is the 4th");

@@ -1,4 +1,4 @@
-//! The `llamatop agent` server over HTTP: it samples the fixture machine, follows the fixture log, and
+//! The `huacaya agent` server over HTTP: it samples the fixture machine, follows the fixture log, and
 //! answers T26's three endpoints. The test binds `127.0.0.1:0` and reads the real port from `start`.
 
 use std::io::{BufReader, Read, Write};
@@ -8,9 +8,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use llamatop::agent::proto::LogPage;
-use llamatop::agent::server::{self, AgentConfig};
-use llamatop::collect::sampler::SystemSnapshot;
+use huacaya::agent::proto::LogPage;
+use huacaya::agent::server::{self, AgentConfig};
+use huacaya::collect::sampler::SystemSnapshot;
 
 /// The agent config pointed at the fixture machine and log, listening on an OS-assigned port.
 fn config() -> AgentConfig {
@@ -172,7 +172,7 @@ fn no_token_beyond_loopback_is_refused() {
 #[test]
 fn live_log_keeps_streaming() {
     // A live journal prints lines long after start: the agent must keep its command running.
-    let script = std::env::temp_dir().join(format!("llamatop-live-log-{}.sh", std::process::id()));
+    let script = std::env::temp_dir().join(format!("huacaya-live-log-{}.sh", std::process::id()));
     std::fs::write(&script, "#!/bin/sh\necho early\nsleep 1\necho late\nsleep 30\n")
         .expect("write the script");
     let mut perms = std::fs::metadata(&script).expect("script metadata").permissions();

@@ -5,12 +5,12 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use llamatop::app::{App, Event, Screen};
-use llamatop::collect::opencode::{OpenCodeSnapshot, parse_sessions, parse_steps};
-use llamatop::ui::panels::{Ctx, header};
-use llamatop::ui::screens::agents;
-use llamatop::ui::snapshot::snapshot;
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::{App, Event, Screen};
+use huacaya::collect::opencode::{OpenCodeSnapshot, parse_sessions, parse_steps};
+use huacaya::ui::panels::{Ctx, header};
+use huacaya::ui::screens::agents;
+use huacaya::ui::snapshot::snapshot;
+use huacaya::ui::theme::{ColorMode, Theme};
 
 // --- Key + snapshot builders (the sheet forbids these in `src/`) -------------------------------
 fn key(c: char) -> KeyEvent {
@@ -144,7 +144,7 @@ fn timeline_rows() {
     // The FAILED detail cell is `Critical`.
     let buf = render_buf(&app, 140, 30);
     let failed_row = (0..30u16).find(|&y| row_symbols(&buf, 140, y).contains("test result: FAILED")).unwrap();
-    let crit_fg = theme.fg(llamatop::ui::theme::Role::Critical).fg;
+    let crit_fg = theme.fg(huacaya::ui::theme::Role::Critical).fg;
     let has_crit = (0..140u16).any(|x| buf[(x, failed_row)].style().fg == crit_fg);
     assert!(has_crit, "the FAILED detail row must be Critical, {:?}", rows);
 }

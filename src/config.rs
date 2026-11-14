@@ -12,15 +12,15 @@ use crate::settings::Settings;
 #[command(version, about)]
 pub struct Cli {
     /// Base URL of the llama.cpp server (router or single model).
-    #[arg(long, env = "LLAMATOP_URL", default_value = "http://127.0.0.1:8080")]
+    #[arg(long, env = "HUACAYA_URL", default_value = "http://127.0.0.1:8080")]
     pub url: String,
 
     /// File holding the API key (first line). `LLAMA_API_KEY` wins when both are set.
-    #[arg(long, env = "LLAMATOP_API_KEY_FILE")]
+    #[arg(long, env = "HUACAYA_API_KEY_FILE")]
     pub api_key_file: Option<PathBuf>,
 
-    /// Configuration file; default `~/.config/llamatop/config.toml`.
-    #[arg(long, env = "LLAMATOP_CONFIG")]
+    /// Configuration file; default `~/.config/huacaya/config.toml`.
+    #[arg(long, env = "HUACAYA_CONFIG")]
     pub config: Option<PathBuf>,
 
     /// Root under which `proc/` and `sys/` are read. Tests point it at `tests/fixtures/sysroot`.
@@ -34,7 +34,7 @@ pub struct Cli {
     /// Command whose standard output is followed as the server log, split on spaces.
     #[arg(
         long,
-        env = "LLAMATOP_LOG_CMD",
+        env = "HUACAYA_LOG_CMD",
         default_value = "journalctl -u llama-server -f -n 2000 --no-pager -q -o short-iso-precise"
     )]
     pub log_cmd: String,
@@ -66,28 +66,28 @@ pub struct Cli {
     #[arg(skip)]
     pub api_key_inline: Option<String>,
 
-    /// URL of a llamatop agent on the server: its machine panels and log replace this machine's.
-    #[arg(long, env = "LLAMATOP_AGENT")]
+    /// URL of a huacaya agent on the server: its machine panels and log replace this machine's.
+    #[arg(long, env = "HUACAYA_AGENT")]
     pub agent: Option<String>,
 
     /// File holding the agent token (first line), like `--api-key-file`.
-    #[arg(long, env = "LLAMATOP_AGENT_TOKEN_FILE")]
+    #[arg(long, env = "HUACAYA_AGENT_TOKEN_FILE")]
     pub agent_token_file: Option<PathBuf>,
 
     /// The agent token from the configuration file.
     #[arg(skip)]
     pub agent_token_inline: Option<String>,
 
-    /// URL of an OpenCode server to watch (`LLAMATOP_OPENCODE`).
-    #[arg(long, env = "LLAMATOP_OPENCODE")]
+    /// URL of an OpenCode server to watch (`HUACAYA_OPENCODE`).
+    #[arg(long, env = "HUACAYA_OPENCODE")]
     pub opencode: Option<String>,
 
     /// The HTTP Basic user for the OpenCode server.
-    #[arg(long, env = "LLAMATOP_OPENCODE_USER")]
+    #[arg(long, env = "HUACAYA_OPENCODE_USER")]
     pub opencode_user: Option<String>,
 
     /// File holding the OpenCode password (first line), like `--api-key-file`.
-    #[arg(long, env = "LLAMATOP_OPENCODE_PASSWORD_FILE")]
+    #[arg(long, env = "HUACAYA_OPENCODE_PASSWORD_FILE")]
     pub opencode_password_file: Option<PathBuf>,
 
     /// The OpenCode password from the configuration file.
@@ -99,18 +99,18 @@ pub struct Cli {
     pub command: Option<Command>,
 }
 
-/// A subcommand of `llamatop`.
+/// A subcommand of `huacaya`.
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum Command {
     /// Ask for the server address and key, check them, save the configuration file.
     Setup,
-    /// Publish this machine's panels (system and log) for remote llamatop dashboards.
+    /// Publish this machine's panels (system and log) for remote huacaya dashboards.
     Agent {
         /// Address and port to listen on.
         #[arg(long, default_value = "0.0.0.0:9099")]
         listen: SocketAddr,
         /// File holding the token clients must send (first line).
-        #[arg(long, env = "LLAMATOP_AGENT_TOKEN_FILE")]
+        #[arg(long, env = "HUACAYA_AGENT_TOKEN_FILE")]
         token_file: Option<PathBuf>,
         /// Accept clients without a token (only sensible on a trusted network).
         #[arg(long)]
@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn defaults() {
-        let cli = Cli::parse_from(["llamatop"]);
+        let cli = Cli::parse_from(["huacaya"]);
         assert_eq!(cli.url, "http://127.0.0.1:8080");
         assert_eq!(cli.sysroot, PathBuf::from("/"));
         assert_eq!(cli.mounts.len(), 0);
@@ -240,6 +240,6 @@ mod tests {
 
     #[test]
     fn interval_is_bounded() {
-        assert!(Cli::try_parse_from(["llamatop", "--interval-ms", "50"]).is_err());
+        assert!(Cli::try_parse_from(["huacaya", "--interval-ms", "50"]).is_err());
     }
 }

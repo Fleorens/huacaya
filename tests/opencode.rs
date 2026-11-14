@@ -5,9 +5,9 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use llamatop::collect::opencode::*;
-use llamatop::http::base64;
-use llamatop::settings::Settings;
+use huacaya::collect::opencode::*;
+use huacaya::http::base64;
+use huacaya::settings::Settings;
 
 /// The `tests/fixtures/opencode` directory.
 fn opencode_dir() -> PathBuf {
@@ -131,7 +131,7 @@ struct FakeFetch {
     messages: String,
 }
 
-impl llamatop::collect::llama_poll::Fetch for FakeFetch {
+impl huacaya::collect::llama_poll::Fetch for FakeFetch {
     fn get(&self, path: &str, _query: &[(&str, &str)]) -> anyhow::Result<String> {
         if path == "/api/session" { Ok(self.sessions.clone()) } else { Ok(self.messages.clone()) }
     }
@@ -156,7 +156,7 @@ fn poller_focus() {
 #[test]
 fn poller_error_hides_the_password() {
     let fetch =
-        llamatop::http::Client::new_basic("http://127.0.0.1:9", "u", "pw-SECRET", Duration::from_secs(1));
+        huacaya::http::Client::new_basic("http://127.0.0.1:9", "u", "pw-SECRET", Duration::from_secs(1));
     let mut poller = OpenCodePoller::new(fetch);
     let snapshot = poller.poll(None);
     let error = snapshot.error.expect("an error");
@@ -166,9 +166,9 @@ fn poller_error_hides_the_password() {
 
 #[test]
 fn settings_and_password() {
-    let path = std::env::temp_dir().join(format!("llamatop-opencode-settings-{}.toml", std::process::id()));
+    let path = std::env::temp_dir().join(format!("huacaya-opencode-settings-{}.toml", std::process::id()));
     let settings = Settings {
-        opencode: llamatop::settings::OpenCodeSettings {
+        opencode: huacaya::settings::OpenCodeSettings {
             url: Some("http://127.0.0.1:8080".to_string()),
             user: Some("dev".to_string()),
             password: Some("pw".to_string()),
@@ -176,15 +176,15 @@ fn settings_and_password() {
         },
         ..Default::default()
     };
-    llamatop::settings::save(&path, &settings).unwrap();
-    assert_eq!(llamatop::settings::load(&path).unwrap().unwrap(), settings);
+    huacaya::settings::save(&path, &settings).unwrap();
+    assert_eq!(huacaya::settings::load(&path).unwrap().unwrap(), settings);
     let _ = std::fs::remove_file(&path);
 
     // `opencode_password()` reads a temp file `  pw \n` as `pw`.
-    let file = std::env::temp_dir().join(format!("llamatop-opencode-pw-{}.txt", std::process::id()));
+    let file = std::env::temp_dir().join(format!("huacaya-opencode-pw-{}.txt", std::process::id()));
     std::fs::write(&file, "  pw \n").unwrap();
     let cli =
-        llamatop::config::Cli::parse_from(["llamatop", "--opencode-password-file", file.to_str().unwrap()]);
+        huacaya::config::Cli::parse_from(["huacaya", "--opencode-password-file", file.to_str().unwrap()]);
     assert_eq!(cli.opencode_password().as_deref(), Some("pw"));
     let _ = std::fs::remove_file(&file);
 }
@@ -193,7 +193,7 @@ fn settings_and_password() {
 /// password `bad`.
 struct FakeProbe;
 
-impl llamatop::setup::Probe for FakeProbe {
+impl huacaya::setup::Probe for FakeProbe {
     fn health(&self, _url: &str) -> anyhow::Result<()> {
         Ok(())
     }
@@ -201,9 +201,9 @@ impl llamatop::setup::Probe for FakeProbe {
         &self,
         _url: &str,
         _key: Option<&str>,
-    ) -> anyhow::Result<Vec<llamatop::collect::llama::ModelInfo>> {
+    ) -> anyhow::Result<Vec<huacaya::collect::llama::ModelInfo>> {
         let json = r#"{"data":[{"id":"m/Model:Q4_K_M","status":{"value":"loaded"}}]}"#;
-        llamatop::collect::llama::parse_models(json)
+        huacaya::collect::llama::parse_models(json)
     }
     fn agent(&self, _url: &str, _token: Option<&str>) -> anyhow::Result<String> {
         Ok("aibox-flo".to_string())
@@ -232,7 +232,7 @@ fn setup_asks_for_opencode() {
         Ok(k)
     };
     let settings =
-        llamatop::setup::wizard(&mut input, &mut out, &mut secret, &FakeProbe, &Settings::default()).unwrap();
+        huacaya::setup::wizard(&mut input, &mut out, &mut secret, &FakeProbe, &Settings::default()).unwrap();
     assert_eq!(settings.opencode.url.as_deref(), Some("http://opencode:8080"));
     assert_eq!(settings.opencode.user.as_deref(), Some("dev"));
     assert_eq!(settings.opencode.password.as_deref(), Some("pw-SECRET"));
@@ -257,7 +257,7 @@ fn setup_asks_again_after_a_refused_password() {
         Ok(k)
     };
     let settings =
-        llamatop::setup::wizard(&mut input, &mut out, &mut secret, &FakeProbe, &Settings::default()).unwrap();
+        huacaya::setup::wizard(&mut input, &mut out, &mut secret, &FakeProbe, &Settings::default()).unwrap();
     assert_eq!(settings.opencode.password.as_deref(), Some("pw-SECRET"));
     let out = String::from_utf8(out).unwrap();
     assert_eq!(out.matches("the server refused the password").count(), 1);
@@ -272,7 +272,7 @@ fn setup_asks_again_after_a_refused_password() {
         Ok(k)
     };
     let result =
-        llamatop::setup::wizard(&mut input, &mut Vec::new(), &mut secret, &FakeProbe, &Settings::default());
+        huacaya::setup::wizard(&mut input, &mut Vec::new(), &mut secret, &FakeProbe, &Settings::default());
     assert!(result.is_err());
 }
 

@@ -11,7 +11,7 @@ use crate::ui::theme::{Role, Theme};
 
 /// The compact tier: no frames, one line per subsystem, then the log.
 ///
-/// Row 0 `llamatop · <hostname> · <dot> <status>` (the header's status text and role); row 1 the Model
+/// Row 0 `huacaya · <hostname> · <dot> <status>` (the header's status text and role); row 1 the Model
 /// panel's badge and speed (`<badge> <short model> <tps> t/s`, badge alone without a model); row 2
 /// `GPU <busy>% <temp>°C <vram> │ CPU <usage>% │ RAM <used>` (`temp` = junction, else edge; `n/a` for a
 /// missing value, no space before `%` or `°C`); then the end of `visible_logs()` as `<time> <text>`
@@ -28,12 +28,12 @@ pub fn render(app: &App, ctx: &Ctx, area: Rect, buf: &mut Buffer) {
     render_logs(app, theme, area, buf);
 }
 
-/// Row 0: `llamatop · <hostname> · <dot> <status>`.
+/// Row 0: `huacaya · <hostname> · <dot> <status>`.
 fn render_row_0(app: &App, theme: &Theme, area: Rect, buf: &mut Buffer) {
     let hostname = app.system.as_ref().and_then(|s| s.hostname.clone()).unwrap_or_else(|| "?".to_string());
     let (status, role) = panels::header::status(app);
     let line = Line::from(vec![
-        Span::styled("llamatop", theme.fg(Role::BorderFocused).add_modifier(Modifier::BOLD)),
+        Span::styled("huacaya", theme.fg(Role::BorderFocused).add_modifier(Modifier::BOLD)),
         Span::styled(format!(" · {hostname} · "), theme.fg(Role::Text)),
         Span::styled(status.to_string(), theme.fg(role).add_modifier(Modifier::BOLD)),
     ]);

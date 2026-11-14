@@ -1,4 +1,4 @@
-//! The first-run setup and `llamatop setup`: a plain question-and-answer dialogue on the terminal,
+//! The first-run setup and `huacaya setup`: a plain question-and-answer dialogue on the terminal,
 //! before the dashboard starts. It asks for the server URL and API key, checks them against the server,
 //! and returns the `Settings` to save (tasks/T23, tasks/T24).
 //!
@@ -84,7 +84,7 @@ fn dialogue(
     effective_key: Option<String>,
 ) -> Result<Settings> {
     let mut input = Input { inner: input, ended: false };
-    writeln!(out, "llamatop setup")?;
+    writeln!(out, "huacaya setup")?;
     writeln!(out)?;
 
     // 1. The URL, with a health check and up to three refusals.
@@ -180,7 +180,7 @@ fn dialogue(
     // none (the log command above keeps its meaning); the token is checked against `/v1/system`.
     // As everywhere in the dialogue, Enter keeps what is in brackets; `-` removes the agent.
     let default_agent_url = current.agent.url.clone().unwrap_or_default();
-    write!(out, "llamatop agent URL (empty: keep, -: none) [{}]: ", default_agent_url)?;
+    write!(out, "huacaya agent URL (empty: keep, -: none) [{}]: ", default_agent_url)?;
     out.flush()?;
     let answered = input.answer()?;
     let entered_agent = if answered.is_empty() { default_agent_url } else { answered };

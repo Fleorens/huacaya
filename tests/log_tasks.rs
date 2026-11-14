@@ -1,7 +1,7 @@
 // Tests for `log_tasks` (T37): summarising the tasks (requests) seen in the log. Pure — no terminal.
 
-use llamatop::app::log_tasks::{TaskOutcome, log_tasks};
-use llamatop::collect::logs::{Level, LogEvent, LogLine};
+use huacaya::app::log_tasks::{TaskOutcome, log_tasks};
+use huacaya::collect::logs::{Level, LogEvent, LogLine};
 
 /// One line, built for the fields `log_tasks` reads: `task`, `time`, `level` and `event`.
 fn line(task: i64, time: Option<&str>, level: Level, event: Option<LogEvent>) -> LogLine {

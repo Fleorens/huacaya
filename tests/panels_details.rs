@@ -5,9 +5,9 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use llamatop::app::demo::{DemoState, app as demo_app};
-use llamatop::ui::panels::{Ctx, gpu, memory};
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::demo::{DemoState, app as demo_app};
+use huacaya::ui::panels::{Ctx, gpu, memory};
+use huacaya::ui::theme::{ColorMode, Theme};
 
 /// Render `f` into a `w × h` buffer and return each row's symbols concatenated.
 fn draw<F>(f: F, w: u16, h: u16) -> Vec<String>

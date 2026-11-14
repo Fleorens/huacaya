@@ -1,10 +1,10 @@
 //! The run loop: clock parsing/formatting and the `--demo` event generator (`tasks/T15-run-loop.md`).
 
-use llamatop::app::clock::{hms, local_utc_offset, parse_utc_offset};
-use llamatop::app::demo;
-use llamatop::app::run::demo_events;
-use llamatop::app::{App, Event};
-use llamatop::collect::logs::{LogEvent, LogLine};
+use huacaya::app::clock::{hms, local_utc_offset, parse_utc_offset};
+use huacaya::app::demo;
+use huacaya::app::run::demo_events;
+use huacaya::app::{App, Event};
+use huacaya::collect::logs::{LogEvent, LogLine};
 
 #[test]
 fn utc_offsets() {

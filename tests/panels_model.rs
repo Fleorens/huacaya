@@ -5,13 +5,13 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Modifier;
 
-use llamatop::app::demo::{DemoState, app as demo_app};
-use llamatop::app::{App, Screen};
-use llamatop::ui::big::big_digits;
-use llamatop::ui::panels::model::badge_state;
-use llamatop::ui::panels::{Ctx, header, model, request};
-use llamatop::ui::text::{bytes_pair, fit, pct, temp, tps};
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::demo::{DemoState, app as demo_app};
+use huacaya::app::{App, Screen};
+use huacaya::ui::big::big_digits;
+use huacaya::ui::panels::model::badge_state;
+use huacaya::ui::panels::{Ctx, header, model, request};
+use huacaya::ui::text::{bytes_pair, fit, pct, temp, tps};
+use huacaya::ui::theme::{ColorMode, Theme};
 
 /// Render `f` into a `w × h` buffer and return each row's symbols concatenated.
 fn draw<F>(f: F, w: u16, h: u16) -> Vec<String>
@@ -58,7 +58,7 @@ fn header_generating() {
     let ctx = make_ctx(&theme);
     let app = demo_app(DemoState::Generating);
     let rows = draw(|area, buf| header::render(&app, &ctx, area, buf), 140, 1);
-    assert!(rows[0].contains("llamatop"), "{:?}", rows[0]);
+    assert!(rows[0].contains("huacaya"), "{:?}", rows[0]);
     assert!(rows[0].contains("gpu-box"), "{:?}", rows[0]);
     assert!(rows[0].contains("up 4d 3h"), "{:?}", rows[0]);
     assert!(rows[0].contains("● server ok"), "{:?}", rows[0]);

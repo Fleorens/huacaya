@@ -4,11 +4,11 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use llamatop::app::App;
-use llamatop::app::demo::{DemoState, app as demo_app};
-use llamatop::ui::panels::Ctx;
-use llamatop::ui::snapshot::{parse_size, snapshot};
-use llamatop::ui::theme::{ColorMode, Theme};
+use huacaya::app::App;
+use huacaya::app::demo::{DemoState, app as demo_app};
+use huacaya::ui::panels::Ctx;
+use huacaya::ui::snapshot::{parse_size, snapshot};
+use huacaya::ui::theme::{ColorMode, Theme};
 
 /// Render `f` into a `w × h` buffer, return each row's symbols with trailing spaces removed.
 fn rows<F>(f: F, w: u16, h: u16) -> Vec<String>
@@ -35,23 +35,23 @@ fn inside(outer: Rect, inner: Rect) -> bool {
 
 #[test]
 fn tiers() {
-    assert_eq!(llamatop::ui::layout::tier(29, 40), llamatop::ui::layout::Tier::TooSmall);
-    assert_eq!(llamatop::ui::layout::tier(30, 7), llamatop::ui::layout::Tier::TooSmall);
-    assert_eq!(llamatop::ui::layout::tier(30, 8), llamatop::ui::layout::Tier::Compact);
-    assert_eq!(llamatop::ui::layout::tier(59, 40), llamatop::ui::layout::Tier::Compact);
-    assert_eq!(llamatop::ui::layout::tier(120, 19), llamatop::ui::layout::Tier::Compact);
-    assert_eq!(llamatop::ui::layout::tier(60, 20), llamatop::ui::layout::Tier::Narrow);
-    assert_eq!(llamatop::ui::layout::tier(99, 50), llamatop::ui::layout::Tier::Narrow);
-    assert_eq!(llamatop::ui::layout::tier(100, 30), llamatop::ui::layout::Tier::Medium);
-    assert_eq!(llamatop::ui::layout::tier(160, 39), llamatop::ui::layout::Tier::Medium);
-    assert_eq!(llamatop::ui::layout::tier(140, 40), llamatop::ui::layout::Tier::Wide);
+    assert_eq!(huacaya::ui::layout::tier(29, 40), huacaya::ui::layout::Tier::TooSmall);
+    assert_eq!(huacaya::ui::layout::tier(30, 7), huacaya::ui::layout::Tier::TooSmall);
+    assert_eq!(huacaya::ui::layout::tier(30, 8), huacaya::ui::layout::Tier::Compact);
+    assert_eq!(huacaya::ui::layout::tier(59, 40), huacaya::ui::layout::Tier::Compact);
+    assert_eq!(huacaya::ui::layout::tier(120, 19), huacaya::ui::layout::Tier::Compact);
+    assert_eq!(huacaya::ui::layout::tier(60, 20), huacaya::ui::layout::Tier::Narrow);
+    assert_eq!(huacaya::ui::layout::tier(99, 50), huacaya::ui::layout::Tier::Narrow);
+    assert_eq!(huacaya::ui::layout::tier(100, 30), huacaya::ui::layout::Tier::Medium);
+    assert_eq!(huacaya::ui::layout::tier(160, 39), huacaya::ui::layout::Tier::Medium);
+    assert_eq!(huacaya::ui::layout::tier(140, 40), huacaya::ui::layout::Tier::Wide);
 }
 
 // --------------------------------------------------------------------------- Overview geometry
 
 #[test]
 fn wide_layout() {
-    let l = llamatop::ui::layout::overview(Rect::new(0, 0, 140, 40));
+    let l = huacaya::ui::layout::overview(Rect::new(0, 0, 140, 40));
     assert_eq!(l.header, Rect::new(0, 0, 140, 1));
     assert_eq!(l.model, Some(Rect::new(0, 1, 140, 6)));
     assert_eq!(l.gpu, Some(Rect::new(0, 7, 46, 9)));
@@ -65,7 +65,7 @@ fn wide_layout() {
 
 #[test]
 fn medium_layout() {
-    let l = llamatop::ui::layout::overview(Rect::new(0, 0, 100, 30));
+    let l = huacaya::ui::layout::overview(Rect::new(0, 0, 100, 30));
     assert_eq!(l.header, Rect::new(0, 0, 100, 1));
     assert_eq!(l.model, Some(Rect::new(0, 1, 100, 6)));
     assert_eq!(l.gpu, Some(Rect::new(0, 7, 33, 8)));
@@ -79,7 +79,7 @@ fn medium_layout() {
 #[test]
 fn narrow_layout() {
     // (80, 24): the cpu | memory band fits (5 rows), the log gets 5 rows, the key bar the last.
-    let l = llamatop::ui::layout::overview(Rect::new(0, 0, 80, 24));
+    let l = huacaya::ui::layout::overview(Rect::new(0, 0, 80, 24));
     assert_eq!(l.header, Rect::new(0, 0, 80, 1));
     assert_eq!(l.model, Some(Rect::new(0, 1, 80, 6)));
     assert_eq!(l.gpu, Some(Rect::new(0, 7, 80, 6)));
@@ -90,7 +90,7 @@ fn narrow_layout() {
     assert!(!l.graphs);
 
     // (80, 30): the band fits, the log gets 11 rows.
-    let l = llamatop::ui::layout::overview(Rect::new(0, 0, 80, 30));
+    let l = huacaya::ui::layout::overview(Rect::new(0, 0, 80, 30));
     assert_eq!(l.cpu, Some(Rect::new(0, 13, 40, 5)));
     assert_eq!(l.memory, Some(Rect::new(40, 13, 40, 5)));
     assert_eq!(l.log, Some(Rect::new(0, 18, 80, 11)));
@@ -106,14 +106,14 @@ fn layout_invariants() {
             let area = Rect::new(0, 0, w, h);
             // Only the real tiers; Compact and TooSmall fall back to the Narrow layout on a tiny body.
             if !matches!(
-                llamatop::ui::layout::tier(w, h),
-                llamatop::ui::layout::Tier::Narrow
-                    | llamatop::ui::layout::Tier::Medium
-                    | llamatop::ui::layout::Tier::Wide
+                huacaya::ui::layout::tier(w, h),
+                huacaya::ui::layout::Tier::Narrow
+                    | huacaya::ui::layout::Tier::Medium
+                    | huacaya::ui::layout::Tier::Wide
             ) {
                 continue;
             }
-            let l = llamatop::ui::layout::overview(area);
+            let l = huacaya::ui::layout::overview(area);
             let present: Vec<Rect> =
                 [l.model, l.request, l.log, l.gpu, l.cpu, l.memory].into_iter().flatten().collect();
 
@@ -134,22 +134,22 @@ fn layout_invariants() {
             assert!(l.model.is_some(), "model dropped at {w}x{h}");
             assert!(l.gpu.is_some(), "gpu dropped at {w}x{h}");
             if let Some(r) = l.model {
-                assert!(r.height >= llamatop::ui::panels::model::MIN_HEIGHT);
+                assert!(r.height >= huacaya::ui::panels::model::MIN_HEIGHT);
             }
             if let Some(r) = l.gpu {
-                assert!(r.height >= llamatop::ui::panels::gpu::MIN_HEIGHT);
+                assert!(r.height >= huacaya::ui::panels::gpu::MIN_HEIGHT);
             }
             if let Some(r) = l.request {
-                assert!(r.height >= llamatop::ui::panels::request::MIN_HEIGHT);
+                assert!(r.height >= huacaya::ui::panels::request::MIN_HEIGHT);
             }
             if let Some(r) = l.cpu {
-                assert!(r.height >= llamatop::ui::panels::cpu::MIN_HEIGHT);
+                assert!(r.height >= huacaya::ui::panels::cpu::MIN_HEIGHT);
             }
             if let Some(r) = l.memory {
-                assert!(r.height >= llamatop::ui::panels::memory::MIN_HEIGHT);
+                assert!(r.height >= huacaya::ui::panels::memory::MIN_HEIGHT);
             }
             if let Some(r) = l.log {
-                assert!(r.height >= llamatop::ui::panels::log::MIN_HEIGHT);
+                assert!(r.height >= huacaya::ui::panels::log::MIN_HEIGHT);
             }
         }
     }
@@ -165,7 +165,7 @@ fn draw_never_panics() {
         for w in (0..=160).step_by(7) {
             for h in (0..=50).step_by(3) {
                 let ctx = Ctx { theme: &theme, graphs: true, clock: "10:21:03" };
-                llamatop::ui::draw::draw(
+                huacaya::ui::draw::draw(
                     &app,
                     &ctx,
                     Rect::new(0, 0, w, h),
@@ -181,7 +181,7 @@ fn too_small_message() {
     let theme = Theme::new(ColorMode::TrueColor);
     let ctx = Ctx { theme: &theme, graphs: true, clock: "10:21:03" };
     let rows =
-        rows(|area, buf| llamatop::ui::draw::draw(&demo_app(DemoState::Generating), &ctx, area, buf), 20, 6);
+        rows(|area, buf| huacaya::ui::draw::draw(&demo_app(DemoState::Generating), &ctx, area, buf), 20, 6);
     assert!(rows.iter().any(|r| r.contains("terminal too small")));
     assert!(rows.iter().any(|r| r.contains("20×6, need 30×8")));
 }
@@ -193,8 +193,8 @@ fn compact_rows() {
     let theme = Theme::new(ColorMode::TrueColor);
     let ctx = Ctx { theme: &theme, graphs: true, clock: "10:21:03" };
     let rows =
-        rows(|area, buf| llamatop::ui::draw::draw(&demo_app(DemoState::Generating), &ctx, area, buf), 50, 15);
-    assert!(rows[0].contains("llamatop · gpu-box · ● server ok"));
+        rows(|area, buf| huacaya::ui::draw::draw(&demo_app(DemoState::Generating), &ctx, area, buf), 50, 15);
+    assert!(rows[0].contains("huacaya · gpu-box · ● server ok"));
     assert!(rows[1].contains("GENERATING"));
     assert!(rows[1].contains("t/s"));
     assert!(rows[2].contains("GPU 95% 73°C 15.9 G │ CPU 50% │ RAM 21.6 G"));

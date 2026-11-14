@@ -1,4 +1,4 @@
-# llamatop — shared rules for agents
+# huacaya — shared rules for agents
 
 This file is read by OpenCode (AGENTS.md) and by Claude Code (CLAUDE.md, a
 symlink to this file). Single source of truth: only this file is edited.
@@ -31,7 +31,7 @@ symlink to this file). Single source of truth: only this file is edited.
 
 ## Project
 
-**llamatop** is a terminal dashboard (TUI) for a llama.cpp server and the machine that runs it
+**huacaya** is a terminal dashboard (TUI) for a llama.cpp server and the machine that runs it
 (`aibox-flo`: Debian 13, i7-11700K, Radeon RX 7800 XT, llama.cpp in router mode on port 8080).
 It shows the loaded model, generation speed, context fill, GPU / CPU / RAM / temperatures, and the live
 server log. Architecture: `docs/01-architecture.md`. Screens: `docs/02-ui.md`. Plan: `tasks/README.md`.

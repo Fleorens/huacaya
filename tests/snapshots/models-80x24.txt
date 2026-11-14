@@ -1,4 +1,4 @@
- llamatop  gpu-box  up 4d 3h  ● server ok  b12151      1  2 Models  3 4 5
+ huacaya  gpu-box  up 4d 3h  ● server ok  b12151       1  2 Models  3 4 5
 ╭ Models ─────────────────────────────────5 known · 1 loaded · VRAM 15.9/16.0 G╮
 │   state       model                quant    ctx      moe   spec          img │
 │   ○ unloaded  Ornith-1.5-35B-A3B   Q4_K_M   163.8K   16    -             img │
@@ -20,5 +20,5 @@
 ││spec    draft-mtp                    ││ctx     ████▎░░░░░░░░  63.8K / 196.6K││
 ││port    35335   pid 6873   rss 19.2 G││decoded 6 189 tok                    ││
 │╰─────────────────────────────────────╯╰─────────────────────────────────────╯│
-│↑↓ select · Home/End · read-only: llamatop never loads or unloads a model     │
+│↑↓ select · Home/End · read-only: huacaya never loads or unloads a model      │
 ╰──────────────────────────────────────────────────────────────────────────────╯

@@ -114,7 +114,7 @@ fn render_one_column(
 
 /// The hint line on the last row of `inner`: the help groups, dropped whole from the end.
 fn render_hint(inner: Rect, buf: &mut Buffer, theme: &Theme) {
-    let raw = "↑↓ select · Home/End · read-only: llamatop never loads or unloads a model";
+    let raw = "↑↓ select · Home/End · read-only: huacaya never loads or unloads a model";
     let parts: Vec<&str> = raw.split(" · ").collect();
     let groups: Vec<Vec<Span>> = parts
         .iter()

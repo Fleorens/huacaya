@@ -1,6 +1,6 @@
-//! The `llamatop agent` server: sample the machine, follow the log, and answer T26's three endpoints
+//! The `huacaya agent` server: sample the machine, follow the log, and answer T26's three endpoints
 //! over HTTP. No async runtime — one thread per job (sampler, log, accept), one per connection, like the
-//! rest of llamatop.
+//! rest of huacaya.
 
 use std::io::{self, BufRead, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -97,12 +97,12 @@ pub fn start(config: AgentConfig, stop: Arc<AtomicBool>) -> Result<(SocketAddr, 
     Ok((addr, accept_handle))
 }
 
-/// `start`, then prints `llamatop agent listening on <addr>` and waits for the accept thread (forever,
+/// `start`, then prints `huacaya agent listening on <addr>` and waits for the accept thread (forever,
 /// until the process is stopped).
 pub fn run(config: AgentConfig) -> Result<()> {
     let stop = Arc::new(AtomicBool::new(false));
     let (addr, _handle) = start(config, stop)?;
-    println!("llamatop agent listening on {addr}");
+    println!("huacaya agent listening on {addr}");
     std::thread::park();
     Ok(())
 }

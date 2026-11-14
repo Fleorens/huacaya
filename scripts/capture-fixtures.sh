@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run ON THE AIBOX. Collects, in one tar.gz, what llamatop reads, so the test fixtures can be
+# Run ON THE AIBOX. Collects, in one tar.gz, what huacaya reads, so the test fixtures can be
 # checked against the real machine: proc and sysfs files, 400 lines of the llama-server journal.
 # Read-only. No secret is collected: the environment and the unit file are not read.
 # The journal holds client IP addresses and request paths, nothing else.
@@ -35,6 +35,6 @@ if journalctl -u llama-server -n 400 --no-pager -q -o short-iso-precise > "$out/
 else
   echo "journal: NOT readable by $(id -un) — see journal.err (group systemd-journal or adm needed)"
 fi
-tar -C "$out" -czf "$PWD/llamatop-capture.tar.gz" .
+tar -C "$out" -czf "$PWD/huacaya-capture.tar.gz" .
 rm -rf "$out"
-echo "Written: $PWD/llamatop-capture.tar.gz"
+echo "Written: $PWD/huacaya-capture.tar.gz"

@@ -1,4 +1,4 @@
- llamatop  gpu-box  up 4d 3h  ● server ok  b12151     1 Overview 2 Models 3 Logs 4 System 5 Agents      10:21:03  ? help
+ huacaya  gpu-box  up 4d 3h  ● server ok  b12151      1 Overview 2 Models 3 Logs 4 System 5 Agents      10:21:03  ? help
 ╭ Levels ──────────────────────╮  ╭ Log ───────────────────────────────────────────────────────────────────── follow ● ╮
 │● info        18              │  │time      task      lvl  message                                                    │
 │▲ warn         0              │  │10:00:08  #9000     ●    processing task, is_child = 0                              │

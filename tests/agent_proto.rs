@@ -1,10 +1,10 @@
 //! The pure part of the agent protocol: request parsing, response formatting, the token check, the
 //! log ring, and routing — exercised without a network.
 
-use llamatop::agent::proto::{self, LOG_RING_CAPACITY, LogPage, LogRing, MAX_HEAD};
-use llamatop::app::demo::{self, DemoState};
-use llamatop::collect::logs::LogLine;
-use llamatop::collect::sampler::SystemSnapshot;
+use huacaya::agent::proto::{self, LOG_RING_CAPACITY, LogPage, LogRing, MAX_HEAD};
+use huacaya::app::demo::{self, DemoState};
+use huacaya::collect::logs::LogLine;
+use huacaya::collect::sampler::SystemSnapshot;
 
 #[test]
 fn parse_get_with_query_and_token() {
@@ -157,5 +157,5 @@ fn route_system_and_log() {
 
 /// One log line for the ring tests, built the same way the agent's clients build theirs.
 fn proto_line(text: &str) -> LogLine {
-    llamatop::collect::logs::parse_line(text)
+    huacaya::collect::logs::parse_line(text)
 }

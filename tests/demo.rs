@@ -1,9 +1,9 @@
 //! Deterministic demo data (`src/app/demo.rs`), per `tasks/T11-demo.md`. Values are exact.
 
-use llamatop::app::demo::{CYCLE_S, DemoState, app, llama, log_lines, state_at, system};
-use llamatop::collect::llama::ModelState;
-use llamatop::collect::llama_poll::Health;
-use llamatop::collect::logs::LogEvent;
+use huacaya::app::demo::{CYCLE_S, DemoState, app, llama, log_lines, state_at, system};
+use huacaya::collect::llama::ModelState;
+use huacaya::collect::llama_poll::Health;
+use huacaya::collect::logs::LogEvent;
 
 /// The five demo states, in the order the sheet lists them.
 const STATES: [DemoState; 5] =

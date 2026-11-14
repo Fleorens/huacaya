@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use llamatop::collect::disk::{auto_mounts, parse_mounts};
+use huacaya::collect::disk::{auto_mounts, parse_mounts};
 
 /// The mount table used by `real_filesystems_only` and `auto_mounts_reads_the_sysroot`.
 const REAL_FS_TEXT: &str = "\
@@ -76,7 +76,7 @@ fn at_most_eight() {
 
 #[test]
 fn auto_mounts_reads_the_sysroot() {
-    let root = temp_dir("llamatop-auto-mounts-ok");
+    let root = temp_dir("huacaya-auto-mounts-ok");
     std::fs::create_dir_all(root.join("proc/self")).unwrap();
     std::fs::write(root.join("proc/self/mounts"), REAL_FS_TEXT).unwrap();
     assert_eq!(
@@ -85,7 +85,7 @@ fn auto_mounts_reads_the_sysroot() {
     );
     std::fs::remove_dir_all(&root).ok();
 
-    let empty_root = temp_dir("llamatop-auto-mounts-missing");
+    let empty_root = temp_dir("huacaya-auto-mounts-missing");
     assert!(auto_mounts(&empty_root).is_empty());
     std::fs::remove_dir_all(&empty_root).ok();
 }
@@ -93,6 +93,6 @@ fn auto_mounts_reads_the_sysroot() {
 #[test]
 fn out_of_range_escape_is_kept() {
     // `\777` is not a byte: kept as written instead of overflowing.
-    let mounts = llamatop::collect::disk::parse_mounts("/dev/sdf1 /x\\777y ext4 rw 0 0\n");
+    let mounts = huacaya::collect::disk::parse_mounts("/dev/sdf1 /x\\777y ext4 rw 0 0\n");
     assert_eq!(mounts, vec![std::path::PathBuf::from("/x\\777y")]);
 }

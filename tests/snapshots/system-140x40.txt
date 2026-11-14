@@ -1,4 +1,4 @@
- llamatop  gpu-box  up 4d 3h  ● server ok  b12151           1 Overview   2 Models   3 Logs   4 System   5 Agents            10:21:03  ? help
+ huacaya  gpu-box  up 4d 3h  ● server ok  b12151           1 Overview   2 Models   3 Logs   4 System   5 Agents             10:21:03  ? help
 ╭ CPU  Intel Core i7-11700K · 8 cores / 16 threads ───60 °C · 3.5 GHz╮╭ Disks ─────────────────────────────────────────────────────────────╮
 │  44      48      52      56      44      48      52      56        ││/               ███████████████████████▉░░░░░░░░░░░░░░░  37.0/60.6 G│
 │  44      48      52      56      44      48      52      56        ││/srv/models     ███████████████████████▎░░░░░░░░░░░░░░  72.1/117.6 G│

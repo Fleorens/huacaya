@@ -52,6 +52,6 @@ pub struct LogView {
     pub task_selected: usize,
     pub level: LevelFilter,
     /// `false`: lines whose event is `LogEvent::Proxy` are hidden. The router prints two of them for
-    /// every polling round of llamatop itself, so they are noise by default.
+    /// every polling round of huacaya itself, so they are noise by default.
     pub show_proxy: bool,
 }

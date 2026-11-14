@@ -105,7 +105,7 @@ fn render_not_configured(theme: &Theme, area: Rect, buf: &mut Buffer) {
     let block = panel("Agents", Role::Server, true, theme);
     let inner = block.inner(area);
     block.render(area, buf);
-    let msg = "OpenCode is not configured: llamatop setup, or --opencode <URL>";
+    let msg = "OpenCode is not configured: huacaya setup, or --opencode <URL>";
     let w = msg.chars().count().min(inner.width as usize) as u16;
     buf.set_line(inner.x, inner.y, &Line::from(Span::styled(msg, theme.fg(Role::Dim))), w);
 }

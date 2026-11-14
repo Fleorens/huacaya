@@ -7,10 +7,10 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
 use ratatui::widgets::Widget;
 
-use llamatop::ui::frame::{badge, panel};
-use llamatop::ui::gauge::{Gauge, bar_cells};
-use llamatop::ui::graph::{BrailleGraph, braille_rows};
-use llamatop::ui::theme::*;
+use huacaya::ui::frame::{badge, panel};
+use huacaya::ui::gauge::{Gauge, bar_cells};
+use huacaya::ui::graph::{BrailleGraph, braille_rows};
+use huacaya::ui::theme::*;
 
 /// Each row's symbols concatenated.
 fn lines(buf: &Buffer) -> Vec<String> {

@@ -4,12 +4,12 @@
 use std::path::Path;
 use std::time::Instant;
 
-use llamatop::app::demo::{self, DemoState};
-use llamatop::app::{App, Event};
-use llamatop::collect::logs::parse_line;
-use llamatop::collect::sampler::{Sampler, SystemSnapshot};
-use llamatop::collect::system::{CpuInfo, parse_cpuinfo, read_cpuinfo, short_cpu_name};
-use llamatop::ui::big::{big_digits, level_bars};
+use huacaya::app::demo::{self, DemoState};
+use huacaya::app::{App, Event};
+use huacaya::collect::logs::parse_line;
+use huacaya::collect::sampler::{Sampler, SystemSnapshot};
+use huacaya::collect::system::{CpuInfo, parse_cpuinfo, read_cpuinfo, short_cpu_name};
+use huacaya::ui::big::{big_digits, level_bars};
 
 const SYSROOT: &str = "tests/fixtures/sysroot";
 

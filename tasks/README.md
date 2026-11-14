@@ -1,4 +1,4 @@
-# Implementation plan — llamatop
+# Implementation plan — huacaya
 
 Each task sheet fits in **one OpenCode session** of the local model. The orchestrator (Claude) writes the
 sheets **by batch**: a batch is written against the code the previous one actually delivered, because a sheet
@@ -39,7 +39,7 @@ orchestrator after review).
 
 **Gate between the batches** — on the aibox:
 1. ~~`bash scripts/capture-fixtures.sh`~~ done on 2026-11-11, see above;
-2. ~~`llamatop --dump --api-key-file <file>`~~ done on 2026-11-12 on the aibox: every value matches `free`,
+2. ~~`huacaya --dump --api-key-file <file>`~~ done on 2026-11-12 on the aibox: every value matches `free`,
    `sensors`, `df`, `ps` and `/proc/loadavg` (GPU power is `power1_average`, the same file `sensors` reads as
    PPT). Finding: each polling round makes the router print two `proxying request` lines, so the log view
    hides `Proxy` lines by default (T09).
@@ -83,8 +83,8 @@ llama.cpp address and key (and later OpenCode's). The remote machine panels need
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
-| [T23](T23-config-file.md) | Configuration file `~/.config/llamatop/config.toml` | T22 | validée |
-| [T24](T24-setup-wizard.md) | First-run setup, `llamatop setup` | T23 | validée |
+| [T23](T23-config-file.md) | Configuration file `~/.config/huacaya/config.toml` | T22 | validée |
+| [T24](T24-setup-wizard.md) | First-run setup, `huacaya setup` | T23 | validée |
 | T25 | `.deb` package (`scripts/build-deb.sh`) — by the orchestrator | T24 | validée |
 
 ## Batch 5 — the agent: the server's machine panels on any machine (2026-11-12)
@@ -92,12 +92,12 @@ llama.cpp address and key (and later OpenCode's). The remote machine panels need
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
 | [T26](T26-agent-protocol.md) | Agent protocol: request parsing, routing, log ring, token (pure) | T24 | validée |
-| [T27](T27-agent-server.md) | `llamatop agent`: the server | T26 | validée |
+| [T27](T27-agent-server.md) | `huacaya agent`: the server | T26 | validée |
 | [T28](T28-agent-client.md) | Dashboard side: `--agent`, `[agent]`, setup question | T27 | validée |
 
 ## Batch 6 — any machine (2026-11-12)
 
-The repository goes public: llamatop must suit any llama.cpp machine, not only the aibox.
+The repository goes public: huacaya must suit any llama.cpp machine, not only the aibox.
 
 | Sheet | Subject | Depends on | Status |
 |---|---|---|---|
@@ -106,7 +106,7 @@ The repository goes public: llamatop must suit any llama.cpp machine, not only t
 
 ## Batch 7 — the TUI v2 (mockups validated by Florian on 2026-11-12)
 
-Mockups: the design canvas "llamatop TUI" (Overview, Agents, 80×24, Models, Logs, System).
+Mockups: the design canvas "huacaya TUI" (Overview, Agents, 80×24, Models, Logs, System).
 
 T29–T35 reviewed by the orchestrator on 2026-11-13. Fixed in the review: rows cut mid-word in narrow columns
 (GPU temperature and power rows, the model band's prompt line, the key bar) now drop their last parts whole

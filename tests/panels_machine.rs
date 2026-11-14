@@ -5,12 +5,12 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 
-use llamatop::app::demo::{DemoState, app as demo_app};
-use llamatop::app::{App, Event};
-use llamatop::collect::logs::parse_line;
-use llamatop::ui::big::level_bars;
-use llamatop::ui::panels::{Ctx, cpu, gauge_row, gpu, log, memory};
-use llamatop::ui::theme::{ColorMode, PCT_THRESHOLDS, Role, Theme};
+use huacaya::app::demo::{DemoState, app as demo_app};
+use huacaya::app::{App, Event};
+use huacaya::collect::logs::parse_line;
+use huacaya::ui::big::level_bars;
+use huacaya::ui::panels::{Ctx, cpu, gauge_row, gpu, log, memory};
+use huacaya::ui::theme::{ColorMode, PCT_THRESHOLDS, Role, Theme};
 
 /// Render `f` into a `w × h` buffer and return each row's symbols concatenated.
 fn draw<F>(f: F, w: u16, h: u16) -> Vec<String>
@@ -324,17 +324,17 @@ fn log_long_filter_stays_inside() {
 
 #[test]
 fn log_all_lines_hidden() {
-    // The router's proxy lines, llamatop's own polling, can fill the whole journal window: say so.
+    // The router's proxy lines, huacaya's own polling, can fill the whole journal window: say so.
     let theme = Theme::new(ColorMode::TrueColor);
     let ctx = Ctx { theme: &theme, graphs: true, clock: "10:21:03" };
     let mut app = App::new(1000);
     let line = "2026-11-12T11:20:05.402493+01:00 aibox-flo llama-server[1194]: 1581.51.785.561 I srv  \
                 proxy_reques: proxying request to model m on port 35335";
     for _ in 0..3 {
-        app.apply(Event::Log(llamatop::collect::logs::parse_line(line)));
+        app.apply(Event::Log(huacaya::collect::logs::parse_line(line)));
     }
     let mut buf = Buffer::empty(Rect::new(0, 0, 70, 5));
-    llamatop::ui::panels::log::render(&app, &ctx, Rect::new(0, 0, 70, 5), &mut buf);
+    huacaya::ui::panels::log::render(&app, &ctx, Rect::new(0, 0, 70, 5), &mut buf);
     let row: String = (0..70).map(|x| buf[(x, 1)].symbol().to_string()).collect();
     assert!(row.contains("3 lines hidden — x proxy"), "{row}");
 }

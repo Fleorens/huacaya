@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use llamatop::collect::logs::*;
+use huacaya::collect::logs::*;
 
 /// The fixture, as a vector of lines (1-based indexing below).
 fn fixture_lines() -> Vec<String> {
@@ -265,7 +265,7 @@ fn drop_stops_the_command() {
 
 #[test]
 fn missing_program_is_an_error() {
-    assert!(follow("llamatop-no-such-program --x", |_line| true).is_err());
+    assert!(follow("huacaya-no-such-program --x", |_line| true).is_err());
     assert!(follow("  ", |_line| true).is_err());
 }
 

@@ -1,4 +1,4 @@
- llamatop  gpu-box  up 4d 3h  ● server ok  b12151           1 Overview   2 Models   3 Logs   4 System   5 Agents            10:21:03  ? help
+ huacaya  gpu-box  up 4d 3h  ● server ok  b12151           1 Overview   2 Models   3 Logs   4 System   5 Agents             10:21:03  ? help
 ╭ Model ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │Cyber-Tiel-Coder-35B-A3B  Q4_K_M        █ █ █▀█   ▀▀█  t/s now                                          ctx  ████████▊░░░░░░░░░░░░░░░░░░  │
 │◉ GENERATING  task #9000 · 0s           ▀▀█ ▀▀█    ▀█  ⣷⣶⣿⣶⣿⣿⣿⣿⣶⣿⣶⣾⣿⣾⣿⣷⣿⣷⣾⣿⣶⣿⣷⣿⣿⣶⣿⣶⣾⣷⣾⣿⣷⣿⣷⣾⣿⣶⣿⣷⣿⣿⣾⣿⣶⣾⣷       63.8K / 196.6K  32 %         │
