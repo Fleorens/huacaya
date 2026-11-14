@@ -94,7 +94,7 @@ pub fn handle(app: &mut App, key: KeyEvent) {
             true
         }
         KeyCode::Char('p') => {
-            app.paused = !app.paused;
+            app.toggle_pause();
             true
         }
         KeyCode::Char('+') => {

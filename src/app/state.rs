@@ -147,6 +147,10 @@ pub struct App {
     /// Number of `Tick`s received, drives the animations.
     pub frame: u64,
     pub quit: bool,
+    /// The data shown while paused (a copy taken when `p` was pressed); `None` when not paused.
+    pub(super) frozen: Option<Box<App>>,
+    /// How far `log_view.scroll` moved for lines that arrived while paused: the frozen log has none of them.
+    pub(super) paused_scroll: usize,
 }
 
 impl App {
@@ -191,6 +195,8 @@ impl App {
             model_selected: 0,
             frame: 0,
             quit: false,
+            frozen: None,
+            paused_scroll: 0,
         }
     }
 
@@ -249,6 +255,9 @@ impl App {
                 }
                 if !self.log_view.follow && visible {
                     self.log_view.scroll = self.log_view.scroll.saturating_add(1);
+                    if self.paused {
+                        self.paused_scroll = self.paused_scroll.saturating_add(1);
+                    }
                 }
                 !self.paused
             }

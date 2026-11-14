@@ -227,7 +227,7 @@ fn draw_frame(
 ) -> Result<String> {
     let wall = wall_clock(offset);
     let ctx = Ctx { theme, graphs: true, clock: wall.as_str() };
-    terminal.draw(|f| draw::draw(app, &ctx, f.area(), f.buffer_mut()))?;
+    terminal.draw(|f| draw::draw(&app.shown(), &ctx, f.area(), f.buffer_mut()))?;
     Ok(wall)
 }
 

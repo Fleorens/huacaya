@@ -8,6 +8,7 @@ pub mod keys;
 pub mod log_tasks;
 pub mod log_view;
 mod net_rates;
+mod pause;
 mod requests;
 pub mod run;
 pub mod state;
