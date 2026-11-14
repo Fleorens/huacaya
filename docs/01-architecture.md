@@ -58,9 +58,12 @@ huacaya silences the journal as well. Each round, after `/v1/models`, it reads t
 under `--sysroot` (`collect::process::read_server_procs`); the instance that serves a loaded model listens on
 `127.0.0.1:<port>` (the port read from its `--port`, its `--alias` being the model id), and answering
 `/metrics` and `/slots` directly on that port — with the same API key — prints **nothing** in the journal,
-whereas the router prints `proxying request to model … on port …` for each of the two calls. When a direct
-answer fails, the round falls back to the router path (with `model=`) for both; when no instance is found, or
-when `--url` is a remote address, the router path is the only one. The safety rule above holds for both paths:
+whereas the router prints `proxying request to model … on port …` for each of the two calls. On a router, when a
+direct answer fails or the loaded model has no instance process, the model is most likely being unloaded while
+`/v1/models` still says `loaded`: the round then reads nothing for it (`metrics` `None`, no slots) and **never**
+falls back to `model=`, which would load it again. The router path (with `model=`) is used only when no
+`llama-server` process is visible at all (`/proc` unreadable), or when `--url` is a remote address; a
+single-model server takes no `model=` and keeps its fallback. The safety rule above holds for both paths:
 direct or not, only models `loaded` in this round are polled. Known limit: the instance is matched by name and
 `--alias` only, not by owner, so on a multi-user machine another account's `llama-server` with the same alias
 would receive the API key; the aibox has a single user.

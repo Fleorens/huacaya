@@ -135,7 +135,7 @@ fn direct_round_skips_the_router() {
 }
 
 #[test]
-fn direct_failure_falls_back() {
+fn direct_failure_skips_the_round() {
     let (fetch, calls, local_calls) = FakeFetch::new();
     router_setup(&fetch);
     fetch.give_local("/metrics", llama("metrics.prom"));
@@ -144,21 +144,42 @@ fn direct_failure_falls_back() {
     let mut poller = Poller::new(fetch).with_local_instances(sysroot());
     let snap = poller.poll(Instant::now());
 
-    // Both filled from the router despite the `/slots` direct error.
+    // The model stays active, with nothing read this round.
     assert_eq!(snap.active.len(), 1);
-    assert!(snap.active[0].metrics.is_some());
-    assert_eq!(snap.active[0].slots.len(), 1);
+    assert!(snap.active[0].metrics.is_none());
+    assert!(snap.active[0].slots.is_empty());
 
-    // Both direct calls were attempted before the fallback.
+    // Both direct calls were attempted.
     assert_eq!(local_calls.lock().unwrap().len(), 2);
 
-    // The fallback went through the router with `model = <the loaded id>`.
+    // An instance that stops answering may be unloading: never ask the router with `model=` then.
     let calls = calls.lock().unwrap();
-    let queried: Vec<_> = calls.iter().filter(|(p, _)| p == "/metrics" || p == "/slots").collect();
-    assert_eq!(queried.len(), 2);
-    for (_p, q) in &queried {
-        assert_eq!(q, &[("model".to_string(), TIEL.to_string())]);
+    assert!(!calls_with_model(&calls));
+    assert_eq!(calls.iter().filter(|(p, _)| p == "/metrics" || p == "/slots").count(), 0);
+}
+
+#[test]
+fn vanished_instance_skips_the_router() {
+    let (fetch, calls, local_calls) = FakeFetch::new();
+    router_setup(&fetch);
+
+    // Only the router process is visible: the loaded model's instance has just exited.
+    let dir = std::env::temp_dir().join(format!("huacaya-vanished-{}", std::process::id()));
+    let proc_dir = dir.join("proc/1201");
+    std::fs::create_dir_all(&proc_dir).unwrap();
+    for file in ["comm", "status", "cmdline"] {
+        std::fs::copy(sysroot().join("proc/1201").join(file), proc_dir.join(file)).unwrap();
     }
+
+    let mut poller = Poller::new(fetch).with_local_instances(dir.clone());
+    let snap = poller.poll(Instant::now());
+
+    assert_eq!(snap.active.len(), 1);
+    assert!(snap.active[0].metrics.is_none());
+    assert!(local_calls.lock().unwrap().is_empty());
+    assert!(!calls_with_model(&calls.lock().unwrap()));
+
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]

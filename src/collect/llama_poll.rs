@@ -182,17 +182,22 @@ impl<F: Fetch> Poller<F> {
             if model.state != ModelState::Loaded {
                 continue; // safety rule: never query a model that is not loaded.
             }
+            // On a router, a failed direct call or a vanished instance most likely means the model is being
+            // unloaded while `/v1/models` still says `loaded`: a `model=` request then would load it again
+            // (§ 2.2). Skip the round instead. The router path stays when no `llama-server` is visible at
+            // all (direct mode off, or `/proc` unreadable), and on a single-model server (no `model=`).
+            let risky = self.router && !instances.is_empty();
             let (metrics, slots) = match Self::instance_for(&instances, &model.id) {
                 Some(port) => {
                     match (self.fetch.get_local(port, "/metrics"), self.fetch.get_local(port, "/slots")) {
                         (Ok(m_body), Ok(s_body)) => {
                             (Some(parse_metrics(&m_body)), parse_slots(&s_body).ok().unwrap_or_default())
                         }
-                        // Either direct call failed: fall back to the router path for both, this round.
+                        _ if risky => (None, Vec::new()),
                         _ => self.router_metrics_slots(&model.id),
                     }
                 }
-                // No instance for this model: the router path, exactly as today.
+                None if risky => (None, Vec::new()),
                 None => self.router_metrics_slots(&model.id),
             };
 
