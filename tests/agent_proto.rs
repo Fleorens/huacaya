@@ -32,6 +32,22 @@ fn parse_rejects() {
 }
 
 #[test]
+fn parse_odd_authorization() {
+    let bearer = |value: &str| {
+        proto::parse_request(&format!("GET /v1/system HTTP/1.1\r\nAuthorization: {value}\r\n"))
+            .unwrap()
+            .bearer
+    };
+    // A UTF-8 character across byte 6 must not panic (it used to, from the network).
+    assert_eq!(bearer("bbbbbé x"), None);
+    assert_eq!(bearer("béarer x"), None);
+    // The scheme needs a separator: `Bearerabc` is not the token `abc`.
+    assert_eq!(bearer("Bearerabc"), None);
+    assert_eq!(bearer("bearer\tabc").as_deref(), Some("abc"));
+    assert_eq!(bearer("Bearer"), None);
+}
+
+#[test]
 fn response_format() {
     let body = proto::response(200, "{\"a\":\"é\"}");
     assert!(body.starts_with("HTTP/1.1 200 OK\r\n"));

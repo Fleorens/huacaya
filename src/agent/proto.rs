@@ -78,11 +78,15 @@ fn parse_query(q: &str) -> Vec<(String, String)> {
 
 /// Extracts the token from an `Authorization: Bearer <token>` header value (scheme case-insensitive).
 fn bearer_from(value: &str) -> Option<String> {
+    // `get` rather than slicing: the header comes from the network and may cut a UTF-8 character at byte 6.
     let value = value.trim();
-    if value.len() < "bearer".len() || !value[..6].eq_ignore_ascii_case("bearer") {
+    let scheme = value.get(..6)?;
+    let rest = value.get(6..)?;
+    // `Bearer` must be followed by whitespace: `Bearerabc` is not the token `abc`.
+    if !scheme.eq_ignore_ascii_case("bearer") || !rest.starts_with(|c: char| c.is_ascii_whitespace()) {
         return None;
     }
-    let token = value[6..].trim();
+    let token = rest.trim();
     if token.is_empty() { None } else { Some(token.to_string()) }
 }
 
