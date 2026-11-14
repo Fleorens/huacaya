@@ -14,18 +14,22 @@ use crate::collect::opencode::{
 /// Polls OpenCode through any `llama_poll::Fetch`.
 pub struct OpenCodePoller<F: Fetch> {
     fetch: F,
-    /// The id of the session whose history is loaded, `None` at first or after an error.
+    /// The id of the session whose history is loaded, `None` at first or after a failed history load
+    /// (retried next round); kept across a sessions or live error.
     loaded_session: Option<String>,
     /// The followed session's steps, oldest first, kept between rounds.
     steps: Vec<Step>,
     /// The map's state for the followed session.
     activity: Activity,
+    /// The last successful snapshot, returned with `error` set on the next error (kept steps, activity
+    /// and its time); `None` until the first success.
+    last: Option<OpenCodeSnapshot>,
 }
 
 impl<F: Fetch> OpenCodePoller<F> {
     /// A poller over `fetch`.
     pub fn new(fetch: F) -> Self {
-        Self { fetch, loaded_session: None, steps: Vec::new(), activity: Activity::default() }
+        Self { fetch, loaded_session: None, steps: Vec::new(), activity: Activity::default(), last: None }
     }
 
     /// The followed session's kept steps, oldest first: the whole history merged with every live round.
@@ -35,21 +39,13 @@ impl<F: Fetch> OpenCodePoller<F> {
 
     /// One round at wall-clock `now_ms`; `poll` calls it with the current time.
     pub fn poll_at(&mut self, focus: Option<&str>, now_ms: i64) -> OpenCodeSnapshot {
-        let empty = |error: String| OpenCodeSnapshot { error: Some(error), ..Default::default() };
-
         // 1. The sessions, then the choice of the focus, exactly as before.
         let sessions = match self.fetch.get("/api/session", &[]) {
             Ok(body) => match parse_sessions(&body) {
                 Ok(sessions) => sessions,
-                Err(e) => {
-                    self.loaded_session = None;
-                    return empty(format!("{e:#}"));
-                }
+                Err(e) => return self.failed(format!("{e:#}")),
             },
-            Err(e) => {
-                self.loaded_session = None;
-                return empty(fetch_error(&e));
-            }
+            Err(e) => return self.failed(fetch_error(&e)),
         };
         let focus = match focus {
             Some(id) if sessions.iter().any(|s| s.id == id) => Some(id.to_string()),
@@ -57,10 +53,12 @@ impl<F: Fetch> OpenCodePoller<F> {
         };
 
         // No focus (no sessions): keep nothing, steps empty, activity default.
-        if focus.is_none() {
+        let Some(focus_id) = focus.as_ref() else {
             self.steps.clear();
             self.activity = Activity::default();
-            return OpenCodeSnapshot {
+            // No session is loaded any more: a session appearing later loads its history.
+            self.loaded_session = None;
+            let snap = OpenCodeSnapshot {
                 sessions,
                 focus: None,
                 steps: Vec::new(),
@@ -68,8 +66,9 @@ impl<F: Fetch> OpenCodePoller<F> {
                 error: None,
                 fetched_ms: now_ms,
             };
-        }
-        let focus_id = focus.as_ref().unwrap();
+            self.last = Some(snap.clone());
+            return snap;
+        };
         let directory = sessions.iter().find(|s| s.id == *focus_id).and_then(|s| s.directory.clone());
 
         // A different session than the loaded one: load its whole history first.
@@ -83,8 +82,9 @@ impl<F: Fetch> OpenCodePoller<F> {
                     self.activity.update(focus_id, &self.steps, now_ms);
                 }
                 Err(e) => {
+                    // History failed: keep nothing loaded so it is retried next round.
                     self.loaded_session = None;
-                    return empty(e);
+                    return self.failed(e);
                 }
             }
         } else {
@@ -93,17 +93,11 @@ impl<F: Fetch> OpenCodePoller<F> {
             let query: Vec<(&str, &str)> = vec![("limit", limit.as_str())];
             let body = match self.fetch.get(&format!("/api/session/{focus_id}/message"), &query) {
                 Ok(body) => body,
-                Err(e) => {
-                    self.loaded_session = None;
-                    return empty(fetch_error(&e));
-                }
+                Err(e) => return self.failed(fetch_error(&e)),
             };
             let round_steps = match parse_steps(&body, directory.as_deref()) {
                 Ok(steps) => steps,
-                Err(e) => {
-                    self.loaded_session = None;
-                    return empty(format!("{e:#}"));
-                }
+                Err(e) => return self.failed(format!("{e:#}")),
             };
             self.activity.update(focus_id, &round_steps, now_ms);
             merge_kept(&mut self.steps, round_steps);
@@ -112,13 +106,24 @@ impl<F: Fetch> OpenCodePoller<F> {
         // The snapshot: the newest SNAPSHOT_STEPS kept steps (oldest first), a clone of the activity.
         let steps =
             self.steps.iter().skip(self.steps.len().saturating_sub(SNAPSHOT_STEPS)).cloned().collect();
-        OpenCodeSnapshot {
+        let snap = OpenCodeSnapshot {
             sessions,
             focus,
             steps,
             activity: self.activity.clone(),
             error: None,
             fetched_ms: now_ms,
+        };
+        self.last = Some(snap.clone());
+        snap
+    }
+
+    /// A snapshot carrying `error` but the previous successful round's data (kept steps, activity and
+    /// its time) so the UI does not flicker on a transient error; empty when no round has succeeded yet.
+    fn failed(&self, error: String) -> OpenCodeSnapshot {
+        match &self.last {
+            Some(prev) => OpenCodeSnapshot { error: Some(error), ..prev.clone() },
+            None => OpenCodeSnapshot { error: Some(error), ..Default::default() },
         }
     }
 
@@ -153,7 +158,10 @@ impl<F: Fetch> OpenCodePoller<F> {
     }
 
     /// One round: the sessions, then the steps of `focus` when it is one of them, else of the newest
-    /// running session, else of the newest session. An error gives a snapshot with `error` set and empty lists.
+    /// running session, else of the newest session. On a fetch/parse error it returns the last good
+    /// snapshot with `error` set (kept steps, activity and last success time) so the UI does not flicker,
+    /// or an empty snapshot when no round has succeeded yet; a sessions or live error keeps the loaded
+    /// session, a failed history load retries it next round.
     pub fn poll(&mut self, focus: Option<&str>) -> OpenCodeSnapshot {
         self.poll_at(focus, now_ms())
     }

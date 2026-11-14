@@ -222,21 +222,24 @@ fn focus_change_reloads() {
 }
 
 #[test]
-fn error_reloads() {
+fn live_parse_error_keeps_history() {
     let a_hist = page(&[("a1", "ta", "read", 100, Some(110))], None);
     let bad = "not json".to_string();
     let a_hist2 = page(&[("a1", "ta", "read", 100, Some(110))], None);
     let (mut poller, records) = setup(sessions_with(&["sessA"]), vec![a_hist, bad, a_hist2]);
 
     assert!(poller.poll_at(Some("sessA"), 1_000).error.is_none());
-    assert!(poller.poll_at(Some("sessA"), 2_000).error.is_some());
+    let snap2 = poller.poll_at(Some("sessA"), 2_000);
+    assert!(snap2.error.is_some());
+    assert_eq!(snap2.steps.len(), 1); // round 1's history is kept
     let snap3 = poller.poll_at(Some("sessA"), 3_000);
     assert!(snap3.error.is_none());
 
     let rec = records.lock().unwrap();
     assert_eq!(rec[1].1, vec![("limit".to_string(), "200".to_string())]);
     assert_eq!(rec[3].1, vec![("limit".to_string(), "12".to_string())]);
-    assert_eq!(rec[5].1, vec![("limit".to_string(), "200".to_string())]);
+    // Round 3 is live (limit 12), not a history reload: the bad live round kept the loaded session.
+    assert_eq!(rec[5].1, vec![("limit".to_string(), "12".to_string())]);
 }
 
 #[test]
